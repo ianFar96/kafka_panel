@@ -1,8 +1,8 @@
 [package]
 name = "kafka_panel"
-version = "0.0.1"
+version = "0.0.4"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["ianFar96"]
 license = ""
 repository = ""
 edition = "2021"

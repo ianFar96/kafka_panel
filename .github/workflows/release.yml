@@ -9,11 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [
-          # macos-latest,
-          ubuntu-latest,
-          # windows-latest
-        ]
+        platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout repository
@@ -33,7 +29,7 @@ jobs:
         if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev webkit2gtk-4.0 libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install app dependencies and build web
         run: npm ci && npm run build
@@ -44,7 +40,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v__VERSION__ # tauri-action replaces \_\_VERSION\_\_ with the app version
-          releaseName: 'v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          releaseName: "v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
           releaseDraft: false
           prerelease: false

@@ -561,18 +561,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "duct"
-version = "0.13.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37ae3fc31835f74c2a7ceda3aeede378b0ae2e74c8f1c36559fcc9ae2a4e7d3e"
-dependencies = [
- "libc",
- "once_cell",
- "os_pipe",
- "shared_child",
-]
-
-[[package]]
 name = "dunce"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2208,7 +2196,6 @@ dependencies = [
  "num_enum",
  "openssl-sys",
  "pkg-config",
- "sasl2-sys",
 ]
 
 [[package]]
@@ -2344,18 +2331,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "sasl2-sys"
-version = "0.1.20+2.1.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e645bd98535fc8fd251c43ba7c7c1f9be1e0369c99b6a5ea719052a773e655c"
-dependencies = [
- "cc",
- "duct",
- "libc",
- "pkg-config",
 ]
 
 [[package]]

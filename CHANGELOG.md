@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.4
+
+### Fix
+
+- Fix bug in release ci
+
 ## 0.0.3
 
 ### Fix

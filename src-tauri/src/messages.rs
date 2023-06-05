@@ -2,7 +2,7 @@ use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::message::BorrowedMessage;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
-use rdkafka::{Message, TopicPartitionList, Offset};
+use rdkafka::{Message, Offset, TopicPartitionList};
 use serde::Serialize;
 use serde_json::Value;
 use tokio::time::Duration;
@@ -33,7 +33,7 @@ pub async fn get_messages(
         .fetch_metadata(Some(&topic), Duration::from_secs(5))
         .map_err(|err| {
             format!(
-                "Could not fetch topic metadada {}: {}",
+                "Could not fetch topic metadada for topic: {}\n\nError: {}",
                 topic,
                 err.to_string()
             )
@@ -44,7 +44,7 @@ pub async fn get_messages(
     }
     consumer.assign(&tpl).map_err(|err| {
         format!(
-            "Could not assign topic partition {}: {}",
+            "Could not assign topic partition for topic: {}\n\nError: {}",
             topic,
             err.to_string()
         )
@@ -56,14 +56,28 @@ pub async fn get_messages(
             .fetch_watermarks(&topic, partition.id(), Duration::from_secs(5))
             .map_err(|err| {
                 format!(
-                    "Could not fetch watermark for topic partition {}: {}",
+                    "Could not seek partition offset in topic:{}, partition: {}\n\nError: {}",
                     topic,
+                    partition.id(),
                     err.to_string()
                 )
             })?;
 
         let seek_start = hight - messages_number;
-        consumer.seek(&topic, partition.id(), Offset::Offset(seek_start), Duration::from_secs(5)).unwrap();
+        let offset_start = if seek_start > 0 {
+            Offset::Offset(seek_start)
+        } else {
+            Offset::Beginning
+        };
+        consumer.seek(&topic, partition.id(), offset_start, Duration::from_secs(5)).map_err(|err| {
+            format!(
+                "Could not seek partition offset in topic:{}, partition: {}, offset: {}\n\nError: {}",
+                seek_start,
+                partition.id(),
+                topic,
+                err.to_string()
+            )
+        })?;
     }
 
     // We wait 3s initially so it has time to connect and all
@@ -83,10 +97,11 @@ pub async fn get_messages(
 
                 let message_result = process_message(&message).map_err(|err| {
                     format!(
-                        "{err}; topic: {}, partition: {}, offset: {}",
+                        "Could not process message for topic: {}, partition: {}, offset: {}\n\nError: {}",
                         message.topic(),
                         message.partition(),
-                        message.offset()
+                        message.offset(),
+                        err
                     )
                 })?;
 
@@ -104,7 +119,7 @@ pub async fn get_messages(
     message_results.sort_by(|a, b| {
         let timestamp_ord = b.timestamp.cmp(&a.timestamp);
         if std::cmp::Ordering::Equal != timestamp_ord {
-            return timestamp_ord
+            return timestamp_ord;
         }
 
         // If timestamp is equal, order by offset

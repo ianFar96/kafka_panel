@@ -1,8 +1,8 @@
-use rdkafka::consumer::{StreamConsumer, Consumer};
+use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::message::BorrowedMessage;
-use rdkafka::producer::{FutureRecord, FutureProducer};
+use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
-use rdkafka::Message;
+use rdkafka::{Message, TopicPartitionList, Offset};
 use serde::Serialize;
 use serde_json::Value;
 use tokio::time::Duration;
@@ -28,18 +28,48 @@ pub async fn get_messages(
     topic: String,
     messages_number: i64,
 ) -> Result<Vec<KafkaMessageResponse>, String> {
-    consumer.subscribe(&[&topic]).map_err(|err| {
+    // Manually fecth metadata and assign partition so we don't fetch using our consumer group
+    let metadata = consumer
+        .fetch_metadata(Some(&topic), Duration::from_secs(5))
+        .map_err(|err| {
+            format!(
+                "Could not fetch topic metadada {}: {}",
+                topic,
+                err.to_string()
+            )
+        })?;
+    let mut tpl = TopicPartitionList::new();
+    for partition in metadata.topics().get(0).unwrap().partitions() {
+        tpl.add_partition(&topic, partition.id());
+    }
+    consumer.assign(&tpl).map_err(|err| {
         format!(
-            "Could not subscribe to topic {}: {}",
+            "Could not assign topic partition {}: {}",
             topic,
             err.to_string()
         )
     })?;
 
+    // Seek the latest watermark minus messages number to get only the last messages
+    for partition in metadata.topics().get(0).unwrap().partitions() {
+        let (_, hight) = consumer
+            .fetch_watermarks(&topic, partition.id(), Duration::from_secs(5))
+            .map_err(|err| {
+                format!(
+                    "Could not fetch watermark for topic partition {}: {}",
+                    topic,
+                    err.to_string()
+                )
+            })?;
+
+        let seek_start = hight - messages_number;
+        consumer.seek(&topic, partition.id(), Offset::Offset(seek_start), Duration::from_secs(5)).unwrap();
+    }
+
     // We wait 3s initially so it has time to connect and all
     let mut timeout = Duration::from_secs(3);
     let mut message_results: Vec<KafkaMessageResponse> = vec![];
-    for _ in 0..messages_number {
+    loop {
         let message = match tokio::time::timeout(timeout, consumer.recv()).await {
             Ok(Ok(message)) => Ok(Some(message)),
             Ok(Err(err)) => Err(err.to_string()),
@@ -71,7 +101,19 @@ pub async fn get_messages(
     consumer.unsubscribe();
 
     // Reorder by timestamp
-    message_results.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    message_results.sort_by(|a, b| {
+        let timestamp_ord = b.timestamp.cmp(&a.timestamp);
+        if std::cmp::Ordering::Equal != timestamp_ord {
+            return timestamp_ord
+        }
+
+        // If timestamp is equal, order by offset
+        return b.offset.cmp(&a.offset);
+    });
+
+    // Get only the last [messages_number] messages
+    // Since there can be more messages than the limit when there's more than 1 partition
+    message_results.truncate(messages_number.try_into().unwrap());
 
     Ok(message_results)
 }

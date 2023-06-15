@@ -20,3 +20,9 @@ export const chipColors = {
 };
 
 export const disabledColor = chipColors.gray;
+
+export const randomColor = () => {
+	const colorKeys = Object.keys(chipColors);
+	const randomIndex = Math.floor(Math.random() * colorKeys.length);
+	return colorKeys[randomIndex] as keyof typeof chipColors;
+};

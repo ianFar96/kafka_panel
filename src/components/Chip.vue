@@ -3,6 +3,11 @@
 import { computed } from 'vue';
 import { chipColors, disabledColor } from '../services/chipColors';
 
+export type Tag = {
+	name: string,
+	color: keyof typeof chipColors
+}
+
 const props = defineProps<{
   chipColor: keyof typeof chipColors,
   disabled?: boolean

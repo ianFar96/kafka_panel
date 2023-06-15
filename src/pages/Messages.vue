@@ -4,6 +4,7 @@ import { message } from '@tauri-apps/api/dialog';
 import { Ref, computed, inject, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import SendMessageDialog from '../components/SendMessageDialog.vue';
+import SaveMessageDialog from '../components/SaveMessageDialog.vue';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
 import { KafkaManager } from '../services/kafka';
@@ -43,8 +44,10 @@ await fetchMessages();
 const copyToClipboard = async (event: MouseEvent, text: string) => {
 	event.preventDefault();
 	event.stopPropagation();
+
 	const copyToClipboard = writeText ?? navigator.clipboard.writeText;
 	await copyToClipboard(text);
+
 	const target = event.target as HTMLElement;
 	target.classList.add('text-green-500');
 	setTimeout(() => {
@@ -72,8 +75,16 @@ const filteredMessages = computed(() => {
 		});
 });
 
-const sendMessageDialog = ref<InstanceType<typeof SendMessageDialog> | null>(null); // Template ref
+const saveMessageDialog = ref<InstanceType<typeof SaveMessageDialog> | null>(null); // Template ref
+const saveMessage = async (messageToSave: OriginalMessage, tags: string[]) => {
+	await db.messages.add({
+		key: JSON.stringify(messageToSave.key),
+		value: JSON.stringify(messageToSave.value),
+		tags
+	});
+};
 
+const sendMessageDialog = ref<InstanceType<typeof SendMessageDialog> | null>(null); // Template ref
 const sendMessage = async (key: string, value: string) => {
 	loader?.value?.show();
 	try {
@@ -172,7 +183,10 @@ onBeforeUnmount(() => {
 					<div class="absolute top-4 right-4">
 						<i @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
 							title="Copy JSON"
-							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-4"></i>
+							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3"></i>
+						<i @click="saveMessageDialog?.openDialog(message)"
+							title="Save on storage"
+							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3"></i>
 						<i @click="sendMessageDialog?.openDialog(message)"
 							title="Send again"
 							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500"></i>
@@ -185,4 +199,5 @@ onBeforeUnmount(() => {
 		</ul>
   </div>
   <SendMessageDialog ref="sendMessageDialog" :sendMessage="sendMessage" />
+  <SaveMessageDialog ref="saveMessageDialog" :saveMessage="saveMessage" />
 </template>

@@ -72,9 +72,9 @@ pub async fn get_messages(
         consumer.seek(&topic, partition.id(), offset_start, Duration::from_secs(5)).map_err(|err| {
             format!(
                 "Could not seek partition offset in topic:{}, partition: {}, offset: {}\n\nError: {}",
-                seek_start,
                 partition.id(),
                 topic,
+                seek_start,
                 err.to_string()
             )
         })?;

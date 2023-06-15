@@ -38,8 +38,13 @@ const route = useRoute();
         <div>
           <router-link to="/topics"
             class="w-16 h-16 flex justify-center items-center cursor-pointer hover:border-l border-white mt-4"
-            :class="{'border-l': route.path.includes('/topics') || route.path.includes('/messages')}">
+            :class="{'border-l': route.path.includes('/topics')}">
             <i class="bi-list-ul text-[32px] leading-none"></i>
+          </router-link>
+          <router-link to="/messages-storage"
+            class="w-16 h-16 flex justify-center items-center cursor-pointer hover:border-l border-white mt-4"
+            :class="{'border-l': route.path.includes('/messages-storage')}">
+            <i class="bi-envelope-check text-[28px] leading-none"></i>
           </router-link>
         </div>
         <div>

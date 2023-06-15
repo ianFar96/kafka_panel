@@ -1,13 +1,16 @@
 import Dexie, { Table } from 'dexie';
 import { Setting } from '../types/settings';
+import { StorageMessage } from '../types/message';
 
 class Databse extends Dexie {
 	settings!: Table<Setting>;
+	messages!: Table<StorageMessage>;
 
 	constructor() {
 		super('kafkaPanelDB');
-		this.version(1).stores({
-			settings: '++key' // Primary key and indexed props
+		this.version(2).stores({
+			settings: '++key',
+			messages: '++id'
 		});
 	}
 }
@@ -48,5 +51,7 @@ settings.forEach(setting => {
 	}
 	db.settings.add(setting);
 });
+
+await db.open();
 
 export default db;

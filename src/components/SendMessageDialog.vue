@@ -4,7 +4,7 @@ import MonacoEditor from 'monaco-editor-vue3';
 import { nextTick, onBeforeUnmount, ref } from 'vue';
 import Dialog from './Dialog.vue';
 import { appWindow } from '@tauri-apps/api/window';
-import { Message } from '../types/message';
+import { SendMessage } from '../types/message';
 
 const key = ref<string>();
 const value = ref<string>();
@@ -62,7 +62,7 @@ const setMonacoEditorSizes = () => {
 const dialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
 defineExpose({
-	openDialog: (message?: Message) => {
+	openDialog: (message?: SendMessage) => {
 		key.value = JSON.stringify(message?.key || undefined, null, 2);
 		value.value = JSON.stringify(message?.value || undefined, null, 2);
 

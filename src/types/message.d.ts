@@ -7,3 +7,15 @@ export type Message = {
   offset: number
   partition: number
 }
+
+export type SendMessage = {
+  key: Json | string
+  value: Json | string
+}
+
+export type StorageMessage = {
+  id?: number
+  key: string
+  value: string
+  tags: string[]
+}

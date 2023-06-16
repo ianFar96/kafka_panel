@@ -144,8 +144,8 @@ onBeforeUnmount(() => {
 		<div class="mb-6 flex justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
-			<button class="text-2xl" type="button" @click="fetchMessages()">
-				<i class="bi-arrow-clockwise"></i>
+			<button type="button" @click="fetchMessages()"
+				class="text-2xl bi-arrow-clockwise">
 			</button>
 		</div>
 
@@ -181,15 +181,18 @@ onBeforeUnmount(() => {
 
 				<div v-if="message.valueVisible" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<i @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
+						<button @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
 							title="Copy JSON"
-							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3"></i>
-						<i @click="saveMessageDialog?.openDialog(message)"
+							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
+						</button>
+						<button @click="saveMessageDialog?.openDialog(message)"
 							title="Save on storage"
-							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3"></i>
-						<i @click="sendMessageDialog?.openDialog(message)"
+							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
+						</button>
+						<button @click="sendMessageDialog?.openDialog(message)"
 							title="Send again"
-							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500"></i>
+							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
+						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
 						<highlightjs :language="'json'" :code="JSON.stringify({key: message.key, value: message.value}, null, 2)" />

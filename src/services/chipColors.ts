@@ -16,10 +16,9 @@ export const chipColors = {
 	violet: /*tw*/ 'border-violet-400 text-violet-400 bg-violet-400 bg-opacity-10',
 	cyan: /*tw*/ 'border-cyan-400 text-cyan-400 bg-cyan-400 bg-opacity-10',
 	rose: /*tw*/ 'border-rose-400 text-rose-400 bg-rose-400 bg-opacity-10',
-	gray: /*tw*/ 'border-gray-400 text-gray-400 bg-gray-400 bg-opacity-10'
 };
 
-export const disabledColor = chipColors.gray;
+export const disabledColor = /*tw*/ 'border-gray-400 text-gray-400 bg-gray-400 bg-opacity-10';
 
 export const randomColor = () => {
 	const colorKeys = Object.keys(chipColors);

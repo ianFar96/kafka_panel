@@ -127,7 +127,7 @@ const sendStorageMessageDialog = ref<InstanceType<typeof SendStorageMessageDialo
 		<ul class="h-full overflow-auto">
 			<li v-for="message, index in filteredMessages" :key="index" :class="{'border-b': index !== filteredMessages.length - 1}"
 				class="border-white overflow-hidden">
-				<div class="flex justify-between items-center w-full cursor-pointer py-4"
+				<div class="flex justify-between items-center w-full cursor-pointer pt-4 pb-2"
 					@click="message.valueVisible = !message.valueVisible">
 					<div>
 						<ul class="flex flex-wrap">
@@ -144,15 +144,18 @@ const sendStorageMessageDialog = ref<InstanceType<typeof SendStorageMessageDialo
 
 				<div v-if="message.valueVisible" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<i @click="deleteMessage(message)"
+						<button @click="deleteMessage(message)"
 							title="Delete message"
-							class="text-xl leading-none bi-trash transition-colors duration-300 cursor-pointer mr-3 hover:text-red-500"></i>
-						<i @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
+							class="text-2xl translate-y-[3px] bi-trash transition-colors duration-300 cursor-pointer mr-3 hover:text-red-500">
+						</button>
+						<button @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
 							title="Copy JSON"
-							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3"></i>
-						<i @click="sendStorageMessageDialog?.openDialog(connections, message)"
+							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
+						</button>
+						<button @click="sendStorageMessageDialog?.openDialog(connections, message)"
 							title="Send again"
-							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500"></i>
+							class="text-xl bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
+						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
 						<highlightjs :language="'json'" :code="JSON.stringify({key: message.key, value: message.value}, null, 2)" />

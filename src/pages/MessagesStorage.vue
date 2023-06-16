@@ -95,19 +95,11 @@ const deleteMessage = async (storageMessage: Message) => {
 };
 
 const saveMessage = async (message: StorageMessage) => {
-	if (message.id) {
-		await db.messages.update(message.id, {
-			key: message.key,
-			value: message.value,
-			tags: message.tags.slice(),
-		});
-	} else {
-		await db.messages.add({
-			key: message.key,
-			value: message.value,
-			tags: message.tags.slice(),
-		});
-	}
+	await db.messages.update(message.id!, {
+		key: message.key,
+		value: message.value,
+		tags: message.tags.slice(),
+	});
 
 	await fetchMessages();
 };

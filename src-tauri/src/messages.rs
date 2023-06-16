@@ -129,17 +129,9 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
     let key = std::str::from_utf8(message.key().ok_or("Message without key found!")?)
         .map_err(|err| err.to_string())?
         .to_string();
-
-    let value = match message.payload_view::<str>() {
-        None => "",
-        Some(result) => result.map_err(|err| {
-            format!(
-                "Error while deserializing message payload: {}",
-                err.to_string()
-            )
-        })?,
-    }
-    .to_string();
+    let value = std::str::from_utf8(message.payload().ok_or("Message without payload found!")?)
+        .map_err(|err| err.to_string())?
+        .to_string();
 
     let timestamp_millis = message
         .timestamp()

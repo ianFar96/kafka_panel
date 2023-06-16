@@ -1,16 +1,14 @@
-export type Json = { [key: string]: string | number | boolean | Json }
-
-export type Message = {
-  key: Json | string
-  value: Json | string
+export type KafkaMessage = {
+  key: string
+  value: string
   timestamp: number
   offset: number
   partition: number
 }
 
 export type SendMessage = {
-  key: Json | string
-  value: Json | string
+  key: string
+  value: string
 }
 
 export type StorageMessage = {

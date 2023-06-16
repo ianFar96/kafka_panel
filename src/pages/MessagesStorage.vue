@@ -6,18 +6,19 @@ import { Ref, computed, inject, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Chip, { Tag } from '../components/Chip.vue';
 import Loader from '../components/Loader.vue';
-import SendStorageMessageDialog from '../components/SendStorageMessageDialog.vue';
+import SendStorageMessageStepper from '../components/SendStorageMessageStepper.vue';
 import checkSettings from '../services/checkSettings';
 import { randomColor } from '../services/chipColors';
 import db from '../services/database';
 import { Connection } from '../types/connection';
-import { Json, StorageMessage } from '../types/message';
+import { StorageMessage } from '../types/message';
 import { Setting, SettingKey } from '../types/settings';
+import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 
 type Message = {
 	id: number
-	key: Json | string
-	value: Json | string
+	key: string
+	value: string
 	tags: Tag[]
 	valueVisible: boolean
 }
@@ -62,6 +63,15 @@ const storeMessageToMessage = (storageMessage: StorageMessage) => {
 	};
 };
 
+const messageToStorageMessage = (message: Message): StorageMessage => {
+	return {
+		id: message.id,
+		key: typeof message.key === 'object' ? JSON.stringify(message.key, null, 2) : message.key,
+		value: typeof message.value === 'object' ? JSON.stringify(message.value, null, 2) : message.value,
+		tags: message.tags.map(tag => tag.name),
+	};
+};
+
 const messages = ref<Message[]>([]);
 const fetchMessages = async () => {
 	loader?.value?.show();
@@ -82,6 +92,24 @@ const deleteMessage = async (storageMessage: Message) => {
 	} catch (error) {
 		await message(`Could not delete message from storage: ${error}`, { title: 'Error', type: 'error' });
 	}
+};
+
+const saveMessage = async (message: StorageMessage) => {
+	if (message.id) {
+		await db.messages.update(message.id, {
+			key: message.key,
+			value: message.value,
+			tags: message.tags.slice(),
+		});
+	} else {
+		await db.messages.add({
+			key: message.key,
+			value: message.value,
+			tags: message.tags.slice(),
+		});
+	}
+
+	await fetchMessages();
 };
 
 const copyToClipboard = async (event: MouseEvent, text: string) => {
@@ -108,7 +136,8 @@ const filteredMessages = computed(() => {
 		});
 });
 
-const sendStorageMessageDialog = ref<InstanceType<typeof SendStorageMessageDialog> | null>(null); // Template ref
+const sendStorageMessageStepper = ref<InstanceType<typeof SendStorageMessageStepper> | null>(null); // Template ref
+const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStepper> | null>(null); // Template ref
 </script>
 
 <template>
@@ -144,6 +173,10 @@ const sendStorageMessageDialog = ref<InstanceType<typeof SendStorageMessageDialo
 
 				<div v-if="message.valueVisible" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
+						<button @click="editMessageStorageStepper?.openDialog(messageToStorageMessage(message))"
+							title="Edit tags and message"
+							class="text-xl translate-y-px bi-pencil-square transition-colors duration-300 cursor-pointer mr-3 hover:text-blue-500">
+						</button>
 						<button @click="deleteMessage(message)"
 							title="Delete message"
 							class="text-2xl translate-y-[3px] bi-trash transition-colors duration-300 cursor-pointer mr-3 hover:text-red-500">
@@ -152,7 +185,7 @@ const sendStorageMessageDialog = ref<InstanceType<typeof SendStorageMessageDialo
 							title="Copy JSON"
 							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="sendStorageMessageDialog?.openDialog(connections, message)"
+						<button @click="sendStorageMessageStepper?.openDialog(connections, message)"
 							title="Send again"
 							class="text-xl bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
 						</button>
@@ -164,5 +197,6 @@ const sendStorageMessageDialog = ref<InstanceType<typeof SendStorageMessageDialo
 			</li>
 		</ul>
   </div>
-	<SendStorageMessageDialog ref="sendStorageMessageDialog" />
+	<SendStorageMessageStepper ref="sendStorageMessageStepper" />
+	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessage" />
 </template>

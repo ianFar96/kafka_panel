@@ -4,23 +4,15 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use rdkafka::{Message, Offset, TopicPartitionList};
 use serde::Serialize;
-use serde_json::Value;
 use tokio::time::Duration;
 
 #[derive(Serialize, Clone)]
 pub struct KafkaMessageResponse {
-    value: PossibleJson,
-    key: PossibleJson,
+    value: String,
+    key: String,
     offset: i64,
     partition: i32,
     timestamp: i64,
-}
-
-#[derive(Serialize, Clone)]
-#[serde(untagged)]
-pub enum PossibleJson {
-    Value(Value),
-    String(String),
 }
 
 pub async fn get_messages(
@@ -134,13 +126,11 @@ pub async fn get_messages(
 }
 
 fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, String> {
-    let key_string = std::str::from_utf8(message.key().ok_or("Message without key found!")?)
-        .map_err(|err| err.to_string())?;
-    let key = serde_json::from_str(key_string)
-        .map(|json| PossibleJson::Value(json))
-        .unwrap_or(PossibleJson::String(key_string.to_string()));
+    let key = std::str::from_utf8(message.key().ok_or("Message without key found!")?)
+        .map_err(|err| err.to_string())?
+        .to_string();
 
-    let value_string = match message.payload_view::<str>() {
+    let value = match message.payload_view::<str>() {
         None => "",
         Some(result) => result.map_err(|err| {
             format!(
@@ -148,10 +138,8 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
                 err.to_string()
             )
         })?,
-    };
-    let value = serde_json::from_str(value_string)
-        .map(|json| PossibleJson::Value(json))
-        .unwrap_or(PossibleJson::String(value_string.to_string()));
+    }
+    .to_string();
 
     let timestamp_millis = message
         .timestamp()
@@ -160,10 +148,10 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
 
     Ok(KafkaMessageResponse {
         key,
+        value,
         offset: message.offset(),
         partition: message.partition(),
         timestamp: timestamp_millis,
-        value,
     })
 }
 

@@ -10,7 +10,8 @@ const key = ref<string>();
 const value = ref<string>();
 
 const props = defineProps<{
-  sendMessage: (key: string, value: string) => Promise<void>
+  submit: (key: string, value: string) => Promise<void>,
+	submitButtonText: string
 }>();
 
 const editorOptions = {
@@ -33,9 +34,9 @@ const editorOptions = {
 const handleSubmit = async () => {
 	if (!key.value || !value.value) return;
 
-	dialog.value?.closeDialog();
+	await props.submit(key.value, value.value);
 
-	await props.sendMessage(key.value, value.value);
+	dialog.value?.closeDialog();
 
 	// Reset form
 	key.value = undefined;
@@ -63,8 +64,12 @@ const dialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
 defineExpose({
 	openDialog: (message?: SendMessage) => {
-		key.value = JSON.stringify(message?.key || undefined, null, 2);
-		value.value = JSON.stringify(message?.value || undefined, null, 2);
+		key.value = typeof message?.key === 'object' ? 
+			JSON.stringify(message?.key || undefined, null, 2) :
+			message?.key;
+		value.value = typeof message?.value === 'object' ? 
+			JSON.stringify(message?.value || undefined, null, 2) :
+			message?.value;
 
 		dialog.value?.openDialog();
 		setMonacoEditorSizes();
@@ -103,7 +108,9 @@ onBeforeUnmount(() => {
       </div>
       <div class="mt-8 flex justify-end">
         <button type="submit"
-          class="border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500">Send</button>
+          class="border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500">
+					{{ submitButtonText }}
+				</button>
       </div>
     </form>
   </Dialog>

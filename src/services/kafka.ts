@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api';
 import { SaslConfig } from '../types/connection';
 import { ConsumerGroup, ConsumerGroupState } from '../types/consumerGroup';
-import { Message } from '../types/message';
+import { KafkaMessage } from '../types/message';
 import { Topic } from '../types/topic';
 
 export class KafkaManager {
@@ -43,7 +43,7 @@ export class KafkaManager {
 	}
 
 	async getMessages(topic: string, messagesNumber: number) {
-		const messages: Message[] = await invoke('get_messages_command', {topic, messagesNumber});
+		const messages: KafkaMessage[] = await invoke('get_messages_command', {topic, messagesNumber});
 		return messages;
 	}
 

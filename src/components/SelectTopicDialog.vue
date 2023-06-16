@@ -6,9 +6,8 @@ import { Topic } from '../types/topic';
 
 const props = defineProps<{
   topics: Topic[]
-  selectTopic: (topic: Topic) => Promise<void>
+  submit: (topic: Topic) => Promise<void>
 }>();
-
 
 const searchQuery = ref('');
 
@@ -22,9 +21,9 @@ const filteredTopics = computed(() => {
 		});
 });
 
-const selectTopic = (topic: Topic) => {
+const submit = (topic: Topic) => {
 	dialog.value?.closeDialog();
-	props.selectTopic(topic);
+	props.submit(topic);
 };
 
 const dialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
@@ -45,7 +44,7 @@ defineExpose({
 
 		<ul class="h-full overflow-auto">
 			<li v-for="topic, index in filteredTopics" :key="index" :class="{'border-b': index !== filteredTopics.length - 1}"
-				class="border-white overflow-hidden flex justify-between py-2 px-3 cursor-pointer hover:bg-[#252526]" @click="selectTopic(topic)">
+				class="border-white overflow-hidden flex justify-between py-2 px-3 cursor-pointer hover:bg-[#252526]" @click="submit(topic)">
 				<span class="mr-4">{{ topic.name }}</span>
         <i class="bi-arrow-right text-xl"></i>
 			</li>

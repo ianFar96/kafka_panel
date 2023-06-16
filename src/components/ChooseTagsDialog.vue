@@ -2,33 +2,36 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { randomColor } from '../services/chipColors';
-import { Message } from '../types/message';
 import Chip, { Tag } from './Chip.vue';
 import Dialog from './Dialog.vue';
 
 const props = defineProps<{
-  saveMessage: (message: Message, tags: string[]) => Promise<void>
+  submit: (tags: string[]) => Promise<void> | void
+	submitButtonText: string
 }>();
 
 const dialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
+const tags = ref<Tag[]>([]);
+
 defineExpose({
-	openDialog: (messageToSave: Message) => {
-		message.value = messageToSave;
+	openDialog: (alreadySelectedTags?: string[]) => {
+		tags.value = alreadySelectedTags?.map(tag => ({
+			name: tag, 
+			color: randomColor()
+		})) || [];
 		dialog.value?.openDialog();
 	},
 	closeDialog: () => dialog.value?.closeDialog(),
 });
 
-const message = ref<Message>();
-const tags = ref<Tag[]>([]);
 
 const handleSubmit = async () => {
 	if (tags.value.length <= 0) return;
 
 	dialog.value?.closeDialog();
 
-	await props.saveMessage(message.value!, tags.value.map(tag => tag.name));
+	await props.submit(tags.value.map(tag => tag.name));
 
 	// Reset form
 	tags.value = [];
@@ -75,7 +78,7 @@ const addTagOnEnter = (event: KeyboardEvent) => {
 		<div class="mt-8 flex justify-end flex-shrink-0">
 			<button type="button" @click="handleSubmit()"
 				class="border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500">
-				Save
+				{{ submitButtonText }}
 			</button>
 		</div>
   </Dialog>

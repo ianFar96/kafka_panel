@@ -6,7 +6,7 @@ import { KafkaManager } from '../services/kafka';
 import { Connection } from '../types/connection';
 import { SendMessage } from '../types/message';
 import Loader from './Loader.vue';
-import SendMessageDialog from './SendMessageDialog.vue';
+import EditMessageDialog from './EditMessageDialog.vue';
 import SetConnectionDialog from './SetConnectionDialog.vue';
 import { Topic } from '../types/topic';
 import SelectTopicDialog from './SelectTopicDialog.vue';
@@ -26,7 +26,7 @@ defineExpose({
 	closeDialog: () => {
 		setConnectionDialog.value?.closeDialog();
 		selectTopicDialog.value?.closeDialog();
-		sendMessageDialog.value?.closeDialog();
+		editMessageDialog.value?.closeDialog();
 	},
 });
 
@@ -35,7 +35,7 @@ const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
 const kafka = new KafkaManager();
 
 const setConnectionDialog = ref<InstanceType<typeof SetConnectionDialog> | null>(null); // Template ref
-const sendMessageDialog = ref<InstanceType<typeof SendMessageDialog> | null>(null); // Template ref
+const editMessageDialog = ref<InstanceType<typeof EditMessageDialog> | null>(null); // Template ref
 const selectTopicDialog = ref<InstanceType<typeof SelectTopicDialog> | null>(null); // Template ref
 
 const setConnection = async (connection: Connection) => {
@@ -57,7 +57,7 @@ const setConnection = async (connection: Connection) => {
 
 const selectTopic = async (topic: Topic) => {
 	selectedTopic.value = topic;
-	sendMessageDialog.value?.openDialog(selectedMessage.value!);
+	editMessageDialog.value?.openDialog(selectedMessage.value!);
 };
 
 const sendMessage = async (key: string, value: string) => {
@@ -72,8 +72,8 @@ const sendMessage = async (key: string, value: string) => {
 </script>
 
 <template>
-  <SendMessageDialog ref="sendMessageDialog" :sendMessage="sendMessage" />
-  <SelectTopicDialog ref="selectTopicDialog" :selectTopic="selectTopic" :topics="topics" />
+  <EditMessageDialog ref="editMessageDialog" :submit="sendMessage" :submit-button-text="'Send'" />
+  <SelectTopicDialog ref="selectTopicDialog" :submit="selectTopic" :topics="topics" />
 	<SetConnectionDialog ref="setConnectionDialog" :connections="connections" :closable="true"
 		:set-connection="setConnection" />
 </template>

@@ -99,8 +99,8 @@ onBeforeUnmount(() => {
 		<div class="flex mb-6 justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block mr-2 bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
-			<button class="text-2xl" type="button" @click="fetchGroupsFromTopic()">
-				<i class="bi-arrow-clockwise"></i>
+			<button @click="fetchGroupsFromTopic()" 
+				class="text-2xl bi-arrow-clockwise" type="button">
 			</button>
 		</div>
 		<div class="h-full overflow-auto">
@@ -150,7 +150,9 @@ onBeforeUnmount(() => {
 								'border-b': key !== filteredGroups.length - 1, 
 								'text-gray-500': !canResetOffset(group)
 							}" class="border-white py-3 px-4 text-right flex justify-center">
-							<i title="Reset offset to latest" @click="resetOffset(group)" class="text-2xl bi-skip-forward cursor-pointer"></i>
+							<button title="Reset offset to latest"
+								@click="resetOffset(group)" class="text-2xl bi-skip-forward">
+							</button>
 						</td>
 					</tr>
 				</tbody>

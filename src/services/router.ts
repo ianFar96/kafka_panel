@@ -3,12 +3,14 @@ import Messages from '../pages/Messages.vue';
 import Settings from '../pages/Settings.vue';
 import Topics from '../pages/Topics.vue';
 import Groups from '../pages/Groups.vue';
+import MessagesStorage from '../pages/MessagesStorage.vue';
 
 const routes: RouteRecordRaw[] = [
 	{ path: '/', redirect: '/topics' },
 	{ path: '/topics', component: Topics, meta: { title: ' Topics' } },
 	{ path: '/topics/:topicName/messages', component: Messages, meta: { title: 'Messages' } },
 	{ path: '/topics/:topicName/groups', component: Groups, meta: { title: ' Consumer Groups' } },
+	{ path: '/messages-storage', component: MessagesStorage, meta: { title: ' Messages Storage' } },
 	{ path: '/settings', component: Settings, meta: { title: 'Settings' } }
 ];
 

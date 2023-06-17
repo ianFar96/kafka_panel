@@ -1,17 +1,26 @@
+<!-- eslint-disable no-empty -->
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
 import { message } from '@tauri-apps/api/dialog';
 import { Ref, computed, inject, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import SendMessageDialog from '../components/SendMessageDialog.vue';
+import ChooseTagsDialog from '../components/ChooseTagsDialog.vue';
+import EditMessageDialog from '../components/EditMessageDialog.vue';
+import Loader from '../components/Loader.vue';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
 import { KafkaManager } from '../services/kafka';
-import { Message as OriginalMessage } from '../types/message';
 import { Setting, SettingKey } from '../types/settings';
-import Loader from '../components/Loader.vue';
+import { KafkaMessage } from '../types/message';
 
-type Message = OriginalMessage & { valueVisible: boolean }
+type Message = {
+	key: Record<string, unknown> | string
+  value: Record<string, unknown> | string
+  timestamp: number
+  offset: number
+  partition: number
+	valueVisible: boolean
+}
 
 await checkSettings('topics');
 
@@ -27,12 +36,43 @@ const topicName = route.params.topicName as string;
 
 const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
 
+const selectedMessage = ref<Message>();
+
+const kafkaMessageToMessage = (kafkaMessage: KafkaMessage): Message => {
+	let key = kafkaMessage.key;
+	try {
+		key = JSON.parse(kafkaMessage.key);
+	} catch (error) { }
+
+	let value = kafkaMessage.value;
+	try {
+		value = JSON.parse(kafkaMessage.value);
+	} catch (error) { }
+	
+	return {
+		...kafkaMessage,
+		key,
+		value,
+		valueVisible: false,
+	};
+};
+
+const messageToKafkaMessage = (message: Message): KafkaMessage => {
+	return {
+		offset: message.offset,
+		partition: message.offset,
+		timestamp: message.timestamp,
+		key: typeof message.key === 'object' ? JSON.stringify(message.key, null, 2) : message.key,
+		value: typeof message.value === 'object' ? JSON.stringify(message.value, null, 2) : message.value,
+	};
+};
+
 const messages = ref<Message[]>([]);
 const fetchMessages = async () => {
 	loader?.value?.show();
 	try {
-		const newMessages = await kafka.getMessages(topicName, parseInt(settingsMap['MESSAGES'].value as string));
-		messages.value = newMessages.map(message => ({ ...message, valueVisible: false }));
+		const kafkaMessages = await kafka.getMessages(topicName, parseInt(settingsMap['MESSAGES'].value as string));
+		messages.value = kafkaMessages.map(message => kafkaMessageToMessage(message));
 	} catch (error) {
 		await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -43,8 +83,10 @@ await fetchMessages();
 const copyToClipboard = async (event: MouseEvent, text: string) => {
 	event.preventDefault();
 	event.stopPropagation();
+
 	const copyToClipboard = writeText ?? navigator.clipboard.writeText;
 	await copyToClipboard(text);
+
 	const target = event.target as HTMLElement;
 	target.classList.add('text-green-500');
 	setTimeout(() => {
@@ -72,8 +114,25 @@ const filteredMessages = computed(() => {
 		});
 });
 
-const sendMessageDialog = ref<InstanceType<typeof SendMessageDialog> | null>(null); // Template ref
+const chooseTagsDialog = ref<InstanceType<typeof ChooseTagsDialog> | null>(null); // Template ref
+const chooseTags = (message: Message) => {
+	selectedMessage.value = message;
+	chooseTagsDialog.value?.openDialog();
+};
 
+const saveMessage = async (tags: string[]) => {
+	await db.messages.add({
+		key: typeof selectedMessage.value!.key === 'object' ?
+			JSON.stringify(selectedMessage.value!.key) :
+			selectedMessage.value!.key,
+		value: typeof selectedMessage.value!.value === 'object' ?
+			JSON.stringify(selectedMessage.value!.value) :
+			selectedMessage.value!.value,
+		tags
+	});
+};
+
+const editMessageDialog = ref<InstanceType<typeof EditMessageDialog> | null>(null); // Template ref
 const sendMessage = async (key: string, value: string) => {
 	loader?.value?.show();
 	try {
@@ -123,7 +182,7 @@ onBeforeUnmount(() => {
 				</router-link>
 				<button
 					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center"
-					@click="sendMessageDialog?.openDialog()">
+					@click="editMessageDialog?.openDialog()">
 					<i class="mr-2 bi-send cursor-pointer"></i>
 					Send message
 				</button>
@@ -133,8 +192,8 @@ onBeforeUnmount(() => {
 		<div class="mb-6 flex justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
-			<button class="text-2xl" type="button" @click="fetchMessages()">
-				<i class="bi-arrow-clockwise"></i>
+			<button type="button" @click="fetchMessages()"
+				class="text-2xl bi-arrow-clockwise">
 			</button>
 		</div>
 
@@ -170,12 +229,18 @@ onBeforeUnmount(() => {
 
 				<div v-if="message.valueVisible" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<i @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
+						<button @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
 							title="Copy JSON"
-							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-4"></i>
-						<i @click="sendMessageDialog?.openDialog(message)"
+							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
+						</button>
+						<button @click="chooseTags(message)"
+							title="Save on storage"
+							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
+						</button>
+						<button @click="editMessageDialog?.openDialog(messageToKafkaMessage(message))"
 							title="Send again"
-							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500"></i>
+							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
+						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
 						<highlightjs :language="'json'" :code="JSON.stringify({key: message.key, value: message.value}, null, 2)" />
@@ -184,5 +249,6 @@ onBeforeUnmount(() => {
 			</li>
 		</ul>
   </div>
-  <SendMessageDialog ref="sendMessageDialog" :sendMessage="sendMessage" />
+  <EditMessageDialog ref="editMessageDialog" :submit="sendMessage" :submit-button-text="'Send'"/>
+  <ChooseTagsDialog ref="chooseTagsDialog" :submit="saveMessage" :submit-button-text="'Save'"/>
 </template>

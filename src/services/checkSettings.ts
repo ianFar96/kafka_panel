@@ -8,7 +8,8 @@ type Page = 'topics'
 async function checkSettings(page: Page) {
 	// Settings must be seeded for this to work
 	const settingsDependencies: { [key: string]: SettingKey[] } = {
-		topics: ['CONNECTIONS']
+		topics: ['CONNECTIONS'],
+		'messages-storage': ['CONNECTIONS']
 	};
 
 	const dependencies = settingsDependencies[page];

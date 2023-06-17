@@ -31,7 +31,7 @@ if (connections.length <= 0) {
 
 const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
 
-const store = useConnectionStore();
+const connectionStore = useConnectionStore();
 const kafka = new KafkaManager();
 
 const topics = ref<Topic[]>([]);
@@ -67,7 +67,7 @@ onDeactivated(() => {
 	clearTimeout(timeout);
 });
 onActivated(async () => {
-	if (store.connection) {
+	if (connectionStore.connection) {
 		await fetchTopicsState();
 	}
 });
@@ -104,7 +104,7 @@ const removeTopic = async (topic: Topic) => {
 
 const setConnectionDialog = ref<InstanceType<typeof SetConnectionDialog> | null>(null); // Template ref
 const setConnection = async (newConnection: Connection) => {
-	store.set(newConnection);
+	connectionStore.set(newConnection);
 
 	loader?.value?.show();
 	try {
@@ -148,10 +148,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<div class="flex flex-col h-full relative" v-if="store.connection">
+	<div class="flex flex-col h-full relative" v-if="connectionStore.connection">
 		<div class="flex items-center justify-between mb-6">
-			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="store.connection?.name">
-				{{ store.connection?.name }} topics
+			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="connectionStore.connection?.name">
+				{{ connectionStore.connection?.name }} topics
 			</h2>
 			<div class="flex">
 				<button
@@ -171,8 +171,8 @@ onBeforeUnmount(() => {
 		<div class="flex mb-6 justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block mr-2 bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
-			<button class="text-2xl" type="button" @click="fetchTopics()">
-				<i class="bi-arrow-clockwise"></i>
+			<button type="button" @click="fetchTopics()"
+				class="text-2xl bi-arrow-clockwise">
 			</button>
 		</div>
 		<div class="h-full overflow-auto">
@@ -221,6 +221,6 @@ onBeforeUnmount(() => {
 		</div>
 	</div>
 	<CreateTopicDialog ref="createTopicDialog" :createTopic="createTopic" />
-	<SetConnectionDialog ref="setConnectionDialog" :connections="connections" :closable="!!store"
+	<SetConnectionDialog ref="setConnectionDialog" :connections="connections" :closable="!!connectionStore.connection"
 		:set-connection="setConnection" />
 </template>

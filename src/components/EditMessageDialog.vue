@@ -53,9 +53,10 @@ const setMonacoEditorSizes = () => {
 	monacoEditorSizes.value = undefined;
 
 	nextTick(() => {
+		const modal = dialog.value?.getModalElement();		
 		monacoEditorSizes.value = {
-			height: (dialog.value?.$el?.children?.[0]?.clientHeight || 250) - 200,
-			width: ((dialog.value?.$el?.children?.[0]?.clientWidth || 500)  / 2) - 40,
+			height: (modal?.clientHeight || 250) - 200,
+			width: ((modal?.clientWidth || 500)  / 2) - 40,
 		};
 	});
 };

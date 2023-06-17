@@ -2,18 +2,18 @@
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
 import { message } from '@tauri-apps/api/dialog';
-import { Ref, computed, inject, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Chip, { Tag } from '../components/Chip.vue';
-import Loader from '../components/Loader.vue';
+import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import SendStorageMessageStepper from '../components/SendStorageMessageStepper.vue';
+import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import { randomColor } from '../services/chipColors';
 import db from '../services/database';
 import { Connection } from '../types/connection';
 import { StorageMessage } from '../types/message';
 import { Setting, SettingKey } from '../types/settings';
-import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 
 type Message = {
 	id: number
@@ -38,7 +38,7 @@ if (connections.length <= 0) {
 	router.push('/settings');
 }
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
 const storeMessageToMessage = (storageMessage: StorageMessage) => {
 	let key = storageMessage.key;

@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { confirm, message } from '@tauri-apps/api/dialog';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import { KafkaManager } from '../services/kafka';
-import { Ref, computed, inject, onBeforeUnmount, ref } from 'vue';
 import { ConsumerGroup } from '../types/consumerGroup';
-import { confirm, message } from '@tauri-apps/api/dialog';
-import Loader from '../components/Loader.vue';
 
 await checkSettings('topics');
 
@@ -15,7 +15,7 @@ const kafka = new KafkaManager();
 
 const topicName = route.params.topicName as string;
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
 const groups = ref<ConsumerGroup[]>([]);
 

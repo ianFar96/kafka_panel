@@ -1,10 +1,10 @@
 
 <script setup lang="ts">
-import { Ref, inject, ref } from 'vue';
+import { ref } from 'vue';
+import { useLoader } from '../composables/loader';
 import { StorageMessage } from '../types/message';
-import ChooseTagsDialog from './ChooseTagsDialog.vue';
 import EditMessageDialog from './EditMessageDialog.vue';
-import Loader from './Loader.vue';
+import EditTagsDialog from './EditTagsDialog.vue';
 
 const selectedMessage = ref<StorageMessage>();
 
@@ -15,19 +15,19 @@ const props = defineProps<{
 defineExpose({
 	openDialog: (messageToEdit: StorageMessage) => {
 		selectedMessage.value = messageToEdit;
-		chooseTagsDialog.value?.openDialog(selectedMessage.value.tags);
+		editTagsDialog.value?.openDialog(selectedMessage.value.tags);
 	},
 	closeDialog: () => {
-		chooseTagsDialog.value?.closeDialog();
+		editTagsDialog.value?.closeDialog();
 		editMessageDialog.value?.closeDialog();
 	},
 });
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
 const tags = ref<string[]>([]);
 const setTags = (selectedTags: string[]) => {
-	chooseTagsDialog.value?.closeDialog();
+	editTagsDialog.value?.closeDialog();
 	tags.value = selectedTags;
 
 	editMessageDialog.value?.openDialog(selectedMessage.value);
@@ -48,11 +48,11 @@ const saveMessage = async (key: string, value: string) => {
 	editMessageDialog.value?.closeDialog();
 };
 
-const chooseTagsDialog = ref<InstanceType<typeof ChooseTagsDialog> | null>(null); // Template ref
+const editTagsDialog = ref<InstanceType<typeof EditTagsDialog> | null>(null); // Template ref
 const editMessageDialog = ref<InstanceType<typeof EditMessageDialog> | null>(null); // Template ref
 </script>
 
 <template>
-	<ChooseTagsDialog ref="chooseTagsDialog" :submit="setTags" :submit-button-text="'Next'" />
+	<EditTagsDialog ref="editTagsDialog" :submit="setTags" :submit-button-text="'Next'" />
 	<EditMessageDialog ref="editMessageDialog" :submit="saveMessage" :submit-button-text="'Save'" />
 </template>

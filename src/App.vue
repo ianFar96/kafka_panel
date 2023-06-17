@@ -61,7 +61,7 @@ const route = useRoute();
           </router-link>
         </div>
       </aside>
-      <main class="w-full overflow-auto p-10 relative">
+      <main id="page-content" class="w-full overflow-auto p-10 relative">
         <Loader ref="loader" />
         <RouterView v-slot="{ Component }">
           <template v-if="Component">

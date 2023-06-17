@@ -2,16 +2,16 @@
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
 import { message } from '@tauri-apps/api/dialog';
-import { Ref, computed, inject, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import ChooseTagsDialog from '../components/ChooseTagsDialog.vue';
 import EditMessageDialog from '../components/EditMessageDialog.vue';
-import Loader from '../components/Loader.vue';
+import EditTagsDialog from '../components/EditTagsDialog.vue';
+import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
 import { KafkaManager } from '../services/kafka';
-import { Setting, SettingKey } from '../types/settings';
 import { KafkaMessage } from '../types/message';
+import { Setting, SettingKey } from '../types/settings';
 
 type Message = {
 	key: Record<string, unknown> | string
@@ -34,7 +34,7 @@ const kafka = new KafkaManager();
 
 const topicName = route.params.topicName as string;
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
 const selectedMessage = ref<Message>();
 
@@ -114,10 +114,10 @@ const filteredMessages = computed(() => {
 		});
 });
 
-const chooseTagsDialog = ref<InstanceType<typeof ChooseTagsDialog> | null>(null); // Template ref
+const editTagsDialog = ref<InstanceType<typeof EditTagsDialog> | null>(null); // Template ref
 const chooseTags = (message: Message) => {
 	selectedMessage.value = message;
-	chooseTagsDialog.value?.openDialog();
+	editTagsDialog.value?.openDialog();
 };
 
 const saveMessage = async (tags: string[]) => {
@@ -250,5 +250,5 @@ onBeforeUnmount(() => {
 		</ul>
   </div>
   <EditMessageDialog ref="editMessageDialog" :submit="sendMessage" :submit-button-text="'Send'"/>
-  <ChooseTagsDialog ref="chooseTagsDialog" :submit="saveMessage" :submit-button-text="'Save'"/>
+  <EditTagsDialog ref="editTagsDialog" :submit="saveMessage" :submit-button-text="'Save'"/>
 </template>

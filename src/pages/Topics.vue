@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { confirm, message } from '@tauri-apps/api/dialog';
-import { Ref, computed, inject, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { computed, onActivated, onBeforeUnmount, onDeactivated, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import CreateTopicDialog from '../components/CreateTopicDialog.vue';
-import SetConnectionDialog from '../components/SetConnectionDialog.vue';
+import SetConnection from '../components/SetConnection.vue';
+import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
 import { KafkaManager } from '../services/kafka';
+import { useConnectionStore } from '../services/store';
 import { Connection } from '../types/connection';
 import { ConsumerGroupState } from '../types/consumerGroup';
 import { Setting, SettingKey } from '../types/settings';
 import { Topic } from '../types/topic';
-import { useConnectionStore } from '../services/store';
-import Loader from '../components/Loader.vue';
+import Dialog from '../components/Dialog.vue';
 
 await checkSettings('topics');
 
@@ -29,7 +30,7 @@ if (connections.length <= 0) {
 	router.push('/settings');
 }
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
 const connectionStore = useConnectionStore();
 const kafka = new KafkaManager();
@@ -42,7 +43,7 @@ const fetchTopics = async () => {
 	loader?.value?.show();
 	try {
 		topics.value = await kafka.listTopics();
-		await fetchTopicsState();
+		await startFetchTopicsState();
 	} catch (error) {
 		await message(`Error fetching topics: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -50,25 +51,34 @@ const fetchTopics = async () => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let timeout: any;
-const fetchTopicsState = async () => {
-	clearTimeout(timeout);
-	timeout = setTimeout(async () => {
-		await fetchTopicsState();
+let fetchTopicStateInterval: any;
+const startFetchTopicsState = async () => {
+	stopFetchTopicState();
+	fetchTopicStateInterval = setInterval(async () => {
+		fetchTopicsState();
 	}, 5000);
-
+	await fetchTopicsState();
+};
+const stopFetchTopicState = () => {
+	clearInterval(fetchTopicStateInterval);
+};
+const fetchTopicsState = async () => {
 	try {
 		topicsState.value = await kafka.getTopicsState();
 	} catch (error) {
 		console.error(`Error fetching topics state: ${error}`, { title: 'Error', type: 'error' });
 	}
 };
+
 onDeactivated(() => {
-	clearTimeout(timeout);
+	stopFetchTopicState();
+	setConnectionDialog?.value?.closeDialog();
 });
 onActivated(async () => {
 	if (connectionStore.connection) {
-		await fetchTopicsState();
+		await startFetchTopicsState();
+	} else {
+		setConnectionDialog?.value?.openDialog();
 	}
 });
 
@@ -102,28 +112,32 @@ const removeTopic = async (topic: Topic) => {
 	await fetchTopics();
 };
 
-const setConnectionDialog = ref<InstanceType<typeof SetConnectionDialog> | null>(null); // Template ref
+const setConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const setConnection = async (newConnection: Connection) => {
-	connectionStore.set(newConnection);
+	// Clean slate
+	topics.value = [];
+	stopFetchTopicState();
+	connectionStore.unset();
 
 	loader?.value?.show();
 	try {
+		// Set connection and make sure it works
 		await kafka.setConnection(
 			newConnection.brokers,
 			newConnection.auth,
 			newConnection.groupPrefix
 		);
+		topics.value = await kafka.listTopics();
+
+		await startFetchTopicsState();
+		connectionStore.set(newConnection);
+		setConnectionDialog.value?.closeDialog();
 	} catch (error) {
 		await message(`Error setting connection: ${error}`, { title: 'Error', type: 'error' });
 	}
+
 	loader?.value?.hide();
-
-	await fetchTopics();
 };
-
-onMounted(() => {
-	setConnectionDialog?.value?.openDialog();
-});
 
 const searchQuery = ref('');
 const filteredTopics = computed(() => {
@@ -221,6 +235,8 @@ onBeforeUnmount(() => {
 		</div>
 	</div>
 	<CreateTopicDialog ref="createTopicDialog" :createTopic="createTopic" />
-	<SetConnectionDialog ref="setConnectionDialog" :connections="connections" :closable="!!connectionStore.connection"
-		:set-connection="setConnection" />
+
+  <Dialog ref="setConnectionDialog" :title="'Choose Connection'">
+		<SetConnection :connections="connections" :set-connection="setConnection" />
+  </Dialog>
 </template>

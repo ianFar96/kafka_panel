@@ -1,15 +1,16 @@
 
 <script setup lang="ts">
 import { message } from '@tauri-apps/api/dialog';
-import { Ref, inject, ref } from 'vue';
+import { ref } from 'vue';
+import { useLoader } from '../composables/loader';
 import { KafkaManager } from '../services/kafka';
 import { Connection } from '../types/connection';
 import { SendMessage } from '../types/message';
-import Loader from './Loader.vue';
-import EditMessageDialog from './EditMessageDialog.vue';
-import SetConnectionDialog from './SetConnectionDialog.vue';
 import { Topic } from '../types/topic';
+import EditMessageDialog from './EditMessageDialog.vue';
 import SelectTopicDialog from './SelectTopicDialog.vue';
+import SetConnection from './SetConnection.vue';
+import Dialog from './Dialog.vue';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
@@ -30,11 +31,11 @@ defineExpose({
 	},
 });
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
 const kafka = new KafkaManager();
 
-const setConnectionDialog = ref<InstanceType<typeof SetConnectionDialog> | null>(null); // Template ref
+const setConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const editMessageDialog = ref<InstanceType<typeof EditMessageDialog> | null>(null); // Template ref
 const selectTopicDialog = ref<InstanceType<typeof SelectTopicDialog> | null>(null); // Template ref
 
@@ -74,6 +75,8 @@ const sendMessage = async (key: string, value: string) => {
 <template>
   <EditMessageDialog ref="editMessageDialog" :submit="sendMessage" :submit-button-text="'Send'" />
   <SelectTopicDialog ref="selectTopicDialog" :submit="selectTopic" :topics="topics" />
-	<SetConnectionDialog ref="setConnectionDialog" :connections="connections" :closable="true"
-		:set-connection="setConnection" />
+
+	<Dialog ref="setConnectionDialog" :title="'Choose Connection'">
+		<SetConnection :connections="connections" :set-connection="setConnection" />
+  </Dialog>
 </template>

@@ -36,7 +36,7 @@ defineExpose({
 </script>
 
 <template>
-  <Dialog ref="dialog" :title="'Select a topic'" :closable="true" modal-class="flex flex-col">
+  <Dialog ref="dialog" :title="'Select a topic'" modal-class="flex flex-col">
     <div class="mb-6 flex justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">

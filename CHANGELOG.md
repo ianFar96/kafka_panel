@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0
+
+### Added
+
+- Messages storage page
+
 ## 0.0.4
 
 ### Fix

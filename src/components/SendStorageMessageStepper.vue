@@ -11,8 +11,8 @@ import EditMessage from './EditMessage.vue';
 import SelectTopic from './SelectTopic.vue';
 import SelectConnection from './SelectConnection.vue';
 import Dialog from './Dialog.vue';
-
-type Steps = 'connection' | 'topic' | 'message'
+import Stepper, { Step } from './Stepper.vue';
+import { useConnectionStore } from '../services/store';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
@@ -20,15 +20,18 @@ const selectedMessage = ref<SendMessage>();
 
 const selectedTopic = ref<Topic>();
 
-const step = ref<Steps>('connection');
-const stepTitle = ref<string>('');
+const steps: Step[] = [
+	{name: 'connection', label: 'Select connection'},
+	{name: 'topic', label: 'Select topic'},
+	{name: 'message', label: 'Send message'},
+];
+const activeStep = ref<Step>(steps[0]);
 
 defineExpose({
 	openDialog: (settingsConnections: Connection[], messageToSend: SendMessage) => {
 		connections.value = settingsConnections;
 		selectedMessage.value = messageToSend;
-		step.value = 'connection';
-		stepTitle.value = 'Select connection';
+		activeStep.value = steps[0];
 		stepperDialog.value?.open();
 	},
 	closeDialog: () => {
@@ -39,8 +42,27 @@ defineExpose({
 const loader = useLoader();
 
 const kafka = new KafkaManager();
+const connectionStore = useConnectionStore();
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
+const onStepClick = (step: Step) => {
+	switch (step.name) {
+	case 'topic':
+		if (connectionStore.connection) {
+			activeStep.value = step;
+		}
+		break;
+	case 'message':
+		if (connectionStore.connection && selectedTopic.value) {
+			activeStep.value = step;
+		}
+		break;
+	
+	default:
+		activeStep.value = step;
+		break;
+	}
+};
 
 const setConnection = async (connection: Connection) => {
 	loader?.value?.show();
@@ -50,12 +72,12 @@ const setConnection = async (connection: Connection) => {
 			connection.auth,
 			connection.groupPrefix
 		);
+		connectionStore.set(connection);
 
 		topics.value = await kafka.listTopics();
 
 		// Next step
-		step.value = 'topic';
-		stepTitle.value = 'Select topic';
+		activeStep.value = steps[1];
 	} catch (error) {
 		await message(`Error setting the connection: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -66,8 +88,7 @@ const selectTopic = async (topic: Topic) => {
 	selectedTopic.value = topic;
 
 	// Next step
-	step.value = 'message';
-	stepTitle.value = 'Send message';
+	activeStep.value = steps[2];
 };
 
 const sendMessage = async (key: string, value: string) => {
@@ -84,12 +105,18 @@ const sendMessage = async (key: string, value: string) => {
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Send storage message" :modal-class="step === 'message' ? 'w-full h-full' : ''">
-		<!-- TODO: show step nicer -->
-		<p>STEP: {{ stepTitle }}</p>
-
-		<SelectConnection v-if="step === 'connection'" :connections="connections" :submit="setConnection" />
-		<SelectTopic v-if="step === 'topic'" :submit="selectTopic" :topics="topics" />
-		<EditMessage v-if="step === 'message'" :message="selectedMessage!" :submit="sendMessage" :submit-button-text="'Send'" />
+	<Dialog ref="stepperDialog" title="Send storage message" :modal-class="activeStep.name === 'message' ? 'w-full h-full' : ''">
+		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
+			<!-- Steps -->
+			<template #connection>
+				<SelectConnection :connections="connections" :submit="setConnection" />
+			</template>
+			<template #topic>
+				<SelectTopic :submit="selectTopic" :topics="topics" />
+			</template>
+			<template #message>
+				<EditMessage :message="selectedMessage!" :submit="sendMessage" :submit-button-text="'Send'" />
+			</template>
+		</Stepper>
   </Dialog>
 </template>

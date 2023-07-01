@@ -7,13 +7,16 @@ import EditTags from './EditTags.vue';
 import EditMessage from './EditMessage.vue';
 import Dialog from './Dialog.vue';
 import { clone } from 'ramda';
+import Stepper, { Step } from './Stepper.vue';
 
-type Steps = 'tags' | 'message'
+const steps: Step[] = [
+	{name:'tags', label: 'Edit tags'},
+	{name:'message', label: 'Edit message'},
+];
 
 const selectedMessage = ref<StorageMessage>();
 
-const step = ref<Steps>('tags');
-const stepTitle = ref<string>('');
+const activeStep = ref<Step>(steps[0]);
 
 const props = defineProps<{
   submit: (message: StorageMessage) => Promise<unknown> | unknown
@@ -22,8 +25,7 @@ const props = defineProps<{
 defineExpose({
 	openDialog: (messageToEdit: StorageMessage) => {
 		selectedMessage.value = clone(messageToEdit);
-		step.value = 'tags';
-		stepTitle.value = 'Edit tags';
+		activeStep.value = steps[0];
 		stepperDialog.value?.open();
 	},
 	closeDialog: () => {
@@ -36,8 +38,7 @@ const loader = useLoader();
 const setTags = (selectedTags: string[]) => {
 	selectedMessage.value!.tags = selectedTags;
 
-	step.value = 'message';
-	stepTitle.value = 'Edit message';
+	activeStep.value = steps[1];
 };
 
 const saveMessage = async (key: string, value: string) => {
@@ -56,14 +57,20 @@ const saveMessage = async (key: string, value: string) => {
 };
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
+const onStepClick = (step: Step) => {
+	activeStep.value = step;
+};
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Edit storage message" :modal-class="step === 'message' ? 'w-full h-full' : ''">
-		<!-- TODO: show step nicer -->
-		<p>STEP: {{ stepTitle }}</p>
-
-		<EditTags v-if="step === 'tags'" :tags="selectedMessage?.tags || []" :submit="setTags" :submit-button-text="'Next'" />
-		<EditMessage v-if="step === 'message'" :message="selectedMessage" :submit="saveMessage" :submit-button-text="'Save'" />
+	<Dialog ref="stepperDialog" title="Edit storage message" :modal-class="activeStep.name === 'message' ? 'w-full h-full' : ''">
+		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
+			<template #tags>
+				<EditTags class="mt-8" :tags="selectedMessage?.tags || []" :submit="setTags" :submit-button-text="'Next'" />
+			</template>
+			<template #message>
+				<EditMessage :message="selectedMessage" :submit="saveMessage" :submit-button-text="'Save'" />
+			</template>
+		</Stepper>
 	</Dialog>
 </template>

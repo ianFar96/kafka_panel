@@ -130,10 +130,11 @@ const setConnection = async (newConnection: Connection) => {
 			newConnection.auth,
 			newConnection.groupPrefix
 		);
+		connectionStore.set(newConnection);
+
 		topics.value = await kafka.listTopics();
 
 		await startFetchTopicsState();
-		connectionStore.set(newConnection);
 	} catch (error) {
 		await message(`Error setting connection: ${error}`, { title: 'Error', type: 'error' });
 	}

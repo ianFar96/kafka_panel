@@ -80,7 +80,7 @@ onBeforeUnmount(() => {
 	<form class="h-full flex flex-col" @submit="handleSubmit()">
 		<div class="flex h-full">
 			<div class="flex flex-col w-full">
-				<label>Key</label>
+				<label class="mb-4">Key</label>
 				<div class="h-full">
 					<MonacoEditor v-if="monacoEditorSizes" theme="vs-dark" :options="editorOptions" language="json"
 						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" v-model:value="key">
@@ -89,7 +89,7 @@ onBeforeUnmount(() => {
 			</div>
 			<div class="h-full bg-white w-px mx-4 shrink-0"></div>
 			<div class="flex flex-col w-full">
-				<label>Value</label>
+				<label class="mb-4">Value</label>
 				<div class="h-full" ref="valueSlotRef">
 					<MonacoEditor v-if="monacoEditorSizes" theme="vs-dark" :options="editorOptions" language="json"
 						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" v-model:value="value">

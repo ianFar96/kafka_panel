@@ -14,8 +14,9 @@ const onChange = (connection: Connection) => {
 </script>
 
 <template>
-  <ul class="-mt-4">
-    <li :class="{'border-b': key !== connections.length - 1}" :key="key" class="border-white py-4 cursor-pointer"
+  <ul>
+    <li :class="{'border-b': key !== connections.length - 1}" :key="key" 
+      class="border-white cursor-pointer hover:bg-[#252526] p-3"
       v-for="connection, key of props.connections" @click="onChange(connection)">
       {{ connection.name }}
     </li>

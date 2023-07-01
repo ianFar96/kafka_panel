@@ -42,7 +42,7 @@ const addTagOnEnter = (event: KeyboardEvent) => {
 </script>
 
 <template>
-	<div class="h-full">
+	<div v-bind.sync="$attrs" class="h-full">
 		<input class="bg-transparent border-b-white border-b outline-none px-2 py-1 w-full mb-4"
 			placeholder="Type the tag and press enter" autofocus ref="tagsInput" 
 			@keyup="addTagOnEnter($event)" type="text">

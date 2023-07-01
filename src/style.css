@@ -5,7 +5,7 @@
 
 @layer components {
   body {
-    @apply bg-[#1e1e1e] text-white;
+    @apply bg-gray-900 text-white;
   }
 }
 

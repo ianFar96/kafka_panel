@@ -34,7 +34,7 @@ const submit = (topic: Topic) => {
 
 	<ul>
 		<li v-for="topic, index in filteredTopics" :key="index" :class="{'border-b': index !== filteredTopics.length - 1}"
-			class="border-white overflow-hidden flex justify-between p-3 cursor-pointer hover:bg-[#252526]" @click="submit(topic)">
+			class="border-white overflow-hidden flex justify-between p-3 cursor-pointer hover:bg-gray-700" @click="submit(topic)">
 			<span class="mr-4">{{ topic.name }}</span>
 			<i class="bi-arrow-right text-xl"></i>
 		</li>

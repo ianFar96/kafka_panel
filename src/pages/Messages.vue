@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
 			</h2>
 			<div class="flex">
 				<router-link title="Topic's Consumer groups"
-					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-blue-500 transition-colors hover:text-blue-500 flex items-center mr-4"
+					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400 flex items-center mr-4"
 					:to="`/topics/${topicName}/groups`">
 					<i class="mr-2 bi-people cursor-pointer"></i>
 					Groups

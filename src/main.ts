@@ -1,7 +1,7 @@
 import hljsVuePlugin from '@highlightjs/vue-plugin';
 import hljs from 'highlight.js/lib/core';
 import json from 'highlight.js/lib/languages/json';
-import 'highlight.js/styles/atom-one-dark.css';
+import 'highlight.js/styles/vs2015.css';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { createApp } from 'vue';

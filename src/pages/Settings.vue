@@ -11,8 +11,9 @@ const editorOptions = {
 	colorDecorators: true,
 	lineHeight: 24,
 	tabSize: 2,
+	fontSize: 16,
 	lineNumbers: 'off',
-	lineDecorationsWidth: 0,
+	lineDecorationsWidth: 5,
 	minimap: {
 		enabled: false
 	},
@@ -64,8 +65,8 @@ onBeforeUnmount(() => {
 <template>
 	<div ref="page" >
 		<div class="mb-4" v-for="setting, key in settings" :key="key">
-			<label class="mb-1 block text-lg">{{ setting.label }}</label>
-			<div v-if="setting.type === 'json'">
+			<label class="mb-2 block text-lg">{{ setting.label }}</label>
+			<div class="rounded-xl overflow-hidden" v-if="setting.type === 'json'">
 				<template v-if="monacoEditorSizes">
 					<MonacoEditor class="border-b border-gray-400 mb-1" theme="vs-dark" :options="editorOptions" language="json"
 						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" 

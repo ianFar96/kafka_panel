@@ -23,15 +23,15 @@ const isActive = (step?: Step) => {
   <ul v-bind.sync="$attrs" class="flex w-full justify-center">
     <template v-for="step, index in props.steps" :key="step.name">
       <li class="flex">
-        <button @click="onStepClick(step)" class="whitespace-nowrap flex items-center text-gray-400" :class="{'text-white': isActive(step)}">
-          <div class="relative rounded-full border p-4 block mr-2" :class="isActive(step) ? 'border-white' : 'border-gray-400'">
+        <button @click="onStepClick(step)" class="whitespace-nowrap flex items-center text-white" :class="{'text-orange-400': isActive(step)}">
+          <div class="relative rounded-full border p-4 block mr-2" :class="isActive(step) ? 'border-orange-400' : 'border-white'">
             <span class="text-lg absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">{{ index + 1 }}</span>
           </div>
           <span>{{ step.label }}</span>
         </button>
       </li>
       <li v-if="index < (props.steps.length - 1)" class="mx-4 w-[250px] flex items-center">
-        <div class="w-full h-px" :class="isActive(props.steps[index + 1]) ? 'bg-white' : 'bg-gray-400'"></div>
+        <div class="w-full h-px" :class="isActive(props.steps[index + 1]) ? 'bg-orange-400' : 'bg-white'"></div>
       </li>
     </template>
   </ul>

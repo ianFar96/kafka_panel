@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
 					New topic
 				</button>
 				<button
-					class="border border-white rounded py-1 px-4 hover:border-blue-500 transition-colors hover:text-blue-500 whitespace-nowrap flex items-center"
+					class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400 whitespace-nowrap flex items-center"
 					@click="selectConnectionDialog?.open()">
 					<i class="bi bi-wifi mr-2"></i>
 					Change connection
@@ -195,7 +195,7 @@ onBeforeUnmount(() => {
 		</div>
 		<div class="h-full overflow-auto">
 			<table class="table-auto w-full border-spacing-0 border-separate">
-				<thead class="sticky top-0 bg-[#252526] z-10">
+				<thead class="sticky top-0 bg-gray-800 z-10">
 					<tr>
 						<th class="border-l border-y border-white text-left px-4 py-2">NAME</th>
 						<th class="border-y border-white px-4 py-2">PARTITIONS</th>
@@ -203,7 +203,7 @@ onBeforeUnmount(() => {
 					</tr>
 				</thead>
 				<tbody>
-					<tr class="hover:bg-[#252526]" v-for="topic, key of filteredTopics" :key="key">
+					<tr class="hover:bg-gray-800" v-for="topic, key of filteredTopics" :key="key">
 						<td :class="key !== filteredTopics.length - 1 ? 'border-b' : ''"
 							class="border-white py-3 px-4 w-full relative">
 							<div class="flex items-center">
@@ -224,10 +224,10 @@ onBeforeUnmount(() => {
 						</td>
 						<td :class="key !== filteredTopics.length - 1 ? 'border-b' : ''" class="border-white py-3 px-4 text-right flex">
 							<router-link title="Messages" class="mr-3" :to="`/topics/${topic.name}/messages`">
-								<i class="text-2xl bi-envelope cursor-pointer transition-colors hover:text-blue-600"></i>
+								<i class="text-2xl bi-envelope cursor-pointer transition-colors hover:text-orange-400"></i>
 							</router-link>
 							<router-link title="Consumer groups" class="mr-3" :to="`/topics/${topic.name}/groups`">
-								<i class="text-2xl bi-people cursor-pointer transition-colors hover:text-blue-600"></i>
+								<i class="text-2xl bi-people cursor-pointer transition-colors hover:text-orange-400"></i>
 							</router-link>
 							<button type="button" title="Delete topic" @click="removeTopic(topic)" 
 								class="text-2xl bi-trash cursor-pointer transition-colors hover:text-red-500">

@@ -18,30 +18,30 @@ const route = useRoute();
 
 <template>
   <div class="h-screen overflow-hidden flex flex-col">
-    <nav data-tauri-drag-region class="flex-shrink-0 flex items-center justify-between bg-orange-900">
+    <nav data-tauri-drag-region class="flex-shrink-0 flex items-center justify-between bg-gray-700">
       <div class="flex items-center">
         <button @click="router.back()"
-          class="bi-chevron-left cursor-pointer hover:bg-orange-800 text-sm px-3.5 py-2.5">
+          class="bi-chevron-left cursor-pointer hover:bg-gray-600 text-sm px-3.5 py-2.5">
         </button>
         <button @click="router.forward()"
-          class="bi-chevron-right cursor-pointer hover:bg-orange-800 text-sm px-3.5 py-2.5">
+          class="bi-chevron-right cursor-pointer hover:bg-gray-600 text-sm px-3.5 py-2.5">
         </button>
       </div>
       <span class="text-sm absolute left-1/2 -translate-x-1/2">Kafka Panel - {{ title }}</span>
       <div class="flex items-center">
         <button @click="appWindow.minimize()"
-          class="bi-dash-lg cursor-pointer hover:bg-orange-800 text-xs px-4 py-3" alt="minimize">
+          class="bi-dash-lg cursor-pointer hover:bg-gray-600 text-xs px-4 py-3" alt="minimize">
         </button>
         <button @click="appWindow.toggleMaximize()"
-          class="bi-square cursor-pointer hover:bg-orange-800 text-xs px-4 py-3" alt="maximize">
+          class="bi-square cursor-pointer hover:bg-gray-600 text-xs px-4 py-3" alt="maximize">
         </button>
         <button @click="appWindow.close()"
-          class="bi-x-lg cursor-pointer hover:bg-orange-800 text-xs px-4 py-3" alt="close">
+          class="bi-x-lg cursor-pointer hover:bg-gray-600 text-xs px-4 py-3" alt="close">
         </button>
       </div>
     </nav>
     <section class="flex-auto flex items-stretch max-h-[calc(100%-40px)]">
-      <aside class="flex-shrink-0 bg-[#252526] flex flex-col justify-between">
+      <aside class="flex-shrink-0 bg-gray-800 flex flex-col justify-between">
         <div>
           <router-link to="/topics"
             class="w-16 h-16 flex justify-center items-center cursor-pointer hover:border-l border-white mt-4"

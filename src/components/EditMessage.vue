@@ -22,8 +22,9 @@ const editorOptions = {
 	colorDecorators: true,
 	lineHeight: 24,
 	tabSize: 2,
+	fontSize: 16,
 	lineNumbers: 'off',
-	lineDecorationsWidth: 0,
+	lineDecorationsWidth: 5,
 	minimap: {
 		enabled: false
 	},
@@ -59,7 +60,6 @@ const setMonacoEditorSizes = () => {
 
 	nextTick(() => {
 		monacoEditorSizes.value = {
-			// TODO: improve editor sizes, they are not good enough
 			height: (valueSlotRef.value?.clientHeight || 250),
 			width: (valueSlotRef.value?.clientWidth || 500),
 		};
@@ -81,7 +81,7 @@ onBeforeUnmount(() => {
 		<div class="flex h-full">
 			<div class="flex flex-col w-full">
 				<label class="mb-4">Key</label>
-				<div class="h-full">
+				<div class="h-full rounded-xl overflow-hidden">
 					<MonacoEditor v-if="monacoEditorSizes" theme="vs-dark" :options="editorOptions" language="json"
 						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" v-model:value="key">
 					</MonacoEditor>
@@ -90,7 +90,7 @@ onBeforeUnmount(() => {
 			<div class="h-full bg-white w-px mx-4 shrink-0"></div>
 			<div class="flex flex-col w-full">
 				<label class="mb-4">Value</label>
-				<div class="h-full" ref="valueSlotRef">
+				<div class="h-full rounded-xl overflow-hidden" ref="valueSlotRef">
 					<MonacoEditor v-if="monacoEditorSizes" theme="vs-dark" :options="editorOptions" language="json"
 						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" v-model:value="value">
 					</MonacoEditor>

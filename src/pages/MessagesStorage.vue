@@ -167,7 +167,7 @@ const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStep
 					<div class="absolute top-4 right-4">
 						<button @click="editMessageStorageStepper?.openDialog(messageToStorageMessage(message))"
 							title="Edit tags and message"
-							class="text-xl translate-y-px bi-pencil-square transition-colors duration-300 cursor-pointer mr-3 hover:text-blue-500">
+							class="text-xl translate-y-px bi-pencil-square transition-colors duration-300 cursor-pointer mr-3 hover:text-orange-400">
 						</button>
 						<button @click="deleteMessage(message)"
 							title="Delete message"

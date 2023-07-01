@@ -4,11 +4,11 @@ import { Connection } from '../types/connection';
 
 const props = defineProps<{
   connections: Connection[]
-  setConnection: (connection: Connection) => Promise<void>
+  submit: (connection: Connection) => Promise<void>
 }>();
 
 const onChange = (connection: Connection) => {
-	props.setConnection(connection);
+	props.submit(connection);
 };
 
 </script>

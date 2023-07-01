@@ -3,10 +3,17 @@
 import { ref } from 'vue';
 import { useLoader } from '../composables/loader';
 import { StorageMessage } from '../types/message';
-import EditMessageDialog from './EditMessageDialog.vue';
-import EditTagsDialog from './EditTagsDialog.vue';
+import EditTags from './EditTags.vue';
+import EditMessage from './EditMessage.vue';
+import Dialog from './Dialog.vue';
+import { clone } from 'ramda';
+
+type Steps = 'tags' | 'message'
 
 const selectedMessage = ref<StorageMessage>();
+
+const step = ref<Steps>('tags');
+const stepTitle = ref<string>('');
 
 const props = defineProps<{
   submit: (message: StorageMessage) => Promise<unknown> | unknown
@@ -14,23 +21,23 @@ const props = defineProps<{
 
 defineExpose({
 	openDialog: (messageToEdit: StorageMessage) => {
-		selectedMessage.value = messageToEdit;
-		editTagsDialog.value?.openDialog(selectedMessage.value.tags);
+		selectedMessage.value = clone(messageToEdit);
+		step.value = 'tags';
+		stepTitle.value = 'Edit tags';
+		stepperDialog.value?.open();
 	},
 	closeDialog: () => {
-		editTagsDialog.value?.closeDialog();
-		editMessageDialog.value?.closeDialog();
+		stepperDialog.value?.close();
 	},
 });
 
 const loader = useLoader();
 
-const tags = ref<string[]>([]);
 const setTags = (selectedTags: string[]) => {
-	editTagsDialog.value?.closeDialog();
-	tags.value = selectedTags;
+	selectedMessage.value!.tags = selectedTags;
 
-	editMessageDialog.value?.openDialog(selectedMessage.value);
+	step.value = 'message';
+	stepTitle.value = 'Edit message';
 };
 
 const saveMessage = async (key: string, value: string) => {
@@ -41,18 +48,22 @@ const saveMessage = async (key: string, value: string) => {
 		id: selectedMessage.value!.id,
 		key,
 		value,
-		tags: tags.value
+		tags: selectedMessage.value!.tags
 	});
 	loader?.value?.hide();
 
-	editMessageDialog.value?.closeDialog();
+	stepperDialog.value?.close();
 };
 
-const editTagsDialog = ref<InstanceType<typeof EditTagsDialog> | null>(null); // Template ref
-const editMessageDialog = ref<InstanceType<typeof EditMessageDialog> | null>(null); // Template ref
+const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 </script>
 
 <template>
-	<EditTagsDialog ref="editTagsDialog" :submit="setTags" :submit-button-text="'Next'" />
-	<EditMessageDialog ref="editMessageDialog" :submit="saveMessage" :submit-button-text="'Save'" />
+	<Dialog ref="stepperDialog" title="Edit storage message" :modal-class="step === 'message' ? 'w-full h-full' : ''">
+		<!-- TODO: show step nicer -->
+		<p>STEP: {{ stepTitle }}</p>
+
+		<EditTags v-if="step === 'tags'" :tags="selectedMessage?.tags || []" :submit="setTags" :submit-button-text="'Next'" />
+		<EditMessage v-if="step === 'message'" :message="selectedMessage" :submit="saveMessage" :submit-button-text="'Save'" />
+	</Dialog>
 </template>

@@ -17,8 +17,8 @@ import { Setting, SettingKey } from '../types/settings';
 
 type Message = {
 	id: number
-	key: string
-	value: string
+	key: Record<string, unknown> | string
+  value: Record<string, unknown> | string
 	tags: Tag[]
 	valueVisible: boolean
 }
@@ -40,7 +40,7 @@ if (connections.length <= 0) {
 
 const loader = useLoader();
 
-const storeMessageToMessage = (storageMessage: StorageMessage) => {
+const storeMessageToMessage = (storageMessage: StorageMessage): Message => {
 	let key = storageMessage.key;
 	try {
 		key = JSON.parse(storageMessage.key);
@@ -177,7 +177,7 @@ const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStep
 							title="Copy JSON"
 							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="sendStorageMessageStepper?.openDialog(connections, message)"
+						<button @click="sendStorageMessageStepper?.openDialog(connections, messageToStorageMessage(message))"
 							title="Send again"
 							class="text-xl bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
 						</button>

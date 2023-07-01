@@ -7,10 +7,12 @@ import { KafkaManager } from '../services/kafka';
 import { Connection } from '../types/connection';
 import { SendMessage } from '../types/message';
 import { Topic } from '../types/topic';
-import EditMessageDialog from './EditMessageDialog.vue';
-import SelectTopicDialog from './SelectTopicDialog.vue';
-import SetConnection from './SetConnection.vue';
+import EditMessage from './EditMessage.vue';
+import SelectTopic from './SelectTopic.vue';
+import SelectConnection from './SelectConnection.vue';
 import Dialog from './Dialog.vue';
+
+type Steps = 'connection' | 'topic' | 'message'
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
@@ -18,16 +20,19 @@ const selectedMessage = ref<SendMessage>();
 
 const selectedTopic = ref<Topic>();
 
+const step = ref<Steps>('connection');
+const stepTitle = ref<string>('');
+
 defineExpose({
 	openDialog: (settingsConnections: Connection[], messageToSend: SendMessage) => {
 		connections.value = settingsConnections;
 		selectedMessage.value = messageToSend;
-		setConnectionDialog.value?.openDialog();
+		step.value = 'connection';
+		stepTitle.value = 'Select connection';
+		stepperDialog.value?.open();
 	},
 	closeDialog: () => {
-		setConnectionDialog.value?.closeDialog();
-		selectTopicDialog.value?.closeDialog();
-		editMessageDialog.value?.closeDialog();
+		stepperDialog.value?.close();
 	},
 });
 
@@ -35,9 +40,7 @@ const loader = useLoader();
 
 const kafka = new KafkaManager();
 
-const setConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const editMessageDialog = ref<InstanceType<typeof EditMessageDialog> | null>(null); // Template ref
-const selectTopicDialog = ref<InstanceType<typeof SelectTopicDialog> | null>(null); // Template ref
+const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
 const setConnection = async (connection: Connection) => {
 	loader?.value?.show();
@@ -49,7 +52,10 @@ const setConnection = async (connection: Connection) => {
 		);
 
 		topics.value = await kafka.listTopics();
-		selectTopicDialog.value?.openDialog();
+
+		// Next step
+		step.value = 'topic';
+		stepTitle.value = 'Select topic';
 	} catch (error) {
 		await message(`Error setting the connection: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -58,13 +64,18 @@ const setConnection = async (connection: Connection) => {
 
 const selectTopic = async (topic: Topic) => {
 	selectedTopic.value = topic;
-	editMessageDialog.value?.openDialog(selectedMessage.value!);
+
+	// Next step
+	step.value = 'message';
+	stepTitle.value = 'Send message';
 };
 
 const sendMessage = async (key: string, value: string) => {
 	loader?.value?.show();
 	try {
 		await kafka.sendMessage(selectedTopic.value!.name, key, value);
+
+		stepperDialog.value?.close();
 	} catch (error) {
 		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -73,10 +84,12 @@ const sendMessage = async (key: string, value: string) => {
 </script>
 
 <template>
-  <EditMessageDialog ref="editMessageDialog" :submit="sendMessage" :submit-button-text="'Send'" />
-  <SelectTopicDialog ref="selectTopicDialog" :submit="selectTopic" :topics="topics" />
+	<Dialog ref="stepperDialog" title="Send storage message" :modal-class="step === 'message' ? 'w-full h-full' : ''">
+		<!-- TODO: show step nicer -->
+		<p>STEP: {{ stepTitle }}</p>
 
-	<Dialog ref="setConnectionDialog" :title="'Choose Connection'">
-		<SetConnection :connections="connections" :set-connection="setConnection" />
+		<SelectConnection v-if="step === 'connection'" :connections="connections" :submit="setConnection" />
+		<SelectTopic v-if="step === 'topic'" :submit="selectTopic" :topics="topics" />
+		<EditMessage v-if="step === 'message'" :message="selectedMessage!" :submit="sendMessage" :submit-button-text="'Send'" />
   </Dialog>
 </template>

@@ -2,8 +2,8 @@
 import { confirm, message } from '@tauri-apps/api/dialog';
 import { computed, onActivated, onBeforeUnmount, onDeactivated, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import CreateTopicDialog from '../components/CreateTopicDialog.vue';
-import SetConnection from '../components/SetConnection.vue';
+import CreateTopic from '../components/CreateTopic.vue';
+import SelectConnection from '../components/SelectConnection.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
@@ -72,17 +72,17 @@ const fetchTopicsState = async () => {
 
 onDeactivated(() => {
 	stopFetchTopicState();
-	setConnectionDialog?.value?.closeDialog();
+	selectConnectionDialog?.value?.close();
 });
 onActivated(async () => {
 	if (connectionStore.connection) {
 		await startFetchTopicsState();
 	} else {
-		setConnectionDialog?.value?.openDialog();
+		selectConnectionDialog?.value?.open();
 	}
 });
 
-const createTopicDialog = ref<InstanceType<typeof CreateTopicDialog> | null>(null); // Template ref
+const createTopicDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
 const createTopic = async (name: string, partitions?: number, replicationFactor?: number) => {
 	if (!name) return;
@@ -94,6 +94,8 @@ const createTopic = async (name: string, partitions?: number, replicationFactor?
 		await message(`Error creating topic: ${error}`, { title: 'Error', type: 'error' });
 	}
 	loader?.value?.hide();
+
+	createTopicDialog.value?.close();
 
 	await fetchTopics();
 };
@@ -112,7 +114,8 @@ const removeTopic = async (topic: Topic) => {
 	await fetchTopics();
 };
 
-const setConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
+const selectConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
+
 const setConnection = async (newConnection: Connection) => {
 	// Clean slate
 	topics.value = [];
@@ -131,12 +134,12 @@ const setConnection = async (newConnection: Connection) => {
 
 		await startFetchTopicsState();
 		connectionStore.set(newConnection);
-		setConnectionDialog.value?.closeDialog();
 	} catch (error) {
 		await message(`Error setting connection: ${error}`, { title: 'Error', type: 'error' });
 	}
-
 	loader?.value?.hide();
+
+	selectConnectionDialog.value?.close();
 };
 
 const searchQuery = ref('');
@@ -170,13 +173,13 @@ onBeforeUnmount(() => {
 			<div class="flex">
 				<button
 					class="mr-4 border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 whitespace-nowrap flex items-center"
-					@click="createTopicDialog?.openDialog()">
+					@click="createTopicDialog?.open()">
 					<i class="bi bi-plus-lg mr-2 -ml-1"></i>
 					New topic
 				</button>
 				<button
 					class="border border-white rounded py-1 px-4 hover:border-blue-500 transition-colors hover:text-blue-500 whitespace-nowrap flex items-center"
-					@click="setConnectionDialog?.openDialog()">
+					@click="selectConnectionDialog?.open()">
 					<i class="bi bi-wifi mr-2"></i>
 					Change connection
 				</button>
@@ -234,9 +237,11 @@ onBeforeUnmount(() => {
 			</table>
 		</div>
 	</div>
-	<CreateTopicDialog ref="createTopicDialog" :createTopic="createTopic" />
+  <Dialog ref="createTopicDialog" :title="'Create topic'">
+		<CreateTopic :createTopic="createTopic" />
+	</Dialog>
 
-  <Dialog ref="setConnectionDialog" :title="'Choose Connection'">
-		<SetConnection :connections="connections" :set-connection="setConnection" />
+  <Dialog ref="selectConnectionDialog" :title="'Choose Connection'">
+		<SelectConnection :connections="connections" :submit="setConnection" />
   </Dialog>
 </template>

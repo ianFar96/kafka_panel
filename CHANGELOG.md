@@ -1,5 +1,14 @@
 # Changelog
 
+### Changed
+
+- Refactor components with better organization
+- New theme based on tailwind's colors
+
+### Added
+
+- Steppers for the multi step modals
+
 ## 0.1.0
 
 ### Added

@@ -50,6 +50,14 @@ In Groups page you see the consumer groups connected to your topic with the stat
 
 You can also move the offsets forward to skip certain messages, but only when the consumer group is disconnected and of course there's lag.
 
+#### Messages Storage
+
+![Messages Storage page](src/assets/screenshots/messages-storage-page.png)
+
+Messages Storage page is meant to provide you with a local storage of your favorite messages from all the topics and connections. Not only that it also allow you for each message to be sent to whatever connection and whatever topic you like.
+
+Messages can be saved in storage with the little "DB" icon you'll find on each message you've already sent, specifying some **tags** before saving to make your search easier in the future.
+
 #### Settings
 
 ![Settings page](src/assets/screenshots/settings-page.png)

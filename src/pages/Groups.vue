@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { confirm, message } from '@tauri-apps/api/dialog';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import { KafkaManager } from '../services/kafka';
-import { Ref, computed, inject, onBeforeUnmount, ref } from 'vue';
 import { ConsumerGroup } from '../types/consumerGroup';
-import { confirm, message } from '@tauri-apps/api/dialog';
-import Loader from '../components/Loader.vue';
 
 await checkSettings('topics');
 
@@ -15,7 +15,7 @@ const kafka = new KafkaManager();
 
 const topicName = route.params.topicName as string;
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
 const groups = ref<ConsumerGroup[]>([]);
 
@@ -90,7 +90,7 @@ onBeforeUnmount(() => {
 				{{ topicName }} groups
 			</h2>
 			<router-link title="Topic's Messages"
-				class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-blue-500 transition-colors hover:text-blue-500 flex items-center"
+				class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400 flex items-center"
 				:to="`/topics/${topicName}/messages`">
 				<i class="mr-2 bi-envelope cursor-pointer"></i>
 				Messages
@@ -105,7 +105,7 @@ onBeforeUnmount(() => {
 		</div>
 		<div class="h-full overflow-auto">
 			<table class="table-auto w-full border-spacing-0 border-separate">
-				<thead class="sticky top-0 bg-[#252526] z-10">
+				<thead class="sticky top-0 bg-gray-800 z-10">
 					<tr>
 						<th class="border-l border-y border-white text-left px-4 py-2">NAME</th>
 						<th class="border-y border-white px-4 py-2">LOW</th>
@@ -115,7 +115,7 @@ onBeforeUnmount(() => {
 					</tr>
 				</thead>
 				<tbody>
-					<tr class="hover:bg-[#252526]" v-for="group, key of filteredGroups" :key="key">
+					<tr class="hover:bg-gray-800" v-for="group, key of filteredGroups" :key="key">
 						<td :class="key !== filteredGroups.length - 1 ? 'border-b' : ''"
 							class="border-white py-3 px-4 w-full relative">
 							<div class="flex justify-center items-center">

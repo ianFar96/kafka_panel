@@ -8,7 +8,10 @@ export const useConnectionStore = defineStore('connection', () => {
 	function set(newConnection: Connection) {
 		connection.value = clone(newConnection);
 	}
-	return {connection, set};
+	function unset() {
+		connection.value = undefined;
+	}
+	return {connection, set, unset};
 });
 
 const pinia = createPinia();

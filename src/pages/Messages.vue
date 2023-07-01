@@ -2,16 +2,17 @@
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
 import { message } from '@tauri-apps/api/dialog';
-import { Ref, computed, inject, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import ChooseTagsDialog from '../components/ChooseTagsDialog.vue';
-import EditMessageDialog from '../components/EditMessageDialog.vue';
-import Loader from '../components/Loader.vue';
+import Dialog from '../components/Dialog.vue';
+import EditMessage from '../components/EditMessage.vue';
+import EditTags from '../components/EditTags.vue';
+import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
 import { KafkaManager } from '../services/kafka';
+import { KafkaMessage, SendMessage } from '../types/message';
 import { Setting, SettingKey } from '../types/settings';
-import { KafkaMessage } from '../types/message';
 
 type Message = {
 	key: Record<string, unknown> | string
@@ -34,7 +35,7 @@ const kafka = new KafkaManager();
 
 const topicName = route.params.topicName as string;
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
 const selectedMessage = ref<Message>();
 
@@ -57,11 +58,8 @@ const kafkaMessageToMessage = (kafkaMessage: KafkaMessage): Message => {
 	};
 };
 
-const messageToKafkaMessage = (message: Message): KafkaMessage => {
+const messageToSendMessage = (message: Message): SendMessage => {
 	return {
-		offset: message.offset,
-		partition: message.offset,
-		timestamp: message.timestamp,
 		key: typeof message.key === 'object' ? JSON.stringify(message.key, null, 2) : message.key,
 		value: typeof message.value === 'object' ? JSON.stringify(message.value, null, 2) : message.value,
 	};
@@ -114,13 +112,13 @@ const filteredMessages = computed(() => {
 		});
 });
 
-const chooseTagsDialog = ref<InstanceType<typeof ChooseTagsDialog> | null>(null); // Template ref
+const editTagsDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const chooseTags = (message: Message) => {
 	selectedMessage.value = message;
-	chooseTagsDialog.value?.openDialog();
+	editTagsDialog.value?.open();
 };
 
-const saveMessage = async (tags: string[]) => {
+const saveMessageInStorage = async (tags: string[]) => {
 	await db.messages.add({
 		key: typeof selectedMessage.value!.key === 'object' ?
 			JSON.stringify(selectedMessage.value!.key) :
@@ -130,19 +128,29 @@ const saveMessage = async (tags: string[]) => {
 			selectedMessage.value!.value,
 		tags
 	});
+
+	editTagsDialog.value?.close();
 };
 
-const editMessageDialog = ref<InstanceType<typeof EditMessageDialog> | null>(null); // Template ref
+const defineMessageToSend = (message?: Message) => {
+	selectedMessage.value = message;
+	sendMessageDialog?.value?.open();
+};
+
+const sendMessageDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const sendMessage = async (key: string, value: string) => {
 	loader?.value?.show();
 	try {
 		await kafka.sendMessage(topicName, key, value);
+
+		sendMessageDialog.value?.close();
+		
+		await fetchMessages();
 	} catch (error) {
 		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
 	}
 	loader?.value?.hide();
 
-	await fetchMessages();
 };
 
 const getDisplayDate = (dateMilis: number) => {
@@ -175,14 +183,13 @@ onBeforeUnmount(() => {
 			</h2>
 			<div class="flex">
 				<router-link title="Topic's Consumer groups"
-					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-blue-500 transition-colors hover:text-blue-500 flex items-center mr-4"
+					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400 flex items-center mr-4"
 					:to="`/topics/${topicName}/groups`">
 					<i class="mr-2 bi-people cursor-pointer"></i>
 					Groups
 				</router-link>
-				<button
-					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center"
-					@click="editMessageDialog?.openDialog()">
+				<button @click="defineMessageToSend()"
+					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center">
 					<i class="mr-2 bi-send cursor-pointer"></i>
 					Send message
 				</button>
@@ -237,7 +244,7 @@ onBeforeUnmount(() => {
 							title="Save on storage"
 							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="editMessageDialog?.openDialog(messageToKafkaMessage(message))"
+						<button @click="defineMessageToSend(message)"
 							title="Send again"
 							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
 						</button>
@@ -249,6 +256,12 @@ onBeforeUnmount(() => {
 			</li>
 		</ul>
   </div>
-  <EditMessageDialog ref="editMessageDialog" :submit="sendMessage" :submit-button-text="'Send'"/>
-  <ChooseTagsDialog ref="chooseTagsDialog" :submit="saveMessage" :submit-button-text="'Save'"/>
+
+	<Dialog ref="sendMessageDialog" title="Send message" modal-class="w-full h-full">
+		<EditMessage :submit="sendMessage" :message="selectedMessage && messageToSendMessage(selectedMessage)" :submit-button-text="'Send'"/>
+	</Dialog>
+
+	<Dialog ref="editTagsDialog" title="Select tags">
+		<EditTags :submit="saveMessageInStorage" :submit-button-text="'Save'"/>
+	</Dialog>
 </template>

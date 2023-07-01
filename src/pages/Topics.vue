@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { confirm, message } from '@tauri-apps/api/dialog';
-import { Ref, computed, inject, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { computed, onActivated, onBeforeUnmount, onDeactivated, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import CreateTopicDialog from '../components/CreateTopicDialog.vue';
-import SetConnectionDialog from '../components/SetConnectionDialog.vue';
+import CreateTopic from '../components/CreateTopic.vue';
+import SelectConnection from '../components/SelectConnection.vue';
+import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
 import { KafkaManager } from '../services/kafka';
+import { useConnectionStore } from '../services/store';
 import { Connection } from '../types/connection';
 import { ConsumerGroupState } from '../types/consumerGroup';
 import { Setting, SettingKey } from '../types/settings';
 import { Topic } from '../types/topic';
-import { useConnectionStore } from '../services/store';
-import Loader from '../components/Loader.vue';
+import Dialog from '../components/Dialog.vue';
 
 await checkSettings('topics');
 
@@ -29,7 +30,7 @@ if (connections.length <= 0) {
 	router.push('/settings');
 }
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
 const connectionStore = useConnectionStore();
 const kafka = new KafkaManager();
@@ -42,7 +43,7 @@ const fetchTopics = async () => {
 	loader?.value?.show();
 	try {
 		topics.value = await kafka.listTopics();
-		await fetchTopicsState();
+		await startFetchTopicsState();
 	} catch (error) {
 		await message(`Error fetching topics: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -50,29 +51,38 @@ const fetchTopics = async () => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let timeout: any;
-const fetchTopicsState = async () => {
-	clearTimeout(timeout);
-	timeout = setTimeout(async () => {
-		await fetchTopicsState();
+let fetchTopicStateInterval: any;
+const startFetchTopicsState = async () => {
+	stopFetchTopicState();
+	fetchTopicStateInterval = setInterval(async () => {
+		fetchTopicsState();
 	}, 5000);
-
+	await fetchTopicsState();
+};
+const stopFetchTopicState = () => {
+	clearInterval(fetchTopicStateInterval);
+};
+const fetchTopicsState = async () => {
 	try {
 		topicsState.value = await kafka.getTopicsState();
 	} catch (error) {
 		console.error(`Error fetching topics state: ${error}`, { title: 'Error', type: 'error' });
 	}
 };
+
 onDeactivated(() => {
-	clearTimeout(timeout);
+	stopFetchTopicState();
+	selectConnectionDialog?.value?.close();
 });
 onActivated(async () => {
 	if (connectionStore.connection) {
-		await fetchTopicsState();
+		await startFetchTopicsState();
+	} else {
+		selectConnectionDialog?.value?.open();
 	}
 });
 
-const createTopicDialog = ref<InstanceType<typeof CreateTopicDialog> | null>(null); // Template ref
+const createTopicDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
 const createTopic = async (name: string, partitions?: number, replicationFactor?: number) => {
 	if (!name) return;
@@ -84,6 +94,8 @@ const createTopic = async (name: string, partitions?: number, replicationFactor?
 		await message(`Error creating topic: ${error}`, { title: 'Error', type: 'error' });
 	}
 	loader?.value?.hide();
+
+	createTopicDialog.value?.close();
 
 	await fetchTopics();
 };
@@ -102,28 +114,34 @@ const removeTopic = async (topic: Topic) => {
 	await fetchTopics();
 };
 
-const setConnectionDialog = ref<InstanceType<typeof SetConnectionDialog> | null>(null); // Template ref
+const selectConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
+
 const setConnection = async (newConnection: Connection) => {
-	connectionStore.set(newConnection);
+	// Clean slate
+	topics.value = [];
+	stopFetchTopicState();
+	connectionStore.unset();
 
 	loader?.value?.show();
 	try {
+		// Set connection and make sure it works
 		await kafka.setConnection(
 			newConnection.brokers,
 			newConnection.auth,
 			newConnection.groupPrefix
 		);
+		connectionStore.set(newConnection);
+
+		topics.value = await kafka.listTopics();
+
+		await startFetchTopicsState();
 	} catch (error) {
 		await message(`Error setting connection: ${error}`, { title: 'Error', type: 'error' });
 	}
 	loader?.value?.hide();
 
-	await fetchTopics();
+	selectConnectionDialog.value?.close();
 };
-
-onMounted(() => {
-	setConnectionDialog?.value?.openDialog();
-});
 
 const searchQuery = ref('');
 const filteredTopics = computed(() => {
@@ -156,13 +174,13 @@ onBeforeUnmount(() => {
 			<div class="flex">
 				<button
 					class="mr-4 border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 whitespace-nowrap flex items-center"
-					@click="createTopicDialog?.openDialog()">
+					@click="createTopicDialog?.open()">
 					<i class="bi bi-plus-lg mr-2 -ml-1"></i>
 					New topic
 				</button>
 				<button
-					class="border border-white rounded py-1 px-4 hover:border-blue-500 transition-colors hover:text-blue-500 whitespace-nowrap flex items-center"
-					@click="setConnectionDialog?.openDialog()">
+					class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400 whitespace-nowrap flex items-center"
+					@click="selectConnectionDialog?.open()">
 					<i class="bi bi-wifi mr-2"></i>
 					Change connection
 				</button>
@@ -177,7 +195,7 @@ onBeforeUnmount(() => {
 		</div>
 		<div class="h-full overflow-auto">
 			<table class="table-auto w-full border-spacing-0 border-separate">
-				<thead class="sticky top-0 bg-[#252526] z-10">
+				<thead class="sticky top-0 bg-gray-800 z-10">
 					<tr>
 						<th class="border-l border-y border-white text-left px-4 py-2">NAME</th>
 						<th class="border-y border-white px-4 py-2">PARTITIONS</th>
@@ -185,7 +203,7 @@ onBeforeUnmount(() => {
 					</tr>
 				</thead>
 				<tbody>
-					<tr class="hover:bg-[#252526]" v-for="topic, key of filteredTopics" :key="key">
+					<tr class="hover:bg-gray-800" v-for="topic, key of filteredTopics" :key="key">
 						<td :class="key !== filteredTopics.length - 1 ? 'border-b' : ''"
 							class="border-white py-3 px-4 w-full relative">
 							<div class="flex items-center">
@@ -206,10 +224,10 @@ onBeforeUnmount(() => {
 						</td>
 						<td :class="key !== filteredTopics.length - 1 ? 'border-b' : ''" class="border-white py-3 px-4 text-right flex">
 							<router-link title="Messages" class="mr-3" :to="`/topics/${topic.name}/messages`">
-								<i class="text-2xl bi-envelope cursor-pointer transition-colors hover:text-blue-600"></i>
+								<i class="text-2xl bi-envelope cursor-pointer transition-colors hover:text-orange-400"></i>
 							</router-link>
 							<router-link title="Consumer groups" class="mr-3" :to="`/topics/${topic.name}/groups`">
-								<i class="text-2xl bi-people cursor-pointer transition-colors hover:text-blue-600"></i>
+								<i class="text-2xl bi-people cursor-pointer transition-colors hover:text-orange-400"></i>
 							</router-link>
 							<button type="button" title="Delete topic" @click="removeTopic(topic)" 
 								class="text-2xl bi-trash cursor-pointer transition-colors hover:text-red-500">
@@ -220,7 +238,11 @@ onBeforeUnmount(() => {
 			</table>
 		</div>
 	</div>
-	<CreateTopicDialog ref="createTopicDialog" :createTopic="createTopic" />
-	<SetConnectionDialog ref="setConnectionDialog" :connections="connections" :closable="!!connectionStore.connection"
-		:set-connection="setConnection" />
+  <Dialog ref="createTopicDialog" :title="'Create topic'">
+		<CreateTopic :createTopic="createTopic" />
+	</Dialog>
+
+  <Dialog ref="selectConnectionDialog" :title="'Choose Connection'">
+		<SelectConnection :connections="connections" :submit="setConnection" />
+  </Dialog>
 </template>

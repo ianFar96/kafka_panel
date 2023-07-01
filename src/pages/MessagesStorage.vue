@@ -2,23 +2,23 @@
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
 import { message } from '@tauri-apps/api/dialog';
-import { Ref, computed, inject, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Chip, { Tag } from '../components/Chip.vue';
-import Loader from '../components/Loader.vue';
+import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import SendStorageMessageStepper from '../components/SendStorageMessageStepper.vue';
+import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import { randomColor } from '../services/chipColors';
 import db from '../services/database';
 import { Connection } from '../types/connection';
 import { StorageMessage } from '../types/message';
 import { Setting, SettingKey } from '../types/settings';
-import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 
 type Message = {
 	id: number
-	key: string
-	value: string
+	key: Record<string, unknown> | string
+  value: Record<string, unknown> | string
 	tags: Tag[]
 	valueVisible: boolean
 }
@@ -38,9 +38,9 @@ if (connections.length <= 0) {
 	router.push('/settings');
 }
 
-const loader = inject<Ref<InstanceType<typeof Loader> | null>>('loader');
+const loader = useLoader();
 
-const storeMessageToMessage = (storageMessage: StorageMessage) => {
+const storeMessageToMessage = (storageMessage: StorageMessage): Message => {
 	let key = storageMessage.key;
 	try {
 		key = JSON.parse(storageMessage.key);
@@ -167,7 +167,7 @@ const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStep
 					<div class="absolute top-4 right-4">
 						<button @click="editMessageStorageStepper?.openDialog(messageToStorageMessage(message))"
 							title="Edit tags and message"
-							class="text-xl translate-y-px bi-pencil-square transition-colors duration-300 cursor-pointer mr-3 hover:text-blue-500">
+							class="text-xl translate-y-px bi-pencil-square transition-colors duration-300 cursor-pointer mr-3 hover:text-orange-400">
 						</button>
 						<button @click="deleteMessage(message)"
 							title="Delete message"
@@ -177,7 +177,7 @@ const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStep
 							title="Copy JSON"
 							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="sendStorageMessageStepper?.openDialog(connections, message)"
+						<button @click="sendStorageMessageStepper?.openDialog(connections, messageToStorageMessage(message))"
 							title="Send again"
 							class="text-xl bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
 						</button>

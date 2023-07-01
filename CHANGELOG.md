@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.1.1
+
 ### Changed
 
 - Refactor components with better organization

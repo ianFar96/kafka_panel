@@ -22,7 +22,7 @@ pub async fn get_messages(
 ) -> Result<Vec<KafkaMessageResponse>, String> {
     // Manually fecth metadata and assign partition so we don't fetch using our consumer group
     let metadata = consumer
-        .fetch_metadata(Some(&topic), Duration::from_secs(5))
+        .fetch_metadata(Some(&topic), Duration::from_secs(30))
         .map_err(|err| {
             format!(
                 "Could not fetch topic metadada for topic: {}\n\nError: {}",
@@ -45,7 +45,7 @@ pub async fn get_messages(
     // Seek the latest watermark minus messages number to get only the last messages
     for partition in metadata.topics().get(0).unwrap().partitions() {
         let (_, hight) = consumer
-            .fetch_watermarks(&topic, partition.id(), Duration::from_secs(5))
+            .fetch_watermarks(&topic, partition.id(), Duration::from_secs(30))
             .map_err(|err| {
                 format!(
                     "Could not seek partition offset in topic:{}, partition: {}\n\nError: {}",
@@ -61,7 +61,7 @@ pub async fn get_messages(
         } else {
             Offset::Beginning
         };
-        consumer.seek(&topic, partition.id(), offset_start, Duration::from_secs(5)).map_err(|err| {
+        consumer.seek(&topic, partition.id(), offset_start, Duration::from_secs(30)).map_err(|err| {
             format!(
                 "Could not seek partition offset in topic:{}, partition: {}, offset: {}\n\nError: {}",
                 partition.id(),
@@ -126,12 +126,15 @@ pub async fn get_messages(
 }
 
 fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, String> {
-    let key = std::str::from_utf8(message.key().ok_or("Message without key found!")?)
-        .map_err(|err| err.to_string())?
-        .to_string();
-    let value = std::str::from_utf8(message.payload().ok_or("Message without payload found!")?)
-        .map_err(|err| err.to_string())?
-        .to_string();
+    let key = match message.key() {
+        Some(key) => std::str::from_utf8(key).map_err(|err| err.to_string())?,
+        None => "null",
+    }.to_string();
+
+    let value = match message.payload() {
+        Some(value) => std::str::from_utf8(value).map_err(|err| err.to_string())?,
+        None => "null",
+    }.to_string();
 
     let timestamp_millis = message
         .timestamp()

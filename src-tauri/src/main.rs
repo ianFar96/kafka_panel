@@ -22,6 +22,7 @@ fn main() {
             // Message commands
             commands::get_messages_command,
             commands::send_message_command,
+            commands::autosend_message_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

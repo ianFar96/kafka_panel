@@ -2,15 +2,16 @@
  * This module is meant to be a safe abstraction on the tauri ecosystem and its internal state
  */
 use kafka_panel::{
-    create_topic, delete_topic, get_groups_from_topic, get_messages, get_topics, get_topics_state,
-    reset_offsets, send_message, KafkaGroupResponse, KafkaMessageResponse, KafkaTopicResponse, GroupState,
+    autosend_message, create_topic, delete_topic, get_groups_from_topic, get_messages, get_topics,
+    get_topics_state, reset_offsets, send_message, AutosendOptions, GroupState, KafkaGroupResponse,
+    KafkaMessageResponse, KafkaTopicResponse, RunningAutosend,
 };
 use rdkafka::{
     admin::AdminClient, client::DefaultClientContext, consumer::StreamConsumer,
     producer::FutureProducer, ClientConfig,
 };
 use serde::Deserialize;
-use std::{sync::Arc, collections::HashMap};
+use std::{collections::HashMap, sync::Arc};
 use tauri::State;
 use tokio::sync::RwLock;
 
@@ -26,6 +27,7 @@ pub struct KafkaState {
     consumer: Arc<RwLock<Option<StreamConsumer>>>,
     producer: Arc<RwLock<Option<FutureProducer>>>,
     common_config: Arc<RwLock<Option<ClientConfig>>>,
+    running_autosend: Arc<RwLock<RunningAutosend>>,
 }
 
 pub fn create_empty_state() -> KafkaState {
@@ -33,11 +35,13 @@ pub fn create_empty_state() -> KafkaState {
     let consumer = Arc::new(RwLock::new(None));
     let producer = Arc::new(RwLock::new(None));
     let common_config = Arc::new(RwLock::new(None));
+    let running_autosend = Arc::new(RwLock::new(HashMap::new()));
     KafkaState {
         admin,
         consumer,
         producer,
         common_config,
+        running_autosend,
     }
 }
 
@@ -211,4 +215,24 @@ pub async fn send_message_command<'a>(
     };
 
     send_message(producer, topic, key, value).await
+}
+
+#[tauri::command]
+pub async fn autosend_message_command<'a>(
+    state: State<'a, KafkaState>,
+    topic: String,
+    key: String,
+    value: String,
+    options: AutosendOptions,
+) -> Result<(), String> {
+    let binding = state.producer.read().await;
+    let producer = match *binding {
+        None => return Err("Connection not set".into()),
+        Some(ref x) => x,
+    };
+
+    let key = serde_json::from_str(&key).unwrap();
+    let value = serde_json::from_str(&value).unwrap();
+
+    autosend_message(&state.running_autosend, producer, topic, key, value, options).await
 }

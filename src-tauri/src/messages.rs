@@ -1,10 +1,42 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Instant;
+use futures::lock::Mutex;
+use mockd::hipster;
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::message::BorrowedMessage;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use rdkafka::{Message, Offset, TopicPartitionList};
-use serde::Serialize;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::thread;
+use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
 use tokio::time::Duration;
+
+pub type RunningAutosend = HashMap<String, bool>;
+
+#[derive(Deserialize, Debug)]
+pub struct AutosendOptions {
+    duration: AutosendTime,
+    interval: AutosendTime,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct AutosendTime {
+    time_unit: TimeUnit,
+    value: u64,
+}
+
+#[derive(Deserialize, Debug)]
+pub enum TimeUnit {
+    Hours,
+    Minutes,
+    Seconds,
+    Miliseconds,
+}
 
 #[derive(Serialize, Clone)]
 pub struct KafkaMessageResponse {
@@ -129,12 +161,14 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
     let key = match message.key() {
         Some(key) => std::str::from_utf8(key).map_err(|err| err.to_string())?,
         None => "null",
-    }.to_string();
+    }
+    .to_string();
 
     let value = match message.payload() {
         Some(value) => std::str::from_utf8(value).map_err(|err| err.to_string())?,
         None => "null",
-    }.to_string();
+    }
+    .to_string();
 
     let timestamp_millis = message
         .timestamp()
@@ -163,4 +197,154 @@ pub async fn send_message(
         .map_err(|(err, _)| format!("Error while sending the message: {}", err.to_string()))?;
 
     Ok(())
+}
+
+pub async fn autosend_message(
+    pointer_running_autosend: &Arc<RwLock<RunningAutosend>>,
+    producer: &FutureProducer,
+    topic: String,
+    key: Value,
+    value: Value,
+    options: AutosendOptions,
+) -> Result<(), String> {
+    // 1. replace key and value props for fake info
+    // 2. send records taking into account the options (done)
+    // 3. think of a way to stop the producer whenever is needed (done)
+
+    let duration = match options.duration.time_unit {
+        TimeUnit::Hours => Duration::from_secs(options.duration.value * 3600),
+        TimeUnit::Minutes => Duration::from_secs(options.duration.value * 60),
+        TimeUnit::Seconds => Duration::from_secs(options.duration.value),
+        TimeUnit::Miliseconds => Duration::from_millis(options.duration.value),
+    };
+
+    let interval = match options.interval.time_unit {
+        TimeUnit::Hours => Duration::from_secs(options.interval.value * 3600),
+        TimeUnit::Minutes => Duration::from_secs(options.interval.value * 60),
+        TimeUnit::Seconds => Duration::from_secs(options.interval.value),
+        TimeUnit::Miliseconds => Duration::from_millis(options.interval.value),
+    };
+
+    let instant = Instant::now();
+
+    // Keep track of the running autosend se we can stop them if needed
+    let mut running_autosend = pointer_running_autosend.write().await;
+    if running_autosend.contains_key(&topic) {
+        return Err(format!("There's already an autosend running with the topic {}, stop the running autosend before starting with a new one", topic));
+    }
+    running_autosend.insert(topic.to_string(), true);
+
+    let pointer_producer = Arc::new(Mutex::new(producer.to_owned()));
+    let pointer_topic = Arc::new(Mutex::new(topic.to_string()));
+    let pointer_key = Arc::new(Mutex::new(key));
+    let pointer_value = Arc::new(Mutex::new(value));
+
+    let mut handles = vec![];
+    loop {
+        if instant.elapsed() >= duration {
+            break;
+        }
+
+        // Stop sending if requested
+        let running_autosend = pointer_running_autosend.read().await;
+        match running_autosend.get(&topic) {
+            None => {
+                return Err(format!(
+                    "Unexpected error, lost track of the current autosend in topic {}, stopping...",
+                    &topic
+                ))
+            }
+            Some(continue_running) => {
+                if !*continue_running {
+                    break;
+                }
+            }
+        }
+
+        let producer = pointer_producer.clone();
+
+        let topic = pointer_topic.clone();
+        let key = pointer_key.clone();
+        let value = pointer_value.clone();
+
+        let handle: JoinHandle<Result<(), String>> = tokio::spawn(async move {
+            let producer = producer.lock().await;
+
+            let topic = topic.lock().await;
+            let key = &mut key.lock().await.clone();
+            let value = &mut value.lock().await.clone();
+
+            replace_with_fake(key)?;
+            replace_with_fake(value)?;
+
+            let stringified_key = serde_json::to_string(key).map_err(|err| format!("{}", err.to_string()))?;
+            let stringified_value = serde_json::to_string(value).map_err(|err| format!("{}", err.to_string()))?;
+
+            let record = FutureRecord::to(&topic)
+                .key(&stringified_key)
+                .payload(&stringified_value);
+
+            match producer.send(record, Timeout::Never).await {
+                Err(err) => Err(err.0.to_string()),
+                Ok(_) => Ok(()),
+            }
+        });
+        handles.push(handle);
+
+        // Clean the ones completed
+        handles = handles
+            .into_iter()
+            .filter(|handle| handle.is_finished())
+            .collect();
+
+        thread::sleep(interval);
+    }
+
+    for handle in handles {
+        handle.abort();
+    }
+
+    Ok(())
+}
+
+fn replace_with_fake(value: &mut Value) -> Result<(), String> {
+    match value {
+        Value::Object(obj) => {
+            for (_, val) in obj {
+                replace_with_fake(val)?;
+            }
+        }
+        Value::Array(arr) => {
+            for val in arr {
+                replace_with_fake(val)?;
+            }
+        }
+        Value::String(string) => {
+            let re = Regex::new(r"\{\{(.*?)\}\}").unwrap();
+            let captures = re.captures(string).unwrap();
+
+            let mut replaced_string = string.clone();
+            for capture in captures.iter() {
+                if capture.is_some() {
+                    let re = Regex::new(r"\{\{.*?\}\}").unwrap();
+                    let faked_string = get_fake_from_type(capture.unwrap().as_str())?;
+                    replaced_string = re.replace(string, faked_string.to_string()).to_string();
+                }
+            }
+
+            *string = replaced_string;
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn get_fake_from_type(fake_type: &str) -> Result<String, String> {
+    return match fake_type {
+        "paragraph" => Ok(hipster::paragraph(3, 4, 40, " ".to_string())),
+        "sentence" => Ok(hipster::sentence(12)),
+        "word" => Ok(hipster::word()),
+        unknown_type => Err(format!("Unkonwn fake type {}", unknown_type)),
+    };
 }

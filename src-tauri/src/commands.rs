@@ -234,5 +234,27 @@ pub async fn autosend_message_command<'a>(
     let key = serde_json::from_str(&key).unwrap();
     let value = serde_json::from_str(&value).unwrap();
 
-    autosend_message(&state.running_autosend, producer, topic, key, value, options).await
+    autosend_message(
+        &state.running_autosend,
+        producer,
+        topic,
+        key,
+        value,
+        options,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn stop_autosend<'a>(state: State<'a, KafkaState>, topic: String) -> Result<(), String> {
+    let mut running_autosend = state.running_autosend.write().await;
+    if !running_autosend.contains_key(&topic) {
+        return Err(format!("Unexpected error, lost track of the autosend in topic {}, autosend will be stopped briefly", topic));
+    }
+
+    running_autosend
+        .entry(topic)
+        .and_modify(|autosend| *autosend = false);
+
+    Ok(())
 }

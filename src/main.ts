@@ -8,7 +8,6 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import router from './services/router';
 import './style.css';
-import pinia from './services/store';
 
 hljs.registerLanguage('json', json);
 
@@ -24,6 +23,5 @@ hljs.registerLanguage('json', json);
 const app = createApp(App);
 
 app.use(router);
-app.use(pinia);
 app.use(hljsVuePlugin);
 app.mount('#app');

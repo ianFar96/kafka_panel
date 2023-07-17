@@ -53,6 +53,11 @@ const route = useRoute();
             :class="{'border-l': route.path.includes('/messages-storage')}">
             <i class="bi-database text-[28px] leading-none"></i>
           </router-link>
+          <router-link to="/autosend"
+            class="w-16 h-16 flex justify-center items-center cursor-pointer hover:border-l border-white mt-4"
+            :class="{'border-l': route.path.includes('/autosend')}">
+            <i class="bi-repeat text-[28px] leading-none"></i>
+          </router-link>
         </div>
         <div>
           <router-link to="/settings" class="px-4 py-3 cursor-pointer hover:border-l border-white block text-center"

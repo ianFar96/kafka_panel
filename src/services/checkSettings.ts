@@ -3,13 +3,14 @@ import router from './router';
 import { Setting, SettingKey } from '../types/settings';
 import { message } from '@tauri-apps/api/dialog';
 
-type Page = 'topics'
+type Page = 'topics' | 'messages-storage' | 'autosend'
 
 async function checkSettings(page: Page) {
 	// Settings must be seeded for this to work
 	const settingsDependencies: { [key: string]: SettingKey[] } = {
 		topics: ['CONNECTIONS'],
-		'messages-storage': ['CONNECTIONS']
+		'messages-storage': ['CONNECTIONS'],
+		autosend: ['CONNECTIONS'],
 	};
 
 	const dependencies = settingsDependencies[page];

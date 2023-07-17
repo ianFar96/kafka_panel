@@ -2,8 +2,8 @@
  * This module is meant to be a safe abstraction on the tauri ecosystem and its internal state
  */
 use kafka_panel::{
-    autosend_message, create_topic, delete_topic, get_groups_from_topic, get_messages, get_topics,
-    get_topics_state, reset_offsets, send_message, AutosendOptions, GroupState, KafkaGroupResponse,
+    create_topic, delete_topic, get_groups_from_topic, get_messages, get_topics, get_topics_state,
+    reset_offsets, send_message, start_autosend, AutosendOptions, GroupState, KafkaGroupResponse,
     KafkaMessageResponse, KafkaTopicResponse, RunningAutosend,
 };
 use rdkafka::{
@@ -11,6 +11,7 @@ use rdkafka::{
     producer::FutureProducer, ClientConfig,
 };
 use serde::Deserialize;
+use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 use tauri::State;
 use tokio::sync::RwLock;
@@ -218,23 +219,23 @@ pub async fn send_message_command<'a>(
 }
 
 #[tauri::command]
-pub async fn autosend_message_command<'a>(
+pub async fn start_autosend_command<'a>(
     state: State<'a, KafkaState>,
     topic: String,
-    key: String,
-    value: String,
+    key: Value,
+    value: Value,
     options: AutosendOptions,
-) -> Result<(), String> {
-    let binding = state.producer.read().await;
-    let producer = match *binding {
+) -> Result<String, String> {
+    let binding = state.common_config.read().await;
+    let common_config = match *binding {
         None => return Err("Connection not set".into()),
-        Some(ref x) => x,
+        Some(ref x) => x.clone(),
     };
 
-    let key = serde_json::from_str(&key).unwrap();
-    let value = serde_json::from_str(&value).unwrap();
+    // NOTE: we create a new producer so the autosend does not fail when connection is changed
+    let producer = &common_config.create::<FutureProducer>().unwrap();
 
-    autosend_message(
+    let id = start_autosend(
         &state.running_autosend,
         producer,
         topic,
@@ -242,18 +243,23 @@ pub async fn autosend_message_command<'a>(
         value,
         options,
     )
-    .await
+    .await?;
+
+    Ok(id)
 }
 
 #[tauri::command]
-pub async fn stop_autosend<'a>(state: State<'a, KafkaState>, topic: String) -> Result<(), String> {
+pub async fn stop_autosend_command<'a>(
+    state: State<'a, KafkaState>,
+    id: String,
+) -> Result<(), String> {
     let mut running_autosend = state.running_autosend.write().await;
-    if !running_autosend.contains_key(&topic) {
-        return Err(format!("Unexpected error, lost track of the autosend in topic {}, autosend will be stopped briefly", topic));
+    if !running_autosend.contains_key(&id) {
+        return Err(format!("Unexpected error, lost track of the autosend {}, will be stopped briefly", id));
     }
 
     running_autosend
-        .entry(topic)
+        .entry(id)
         .and_modify(|autosend| *autosend = false);
 
     Ok(())

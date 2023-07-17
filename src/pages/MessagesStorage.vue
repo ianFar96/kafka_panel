@@ -23,7 +23,7 @@ type Message = {
 	valueVisible: boolean
 }
 
-await checkSettings('topics');
+await checkSettings('messages-storage');
 
 const router = useRouter();
 

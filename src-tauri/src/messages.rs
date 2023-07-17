@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Instant;
 use futures::lock::Mutex;
 use mockd::hipster;
+use mockd::unique::uuid_v4;
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::message::BorrowedMessage;
 use rdkafka::producer::{FutureProducer, FutureRecord};
@@ -11,7 +9,10 @@ use rdkafka::{Message, Offset, TopicPartitionList};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::thread;
+use std::time::Instant;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
@@ -199,14 +200,14 @@ pub async fn send_message(
     Ok(())
 }
 
-pub async fn autosend_message(
+pub async fn start_autosend(
     pointer_running_autosend: &Arc<RwLock<RunningAutosend>>,
     producer: &FutureProducer,
     topic: String,
     key: Value,
     value: Value,
     options: AutosendOptions,
-) -> Result<(), String> {
+) -> Result<String, String> {
     // 1. replace key and value props for fake info
     // 2. send records taking into account the options (done)
     // 3. think of a way to stop the producer whenever is needed (done)
@@ -229,10 +230,8 @@ pub async fn autosend_message(
 
     // Keep track of the running autosend se we can stop them if needed
     let mut running_autosend = pointer_running_autosend.write().await;
-    if running_autosend.contains_key(&topic) {
-        return Err(format!("There's already an autosend running with the topic {}, stop the running autosend before starting with a new one", topic));
-    }
-    running_autosend.insert(topic.to_string(), true);
+    let id = uuid_v4();
+    running_autosend.insert(id.clone(), true);
 
     let pointer_producer = Arc::new(Mutex::new(producer.to_owned()));
     let pointer_topic = Arc::new(Mutex::new(topic.to_string()));
@@ -247,11 +246,11 @@ pub async fn autosend_message(
 
         // Stop sending if requested
         let running_autosend = pointer_running_autosend.read().await;
-        match running_autosend.get(&topic) {
+        match running_autosend.get(&id) {
             None => {
                 return Err(format!(
-                    "Unexpected error, lost track of the current autosend in topic {}, stopping...",
-                    &topic
+                    "Unexpected error, lost track of the current autosend {}, stopping...",
+                    &id
                 ))
             }
             Some(continue_running) => {
@@ -277,8 +276,10 @@ pub async fn autosend_message(
             replace_with_fake(key)?;
             replace_with_fake(value)?;
 
-            let stringified_key = serde_json::to_string(key).map_err(|err| format!("{}", err.to_string()))?;
-            let stringified_value = serde_json::to_string(value).map_err(|err| format!("{}", err.to_string()))?;
+            let stringified_key =
+                serde_json::to_string(key).map_err(|err| format!("{}", err.to_string()))?;
+            let stringified_value =
+                serde_json::to_string(value).map_err(|err| format!("{}", err.to_string()))?;
 
             let record = FutureRecord::to(&topic)
                 .key(&stringified_key)
@@ -304,7 +305,7 @@ pub async fn autosend_message(
         handle.abort();
     }
 
-    Ok(())
+    Ok(id)
 }
 
 fn replace_with_fake(value: &mut Value) -> Result<(), String> {

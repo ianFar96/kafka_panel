@@ -3,7 +3,8 @@
 import { message } from '@tauri-apps/api/dialog';
 import { useSubject } from '@vueuse/rxjs';
 import { Duration } from 'luxon';
-import { Ref, computed, onUnmounted, ref } from 'vue';
+import { BehaviorSubject } from 'rxjs';
+import { Ref, computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAutosendsStore } from '../composables/autosends';
 import { useLoader } from '../composables/loader';
@@ -12,7 +13,6 @@ import db from '../services/database';
 import { ActiveAutosend } from '../types/autosend';
 import { Connection } from '../types/connection';
 import { Setting, SettingKey } from '../types/settings';
-import { BehaviorSubject } from 'rxjs';
 
 type DisplayAutosend = ActiveAutosend & {
 	valueVisible: boolean
@@ -54,13 +54,6 @@ const filteredAutosends = computed(() => {
 			const includesTopic = autosend.topic.includes(query);
 			return includesTopic;
 		});
-});
-
-// TODO: remove this in favor of a global mechanism to watch running autosends
-onUnmounted(async () => {
-	for (const autosend of autosendStore.autosends) {
-		await autosendStore.stopAutosend(autosend as ActiveAutosend);
-	}
 });
 
 // TODO: remove this
@@ -134,7 +127,7 @@ for (const index of [1,2,3,4,5]) {
 					<div class="absolute top-4 right-4">
 						<button @click="autosendStore.stopAutosend(autosend)"
 							title="Stop"
-							class="text-xl leading-none bi-stop transition-colors duration-300 cursor-pointer hover:text-red-500">
+							class="text-2xl leading-none bi-stop transition-colors duration-300 cursor-pointer hover:text-red-500">
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">

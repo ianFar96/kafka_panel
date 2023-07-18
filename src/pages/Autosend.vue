@@ -1,18 +1,22 @@
 <!-- eslint-disable no-empty -->
 <script setup lang="ts">
 import { message } from '@tauri-apps/api/dialog';
-import { computed, onUnmounted, ref, watchEffect } from 'vue';
+import { useSubject } from '@vueuse/rxjs';
+import { Duration } from 'luxon';
+import { Ref, computed, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAutosends } from '../composables/autosends';
+import { useAutosendsStore } from '../composables/autosends';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
 import { ActiveAutosend } from '../types/autosend';
 import { Connection } from '../types/connection';
 import { Setting, SettingKey } from '../types/settings';
+import { BehaviorSubject } from 'rxjs';
 
 type DisplayAutosend = ActiveAutosend & {
-	valueVisible: boolean;
+	valueVisible: boolean
+	timerDisplay: Ref<Duration>
 }
 
 await checkSettings('autosend');
@@ -32,18 +36,13 @@ if (connections.length <= 0) {
 
 const loader = useLoader();
 
-const { autosends, startAutosend, stopAutosend } = useAutosends();
+const autosendStore = useAutosendsStore();
 
-// Copy readonly autosends to update the visibility toggle
-const displayAutosends = ref<DisplayAutosend[]>([]);
-watchEffect(() => {
-	displayAutosends.value = autosends.value.map(autosend => {
-		return {
-			...autosend,
-			valueVisible: false
-		};
-	});
-});
+const displayAutosends = computed(() => autosendStore.autosends.map(autosend => ({
+	...autosend,
+	valueVisible: false,
+	timerDisplay: useSubject(autosend.timer.remaining as BehaviorSubject<Duration>)
+}) as DisplayAutosend));
 
 const searchQuery = ref('');
 
@@ -57,15 +56,16 @@ const filteredAutosends = computed(() => {
 		});
 });
 
+// TODO: remove this in favor of a global mechanism to watch running autosends
 onUnmounted(async () => {
-	for (const autosend of autosends.value) {
-		await stopAutosend(autosend as ActiveAutosend);
+	for (const autosend of autosendStore.autosends) {
+		await autosendStore.stopAutosend(autosend as ActiveAutosend);
 	}
 });
 
 // TODO: remove this
 for (const index of [1,2,3,4,5]) {
-	await startAutosend({
+	autosendStore.startAutosend({
 		key: {
 			patata: `hola-${index}`
 		},
@@ -75,8 +75,8 @@ for (const index of [1,2,3,4,5]) {
 		topic: `topic-autosend-${index}`,
 		options: {
 			duration: {
-				time_unit: 'Seconds',
-				value: 10
+				time_unit: 'Minutes',
+				value: 5
 			},
 			interval: {
 				time_unit: 'Seconds',
@@ -123,7 +123,7 @@ for (const index of [1,2,3,4,5]) {
 						</span>
 						<span class="text-md mr-4 flex items-center" title="Remaining">
 							<i class="bi-hourglass-split mr-2 leading-none"></i>
-							{{ autosend.timer.remaining }}
+							{{ autosend.timerDisplay.value.toFormat('hh::mm:ss') }}
 						</span>
 					</div>
 					<i class="text-xl leading-none"
@@ -132,11 +132,10 @@ for (const index of [1,2,3,4,5]) {
 
 				<div v-if="autosend.valueVisible" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<!-- TODO: stop autosend -->
-						<!-- <button @click="defineMessageToSend(autosend)"
-							title="Send again"
-							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
-						</button> -->
+						<button @click="autosendStore.stopAutosend(autosend)"
+							title="Stop"
+							class="text-xl leading-none bi-stop transition-colors duration-300 cursor-pointer hover:text-red-500">
+						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
 						<highlightjs :language="'json'" :code="JSON.stringify({key: autosend.key, value: autosend.value}, null, 2)" />

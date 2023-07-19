@@ -45,10 +45,7 @@
             "off"
         ],
         "vue/no-mutating-props": [
-            "error",
-            {
-                "shallowOnly": false
-            }
+            "off"
         ]
     }
 }

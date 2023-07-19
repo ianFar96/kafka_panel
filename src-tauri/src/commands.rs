@@ -3,15 +3,14 @@
  */
 use kafka_panel::{
     create_topic, delete_topic, get_groups_from_topic, get_messages, get_topics, get_topics_state,
-    reset_offsets, send_message, start_autosend, AutosendOptions, GroupState, KafkaGroupResponse,
-    KafkaMessageResponse, KafkaTopicResponse, RunningAutosend,
+    reset_offsets, send_message, GroupState, KafkaGroupResponse, KafkaMessageResponse,
+    KafkaTopicResponse,
 };
 use rdkafka::{
     admin::AdminClient, client::DefaultClientContext, consumer::StreamConsumer,
     producer::FutureProducer, ClientConfig,
 };
 use serde::Deserialize;
-use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 use tauri::State;
 use tokio::sync::RwLock;
@@ -28,7 +27,6 @@ pub struct KafkaState {
     consumer: Arc<RwLock<Option<StreamConsumer>>>,
     producer: Arc<RwLock<Option<FutureProducer>>>,
     common_config: Arc<RwLock<Option<ClientConfig>>>,
-    running_autosend: Arc<RwLock<RunningAutosend>>,
 }
 
 pub fn create_empty_state() -> KafkaState {
@@ -36,13 +34,11 @@ pub fn create_empty_state() -> KafkaState {
     let consumer = Arc::new(RwLock::new(None));
     let producer = Arc::new(RwLock::new(None));
     let common_config = Arc::new(RwLock::new(None));
-    let running_autosend = Arc::new(RwLock::new(HashMap::new()));
     KafkaState {
         admin,
         consumer,
         producer,
         common_config,
-        running_autosend,
     }
 }
 
@@ -216,51 +212,4 @@ pub async fn send_message_command<'a>(
     };
 
     send_message(producer, topic, key, value).await
-}
-
-#[tauri::command]
-pub async fn start_autosend_command<'a>(
-    state: State<'a, KafkaState>,
-    topic: String,
-    key: Value,
-    value: Value,
-    options: AutosendOptions,
-) -> Result<String, String> {
-    let binding = state.common_config.read().await;
-    let common_config = match *binding {
-        None => return Err("Connection not set".into()),
-        Some(ref x) => x.clone(),
-    };
-
-    // NOTE: we create a new producer so the autosend does not fail when connection is changed
-    let producer = &common_config.create::<FutureProducer>().unwrap();
-
-    let id = start_autosend(
-        &state.running_autosend,
-        producer,
-        topic,
-        key,
-        value,
-        options,
-    )
-    .await?;
-
-    Ok(id)
-}
-
-#[tauri::command]
-pub async fn stop_autosend_command<'a>(
-    state: State<'a, KafkaState>,
-    id: String,
-) -> Result<(), String> {
-    let mut running_autosend = state.running_autosend.write().await;
-    if !running_autosend.contains_key(&id) {
-        return Err(format!("Unexpected error, lost track of the autosend {}, will be stopped briefly", id));
-    }
-
-    running_autosend
-        .entry(id)
-        .and_modify(|autosend| *autosend = false);
-
-    Ok(())
 }

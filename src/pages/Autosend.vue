@@ -37,8 +37,6 @@ if (connections.length <= 0) {
 	router.push('/settings');
 }
 
-const loader = useLoader();
-
 const autosendStore = useAutosendsStore();
 const { autosends } = storeToRefs(autosendStore);
 

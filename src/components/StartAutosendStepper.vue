@@ -131,6 +131,28 @@ const startAutosend = async (key: string, value: string) => {
 	}
 	loader?.value?.hide();
 };
+
+const exampleMessage = {
+	key: {
+		name: '{{person.firstName(\'female\')}}'
+	},
+	value: {
+		lastName: '{{person.lastName()}}',
+		phone: '{{phone.imei()}}',
+		address: '{{location.streetAddress()}}, {{location.county()}}, {{location.country()}}'
+	},
+};
+
+const exampleInterpolated = {
+	key: {
+		name: 'Anna'
+	},
+	value: {
+		lastName: 'Grady',
+		phone: '13-850489-913761-5',
+		address: '34830 Erdman Hollow, Monroe County, U.S.A'
+	},
+};
 </script>
 
 <template>
@@ -153,7 +175,25 @@ const startAutosend = async (key: string, value: string) => {
 				<SelectTopic :submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
-				<EditMessage :submit="startAutosend" :submit-button-text="'Start'" />
+				<div class="flex h-full">
+					<div class="w-[75%] mr-6">
+						<EditMessage :submit="startAutosend" :submit-button-text="'Start'" />
+					</div>
+					<div class="w-[25%]">
+						<p class="mb-2">
+							A very cool feature of autosends is <a href="https://fakerjs.dev/">faker.js</a> value interpolation. 
+							You can replace any string content with a faker.js object or function as if you were calling the function from the faker object itself.
+						</p>
+						<highlightjs :language="'json'" :code="JSON.stringify(exampleMessage, null, 2)" />
+						<p class="my-2">
+							Will result in
+						</p>
+						<highlightjs :language="'json'" :code="JSON.stringify(exampleInterpolated, null, 2)" />
+						<p class="mt-2">
+							The template provided is re-interpolated for each message sent, so every message will have a distinct and unique touch with realistic data!
+						</p>
+					</div>
+				</div>
 			</template>
 		</Stepper>
   </Dialog>

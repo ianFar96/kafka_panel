@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { Timer } from '../services/Timer';
 import { ActiveAutosend, Autosend, AutosendTime } from '../types/autosend';
+import { invoke } from '@tauri-apps/api';
 
 function createAutosendTimer(time: AutosendTime) {
 	let duration: Duration;
@@ -16,7 +17,7 @@ function createAutosendTimer(time: AutosendTime) {
 	case 'Seconds':
 		duration = Duration.fromObject({seconds: time.value});
 		break;
-	case 'Miliseconds':
+	case 'Milliseconds':
 		duration = Duration.fromObject({milliseconds: time.value});
 		break;
 	}
@@ -29,9 +30,7 @@ export const useAutosendsStore = defineStore('autosends', () => {
 	const autosends = ref<ActiveAutosend[]>([]);
 
 	async function startAutosend(autosend: Autosend) {
-		// TODO: uncomment this when UI is ready
-		// const id = await invoke('start_autosend_command', autosend);
-		const id = Math.floor(Math.random() * 10).toString();
+		const id = await invoke<string>('start_autosend_command', autosend);
 
 		const timer = createAutosendTimer(autosend.options.duration);
 		timer.start();
@@ -43,7 +42,7 @@ export const useAutosendsStore = defineStore('autosends', () => {
 		};
 
 		activeAutosend.timer.onFinish(async () => {
-			removeAutosendFromStore(activeAutosend);
+			await removeAutosendFromStore(activeAutosend);
 		});
 
 		autosends.value.push(activeAutosend);
@@ -51,12 +50,11 @@ export const useAutosendsStore = defineStore('autosends', () => {
 
 	async function stopAutosend(autosend: ActiveAutosend) {
 		await autosend.timer.stop();
-		removeAutosendFromStore(autosend);
+		await removeAutosendFromStore(autosend);
 	}
 
-	const removeAutosendFromStore = (autosend: ActiveAutosend) => {
-		// TODO: uncomment this when UI is ready
-		// await invoke('stop_autosend_command', { id: autosend.id });
+	const removeAutosendFromStore = async (autosend: ActiveAutosend) => {
+		await invoke('stop_autosend_command', { id: autosend.id });
 		const index = autosends.value.findIndex(autosendTmp => autosendTmp.id === autosend.id);
 		autosends.value.splice(index, 1);
 	};

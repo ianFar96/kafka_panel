@@ -13,9 +13,12 @@ import db from '../services/database';
 import { ActiveAutosend } from '../types/autosend';
 import { Connection } from '../types/connection';
 import { Setting, SettingKey } from '../types/settings';
+import { storeToRefs } from 'pinia';
+import StartAutosendStepper from '../components/StartAutosendStepper.vue';
 
 type DisplayAutosend = ActiveAutosend & {
-	valueVisible: boolean
+	// TODO: this should not be a ref (removing timerDisplay changes nothing)
+	valueVisible: Ref<boolean>
 	timerDisplay: Ref<Duration>
 }
 
@@ -37,10 +40,11 @@ if (connections.length <= 0) {
 const loader = useLoader();
 
 const autosendStore = useAutosendsStore();
+const { autosends } = storeToRefs(autosendStore);
 
-const displayAutosends = computed(() => autosendStore.autosends.map(autosend => ({
+const displayAutosends = computed(() => autosends.value.map(autosend => ({
 	...autosend,
-	valueVisible: false,
+	valueVisible: ref(false),
 	timerDisplay: useSubject(autosend.timer.remaining as BehaviorSubject<Duration>)
 }) as DisplayAutosend));
 
@@ -56,37 +60,22 @@ const filteredAutosends = computed(() => {
 		});
 });
 
-// TODO: remove this
-for (const index of [1,2,3,4,5]) {
-	autosendStore.startAutosend({
-		key: {
-			patata: `hola-${index}`
-		},
-		value: {
-			patata: `hola-${index}`
-		},
-		topic: `topic-autosend-${index}`,
-		options: {
-			duration: {
-				time_unit: 'Minutes',
-				value: 5
-			},
-			interval: {
-				time_unit: 'Seconds',
-				value: 1
-			}
-		}
-	});
-}
-
+const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | null>(null); // Template ref
 </script>
 
 <template>
   <div class="flex flex-col h-full relative">
-		<div class="mb-6">
+		<div class="flex justify-between items-end mb-6">
 			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" title="Autosend">
 				Autosend
 			</h2>
+			<div class="flex">
+				<button @click="startAutosendStepper?.openDialog(connections)"
+					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center">
+					<i class="mr-1 -ml-1 bi-play text-2xl leading-none cursor-pointer"></i>
+					Start autosend
+				</button>
+			</div>
 		</div>
 
 		<div class="mb-6">
@@ -98,7 +87,7 @@ for (const index of [1,2,3,4,5]) {
 			<li v-for="autosend, index in filteredAutosends" :key="index" :class="{'border-b': index !== filteredAutosends.length - 1}"
 				class="border-white overflow-hidden">
 				<div class="flex justify-between items-center w-full cursor-pointer py-4"
-					@click="autosend.valueVisible = !autosend.valueVisible">
+					@click="autosend.valueVisible.value = !autosend.valueVisible.value">
 					<div class="flex">
 						<span class="text-md mr-4 flex items-center" title="Topic">
 							<i class="bi-list-ul mr-2 leading-none"></i>
@@ -120,10 +109,10 @@ for (const index of [1,2,3,4,5]) {
 						</span>
 					</div>
 					<i class="text-xl leading-none"
-						:class="{'bi-chevron-up': autosend.valueVisible, 'bi-chevron-down': !autosend.valueVisible}"></i>
+						:class="{'bi-chevron-up': autosend.valueVisible.value, 'bi-chevron-down': !autosend.valueVisible.value}"></i>
 				</div>
 
-				<div v-if="autosend.valueVisible" class="mb-4 relative">
+				<div v-if="autosend.valueVisible.value" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
 						<button @click="autosendStore.stopAutosend(autosend)"
 							title="Stop"
@@ -136,6 +125,7 @@ for (const index of [1,2,3,4,5]) {
 				</div>
 			</li>
 		</ul>
-		
 	</div>
+
+	<StartAutosendStepper ref="startAutosendStepper" :submit="autosendStore.startAutosend" />
 </template>

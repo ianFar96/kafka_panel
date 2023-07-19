@@ -43,6 +43,12 @@
         ],
         "vue/no-deprecated-v-bind-sync": [
             "off"
+        ],
+        "vue/no-mutating-props": [
+            "error",
+            {
+                "shallowOnly": false
+            }
         ]
     }
 }

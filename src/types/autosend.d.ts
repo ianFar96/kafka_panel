@@ -18,6 +18,6 @@ export type AutosendOptions = {
 }
 
 export type AutosendTime = {
-  time_unit: 'Hours'| 'Minutes'| 'Seconds'| 'Miliseconds'
+  time_unit: 'Hours'| 'Minutes'| 'Seconds'| 'Milliseconds'
   value: number
 }

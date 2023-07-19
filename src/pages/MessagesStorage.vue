@@ -189,6 +189,7 @@ const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStep
 			</li>
 		</ul>
   </div>
+
 	<SendStorageMessageStepper ref="sendStorageMessageStepper" />
 	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessage" />
 </template>

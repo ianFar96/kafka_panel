@@ -4,6 +4,7 @@ import Settings from '../pages/Settings.vue';
 import Topics from '../pages/Topics.vue';
 import Groups from '../pages/Groups.vue';
 import MessagesStorage from '../pages/MessagesStorage.vue';
+import Autosend from '../pages/Autosend.vue';
 
 const routes: RouteRecordRaw[] = [
 	{ path: '/', redirect: '/topics' },
@@ -11,6 +12,7 @@ const routes: RouteRecordRaw[] = [
 	{ path: '/topics/:topicName/messages', component: Messages, meta: { title: 'Messages' } },
 	{ path: '/topics/:topicName/groups', component: Groups, meta: { title: ' Consumer Groups' } },
 	{ path: '/messages-storage', component: MessagesStorage, meta: { title: ' Messages Storage' } },
+	{ path: '/autosend', component: Autosend, meta: { title: ' Autosend' } },
 	{ path: '/settings', component: Settings, meta: { title: 'Settings' } }
 ];
 

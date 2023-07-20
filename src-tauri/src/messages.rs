@@ -129,12 +129,14 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
     let key = match message.key() {
         Some(key) => std::str::from_utf8(key).map_err(|err| err.to_string())?,
         None => "null",
-    }.to_string();
+    }
+    .to_string();
 
     let value = match message.payload() {
         Some(value) => std::str::from_utf8(value).map_err(|err| err.to_string())?,
         None => "null",
-    }.to_string();
+    }
+    .to_string();
 
     let timestamp_millis = message
         .timestamp()

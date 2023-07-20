@@ -10,7 +10,7 @@ import EditTags from '../components/EditTags.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
-import { KafkaManager } from '../services/kafka';
+import kafkaService from '../services/kafka';
 import { KafkaMessage, SendMessage } from '../types/message';
 import { Setting, SettingKey } from '../types/settings';
 
@@ -30,8 +30,6 @@ const route = useRoute();
 const settingKeys: SettingKey[] = ['MESSAGES'];
 const settings = await db.settings.bulkGet(settingKeys) as Setting[];
 const settingsMap: { [key: string]: Setting } = settings.reduce((acc, setting) => ({ ...acc, [setting.key]: setting }), {});
-
-const kafka = new KafkaManager();
 
 const topicName = route.params.topicName as string;
 
@@ -69,7 +67,7 @@ const messages = ref<Message[]>([]);
 const fetchMessages = async () => {
 	loader?.value?.show();
 	try {
-		const kafkaMessages = await kafka.getMessages(topicName, parseInt(settingsMap['MESSAGES'].value as string));
+		const kafkaMessages = await kafkaService.getMessages(topicName, parseInt(settingsMap['MESSAGES'].value as string));
 		messages.value = kafkaMessages.map(message => kafkaMessageToMessage(message));
 	} catch (error) {
 		await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
@@ -141,7 +139,7 @@ const sendMessageDialog = ref<InstanceType<typeof Dialog> | null>(null); // Temp
 const sendMessage = async (key: string, value: string) => {
 	loader?.value?.show();
 	try {
-		await kafka.sendMessage(topicName, key, value);
+		await kafkaService.sendMessage(topicName, key, value);
 
 		sendMessageDialog.value?.close();
 		
@@ -241,7 +239,7 @@ onBeforeUnmount(() => {
 							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
 						<button @click="chooseTags(message)"
-							title="Save on storage"
+							title="Save in storage"
 							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
 						</button>
 						<button @click="defineMessageToSend(message)"

@@ -3,7 +3,6 @@
 import { message } from '@tauri-apps/api/dialog';
 import { ref } from 'vue';
 import { useLoader } from '../composables/loader';
-import { KafkaManager } from '../services/kafka';
 import { Connection } from '../types/connection';
 import { SendMessage } from '../types/message';
 import { Topic } from '../types/topic';
@@ -12,7 +11,8 @@ import SelectTopic from './SelectTopic.vue';
 import SelectConnection from './SelectConnection.vue';
 import Dialog from './Dialog.vue';
 import Stepper, { Step } from './Stepper.vue';
-import { useConnectionStore } from '../services/store';
+import { useConnection } from '../composables/connection';
+import kafkaService from '../services/kafka';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
@@ -41,19 +41,18 @@ defineExpose({
 
 const loader = useLoader();
 
-const kafka = new KafkaManager();
-const connectionStore = useConnectionStore();
+const { connection, setConnection } = useConnection();
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const onStepClick = (step: Step) => {
 	switch (step.name) {
 	case 'topic':
-		if (connectionStore.connection) {
+		if (connection.value) {
 			activeStep.value = step;
 		}
 		break;
 	case 'message':
-		if (connectionStore.connection && selectedTopic.value) {
+		if (connection.value && selectedTopic.value) {
 			activeStep.value = step;
 		}
 		break;
@@ -64,17 +63,12 @@ const onStepClick = (step: Step) => {
 	}
 };
 
-const setConnection = async (connection: Connection) => {
+const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
 	try {
-		await kafka.setConnection(
-			connection.brokers,
-			connection.auth,
-			connection.groupPrefix
-		);
-		connectionStore.set(connection);
+		await setConnection(newConnection);
 
-		topics.value = await kafka.listTopics();
+		topics.value = await kafkaService.listTopics();
 
 		// Next step
 		activeStep.value = steps[1];
@@ -94,7 +88,7 @@ const selectTopic = async (topic: Topic) => {
 const sendMessage = async (key: string, value: string) => {
 	loader?.value?.show();
 	try {
-		await kafka.sendMessage(selectedTopic.value!.name, key, value);
+		await kafkaService.sendMessage(selectedTopic.value!.name, key, value);
 
 		stepperDialog.value?.close();
 	} catch (error) {
@@ -109,7 +103,7 @@ const sendMessage = async (key: string, value: string) => {
 		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
 			<!-- Steps -->
 			<template #connection>
-				<SelectConnection :connections="connections" :submit="setConnection" />
+				<SelectConnection :connections="connections" :submit="setNewConnection" />
 			</template>
 			<template #topic>
 				<SelectTopic :submit="selectTopic" :topics="topics" />

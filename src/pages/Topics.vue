@@ -7,13 +7,13 @@ import SelectConnection from '../components/SelectConnection.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
-import { KafkaManager } from '../services/kafka';
-import { useConnectionStore } from '../services/store';
 import { Connection } from '../types/connection';
 import { ConsumerGroupState } from '../types/consumerGroup';
 import { Setting, SettingKey } from '../types/settings';
 import { Topic } from '../types/topic';
 import Dialog from '../components/Dialog.vue';
+import { useConnection } from '../composables/connection';
+import kafkaService from '../services/kafka';
 
 await checkSettings('topics');
 
@@ -32,8 +32,7 @@ if (connections.length <= 0) {
 
 const loader = useLoader();
 
-const connectionStore = useConnectionStore();
-const kafka = new KafkaManager();
+const { connection, setConnection } = useConnection();
 
 const topics = ref<Topic[]>([]);
 const topicsState = ref<Record<string, ConsumerGroupState>>({});
@@ -42,7 +41,7 @@ const fetchTopics = async () => {
 	
 	loader?.value?.show();
 	try {
-		topics.value = await kafka.listTopics();
+		topics.value = await kafkaService.listTopics();
 		await startFetchTopicsState();
 	} catch (error) {
 		await message(`Error fetching topics: ${error}`, { title: 'Error', type: 'error' });
@@ -64,7 +63,7 @@ const stopFetchTopicState = () => {
 };
 const fetchTopicsState = async () => {
 	try {
-		topicsState.value = await kafka.getTopicsState();
+		topicsState.value = await kafkaService.getTopicsState();
 	} catch (error) {
 		console.error(`Error fetching topics state: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -75,7 +74,7 @@ onDeactivated(() => {
 	selectConnectionDialog?.value?.close();
 });
 onActivated(async () => {
-	if (connectionStore.connection) {
+	if (connection.value) {
 		await startFetchTopicsState();
 	} else {
 		selectConnectionDialog?.value?.open();
@@ -89,7 +88,7 @@ const createTopic = async (name: string, partitions?: number, replicationFactor?
 
 	loader?.value?.show();
 	try {
-		await kafka.createTopic(name, partitions, replicationFactor);
+		await kafkaService.createTopic(name, partitions, replicationFactor);
 	} catch (error) {
 		await message(`Error creating topic: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -105,7 +104,7 @@ const removeTopic = async (topic: Topic) => {
 
 	loader?.value?.show();
 	try {
-		await kafka.deleteTopic(topic.name);
+		await kafkaService.deleteTopic(topic.name);
 	} catch (error) {
 		await message(`Error removing topic: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -116,23 +115,17 @@ const removeTopic = async (topic: Topic) => {
 
 const selectConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
-const setConnection = async (newConnection: Connection) => {
+const setNewConnection = async (newConnection: Connection) => {
 	// Clean slate
 	topics.value = [];
 	stopFetchTopicState();
-	connectionStore.unset();
 
 	loader?.value?.show();
 	try {
 		// Set connection and make sure it works
-		await kafka.setConnection(
-			newConnection.brokers,
-			newConnection.auth,
-			newConnection.groupPrefix
-		);
-		connectionStore.set(newConnection);
+		await setConnection(newConnection);
 
-		topics.value = await kafka.listTopics();
+		topics.value = await kafkaService.listTopics();
 
 		await startFetchTopicsState();
 	} catch (error) {
@@ -166,10 +159,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<div class="flex flex-col h-full relative" v-if="connectionStore.connection">
+	<div class="flex flex-col h-full relative" v-if="connection">
 		<div class="flex items-center justify-between mb-6">
-			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="connectionStore.connection?.name">
-				{{ connectionStore.connection?.name }} topics
+			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="connection.name">
+				{{ connection.name }} topics
 			</h2>
 			<div class="flex">
 				<button
@@ -243,6 +236,6 @@ onBeforeUnmount(() => {
 	</Dialog>
 
   <Dialog ref="selectConnectionDialog" :title="'Choose Connection'">
-		<SelectConnection :connections="connections" :submit="setConnection" />
+		<SelectConnection :connections="connections" :submit="setNewConnection" />
   </Dialog>
 </template>

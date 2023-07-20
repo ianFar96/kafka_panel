@@ -4,9 +4,9 @@ import { ConsumerGroup, ConsumerGroupState } from '../types/consumerGroup';
 import { KafkaMessage } from '../types/message';
 import { Topic } from '../types/topic';
 
-export class KafkaManager {
-	async setConnection(brokers: string[], sasl?: SaslConfig, groupIdPrefix = '') {
-		await invoke('set_connection_command', {brokers, sasl, groupId: `${groupIdPrefix ? `${groupIdPrefix}.` : ''}kafka-panel`});
+class KafkaService {
+	async setConnection(brokers: string[], groupId: string, sasl?: SaslConfig) {
+		await invoke('set_connection_command', {brokers, groupId, sasl});
 	}
 
 	async getTopicsState() {
@@ -51,3 +51,7 @@ export class KafkaManager {
 		await invoke('send_message_command', {topic, key, value});
 	}
 }
+
+const kafkaService = new KafkaService();
+
+export default kafkaService;

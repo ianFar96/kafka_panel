@@ -4,14 +4,12 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
-import { KafkaManager } from '../services/kafka';
+import kafkaService from '../services/kafka';
 import { ConsumerGroup } from '../types/consumerGroup';
 
 await checkSettings('topics');
 
 const route = useRoute();
-
-const kafka = new KafkaManager();
 
 const topicName = route.params.topicName as string;
 
@@ -23,7 +21,7 @@ const groups = ref<ConsumerGroup[]>([]);
 const fetchGroupsFromTopic = async () => {
 	loader?.value?.show();
 	try {
-		groups.value = await kafka.listGroupsFromTopic(topicName);
+		groups.value = await kafkaService.listGroupsFromTopic(topicName);
 	} catch (error) {
 		await message(`Error getting groups: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -63,7 +61,7 @@ You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`;
 
 	loader?.value?.show();
 	try {
-		await kafka.resetOffsets(group.name, topicName);
+		await kafkaService.resetOffsets(group.name, topicName);
 	} catch (error) {
 		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
 	}

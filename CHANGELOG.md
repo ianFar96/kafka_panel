@@ -1,8 +1,13 @@
 # Changelog
 
+### Added
+
+- Added Autosends page: A page that let's you define auto sending message processes with all the customizations one can need 
+
 ### Fix
 
 - When topic has messages without key or value, null is shown instead of an error
+
 ## 0.1.1
 
 ### Changed

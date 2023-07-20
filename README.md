@@ -30,21 +30,15 @@ Here is explained for each page what features it provides and how to use them.
 
 #### Topics
 
-![Topics page](src/assets/screenshots/topics-page.png)
-
 Topics page provides you with a quick overview of the topics, where you can create see a list and delete them. You can also change the connection (configured in Settings page) which will give you access to all the topics that specific user has permissions on.
 
 You might also notice the small dot besides every topic, this is the "topic status" where it can be `Consuming` meaning that there's a consumer connected to it, `Disconnected` meaning it has committed offsets to it but is not currently being consumed, and `Unconnected` which means your topic has no metadata relative to any consumer group. You will also see this pattern in the [Groups page](#groups)
 
 #### Messages
 
-![Messages page](src/assets/screenshots/messages-page.png)
-
-Messages page is where you can see the **latest** messages your topic has.A maximum of messages can be configured and by default is `20`. Of course you can also send messages by starting from blank or selecting one of the already existing messages as starting point.
+Messages page is where you can see the **latest** messages your topic has. A maximum of messages can be configured and by default is `20`. Of course you can also send messages by starting from blank or selecting one of the already existing messages as starting point.
 
 #### Groups
-
-![Groups page](src/assets/screenshots/groups-page.png)
 
 In Groups page you see the consumer groups connected to your topic with the status indicator that we saw in the [Topics page](#topics) and the **lag**.
 
@@ -52,15 +46,17 @@ You can also move the offsets forward to skip certain messages, but only when th
 
 #### Messages Storage
 
-![Messages Storage page](src/assets/screenshots/messages-storage-page.png)
-
 Messages Storage page is meant to provide you with a local storage of your favorite messages from all the topics and connections. Not only that, it also allows you to send each message to whatever connection and whatever topic you'd like.
 
 Messages can be saved in storage with the little "DB" icon you'll find on each message you've already sent, specifying some **tags** before saving to make your search easier in the future.
 
-#### Settings
+#### Autosends
 
-![Settings page](src/assets/screenshots/settings-page.png)
+Autosends page lets you configure multiple auto message sending processes where you can specify duration, interval, connection/topic and the message template to send. 
+
+Message templates have at their disposition the full power of [faker.js](https://fakerjs.dev/), to use it you just need to declare a string with double brackets and write any faker js function you want, for example `"{{faker.person.firstName('female')}}"`. You also can use the values generated in the key object to populate the value object.
+
+#### Settings
 
 Last but not least, the settings page lets you configure your connections to your cluster with a simple json.
 

@@ -3,14 +3,15 @@
  */
 use kafka_panel::{
     create_topic, delete_topic, get_groups_from_topic, get_messages, get_topics, get_topics_state,
-    reset_offsets, send_message, KafkaGroupResponse, KafkaMessageResponse, KafkaTopicResponse, GroupState,
+    reset_offsets, send_message, GroupState, KafkaGroupResponse, KafkaMessageResponse,
+    KafkaTopicResponse,
 };
 use rdkafka::{
     admin::AdminClient, client::DefaultClientContext, consumer::StreamConsumer,
     producer::FutureProducer, ClientConfig,
 };
 use serde::Deserialize;
-use std::{sync::Arc, collections::HashMap};
+use std::{collections::HashMap, sync::Arc};
 use tauri::State;
 use tokio::sync::RwLock;
 

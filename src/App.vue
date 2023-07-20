@@ -3,6 +3,7 @@ import { appWindow } from '@tauri-apps/api/window';
 import { provide, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Loader from './components/Loader.vue';
+import { useAutosendsStore } from './composables/autosends';
 
 const router = useRouter();
 let title = ref<string>();
@@ -12,6 +13,8 @@ router.afterEach(to => {
 
 const loader = ref<InstanceType<typeof Loader> | null>(null); // Template ref
 provide('loader', loader);
+
+const autosendStore = useAutosendsStore();
 
 const route = useRoute();
 </script>
@@ -52,6 +55,15 @@ const route = useRoute();
             class="w-16 h-16 flex justify-center items-center cursor-pointer hover:border-l border-white mt-4"
             :class="{'border-l': route.path.includes('/messages-storage')}">
             <i class="bi-database text-[28px] leading-none"></i>
+          </router-link>
+          <router-link to="/autosend"
+            class="w-16 h-16 flex justify-center items-center cursor-pointer hover:border-l border-white mt-4 relative"
+            :class="{'border-l': route.path.includes('/autosend')}">
+            <i class="bi-repeat text-[28px] leading-none"></i>
+            <i v-if="autosendStore.autosends.length > 0" 
+              class="absolute top-2 right-2 text-xs not-italic h-5 w-5 leading-none flex items-center justify-center bg-red-700 text-white text-center rounded-full">
+              {{ autosendStore.autosends.length }}
+            </i>
           </router-link>
         </div>
         <div>

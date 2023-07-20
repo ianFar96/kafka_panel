@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.0.0
+
 ### Added
 
 - Added Autosends page: A page that let's you define auto sending message processes with all the customizations one can need 

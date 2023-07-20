@@ -10,7 +10,7 @@ export class Timer {
 
 	private _remaining: BehaviorSubject<Duration>;
 	get remaining() {
-		return this._remaining;
+		return this._remaining.asObservable();
 	}
 
 	constructor(duration: Duration) {

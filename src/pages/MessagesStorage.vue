@@ -14,6 +14,9 @@ import db from '../services/database';
 import { Connection } from '../types/connection';
 import { StorageMessage } from '../types/message';
 import { Setting, SettingKey } from '../types/settings';
+import StartAutosendStepper from '../components/StartAutosendStepper.vue';
+import { useAutosendsStore } from '../composables/autosends';
+import { pick } from 'ramda';
 
 type Message = {
 	id: number
@@ -128,8 +131,11 @@ const filteredMessages = computed(() => {
 		});
 });
 
+const autosendStore = useAutosendsStore();
+
 const sendStorageMessageStepper = ref<InstanceType<typeof SendStorageMessageStepper> | null>(null); // Template ref
 const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStepper> | null>(null); // Template ref
+const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | null>(null); // Template ref
 </script>
 
 <template>
@@ -177,6 +183,10 @@ const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStep
 							title="Copy JSON"
 							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
+						<button @click="startAutosendStepper?.openDialog(connections, messageToStorageMessage(message))"
+							title="Start autosend"
+							class="text-xl bi-repeat transition-colors duration-300 cursor-pointer hover:text-orange-400 mr-3">
+						</button>
 						<button @click="sendStorageMessageStepper?.openDialog(connections, messageToStorageMessage(message))"
 							title="Send again"
 							class="text-xl bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
@@ -190,6 +200,7 @@ const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStep
 		</ul>
   </div>
 
-	<SendStorageMessageStepper ref="sendStorageMessageStepper" />
 	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessage" />
+	<SendStorageMessageStepper ref="sendStorageMessageStepper" />
+	<StartAutosendStepper ref="startAutosendStepper" :submit="autosendStore.startAutosend" />
 </template>

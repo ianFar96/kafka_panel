@@ -1,4 +1,4 @@
-import { Timer } from '../services/Timer';
+import { Observable } from 'rxjs';
 
 export type Autosend = {
   topic: string,
@@ -8,8 +8,9 @@ export type Autosend = {
 }
 
 export type ActiveAutosend = Autosend & {
-  timer: Timer,
-  id: string
+  id: string,
+  timer?: Observable<string>,
+  messagesSent?: Observable<number>
 }
 
 export type AutosendOptions = {

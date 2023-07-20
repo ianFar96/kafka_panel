@@ -239,7 +239,7 @@ onBeforeUnmount(() => {
 							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
 						<button @click="chooseTags(message)"
-							title="Save on storage"
+							title="Save in storage"
 							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
 						</button>
 						<button @click="defineMessageToSend(message)"

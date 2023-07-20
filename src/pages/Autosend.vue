@@ -1,25 +1,23 @@
 <!-- eslint-disable no-empty -->
 <script setup lang="ts">
 import { message } from '@tauri-apps/api/dialog';
-import { useSubject } from '@vueuse/rxjs';
-import { Duration } from 'luxon';
-import { BehaviorSubject } from 'rxjs';
 import { Ref, computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import Dialog from '../components/Dialog.vue';
+import EditTags from '../components/EditTags.vue';
+import StartAutosendStepper from '../components/StartAutosendStepper.vue';
 import { useAutosendsStore } from '../composables/autosends';
-import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import db from '../services/database';
 import { ActiveAutosend } from '../types/autosend';
 import { Connection } from '../types/connection';
 import { Setting, SettingKey } from '../types/settings';
-import { storeToRefs } from 'pinia';
-import StartAutosendStepper from '../components/StartAutosendStepper.vue';
+import { useObservable } from '@vueuse/rxjs';
 
 type DisplayAutosend = ActiveAutosend & {
-	// TODO: this should not be a ref (removing timerDisplay changes nothing)
 	valueVisible: Ref<boolean>
-	timerDisplay: Ref<Duration>
+	timerDisplay: Ref<string>
+	messagesSentDisplay: Ref<number>
 }
 
 await checkSettings('autosend');
@@ -38,12 +36,12 @@ if (connections.length <= 0) {
 }
 
 const autosendStore = useAutosendsStore();
-const { autosends } = storeToRefs(autosendStore);
 
-const displayAutosends = computed(() => autosends.value.map(autosend => ({
+const displayAutosends = computed(() => autosendStore.autosends.map(autosend => ({
 	...autosend,
 	valueVisible: ref(false),
-	timerDisplay: useSubject(autosend.timer.remaining as BehaviorSubject<Duration>)
+	timerDisplay: useObservable(autosend.timer!),
+	messagesSentDisplay: useObservable(autosend.messagesSent!),
 }) as DisplayAutosend));
 
 const searchQuery = ref('');
@@ -59,6 +57,27 @@ const filteredAutosends = computed(() => {
 });
 
 const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | null>(null); // Template ref
+
+const editTagsDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
+const selectedAutosend = ref<ActiveAutosend>();
+const chooseTags = (autosend: ActiveAutosend) => {
+	selectedAutosend.value = autosend;
+	editTagsDialog.value?.open();
+};
+
+const saveMessageInStorage = async (tags: string[]) => {
+	await db.messages.add({
+		key: typeof selectedAutosend.value!.key === 'object' ?
+			JSON.stringify(selectedAutosend.value!.key) :
+			selectedAutosend.value!.key,
+		value: typeof selectedAutosend.value!.value === 'object' ?
+			JSON.stringify(selectedAutosend.value!.value) :
+			selectedAutosend.value!.value,
+		tags
+	});
+
+	editTagsDialog.value?.close();
+};
 </script>
 
 <template>
@@ -103,7 +122,11 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 						</span>
 						<span class="text-md mr-4 flex items-center" title="Remaining">
 							<i class="bi-hourglass-split mr-2 leading-none"></i>
-							{{ autosend.timerDisplay.value.toFormat('hh::mm:ss') }}
+							{{ autosend.timerDisplay.value || '-' }}
+						</span>
+						<span class="text-md mr-4 flex items-center" title="Messages sent">
+							<i class="bi-send-check mr-2 leading-none"></i>
+							{{ autosend.messagesSentDisplay.value || '-' }}
 						</span>
 					</div>
 					<i class="text-xl leading-none"
@@ -112,6 +135,10 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 
 				<div v-if="autosend.valueVisible.value" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
+						<button @click="chooseTags(autosend)"
+							title="Save in storage"
+							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
+						</button>
 						<button @click="autosendStore.stopAutosend(autosend)"
 							title="Stop"
 							class="text-2xl leading-none bi-stop transition-colors duration-300 cursor-pointer hover:text-red-500">
@@ -126,4 +153,8 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 	</div>
 
 	<StartAutosendStepper ref="startAutosendStepper" :submit="autosendStore.startAutosend" />
+
+	<Dialog ref="editTagsDialog" title="Select tags">
+		<EditTags :tags="['autosend template']" :submit="saveMessageInStorage" :submit-button-text="'Save'"/>
+	</Dialog>
 </template>

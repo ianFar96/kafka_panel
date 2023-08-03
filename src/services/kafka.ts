@@ -4,11 +4,12 @@ import { ConsumerGroup, ConsumerGroupState } from '../types/consumerGroup';
 import { KafkaMessage } from '../types/message';
 import { Topic } from '../types/topic';
 import { UnlistenFn, emit, listen } from '@tauri-apps/api/event';
-import { message } from '@tauri-apps/api/dialog';
 import { Subject } from 'rxjs';
 
 class KafkaService {
 	private unlisten?: UnlistenFn;
+	private batchingInterval?: NodeJS.Timer;
+	private batchMessages: KafkaMessage[] = [];
 	
 	async setConnection(brokers: string[], groupId: string, sasl?: SaslConfig) {
 		await invoke('set_connection_command', {brokers, groupId, sasl});
@@ -52,11 +53,13 @@ class KafkaService {
 			throw new Error('Unexpected error: previous listening for messages is still active');
 		}
 
-		const messagesSubject = new Subject<KafkaMessage>();
+		const messagesSubject = new Subject<KafkaMessage[]>();
 		invoke('listen_messages_command', {topic, messagesNumber})
 			.then(() => {
 				messagesSubject.complete();
-				
+
+				clearInterval(this.batchingInterval);
+
 				this.unlisten?.();
 				delete this.unlisten;
 			})
@@ -66,8 +69,17 @@ class KafkaService {
 
 		const unlisten = await listen<KafkaMessage>('onMessage', (event) => {
 			const kafkaMessage = event.payload;
-			messagesSubject.next(kafkaMessage);
+			this.batchMessages.push(kafkaMessage);
 		});
+
+		// Debounce batching system so in case of flow spike
+		// VueJS has the time to display elements
+		this.batchingInterval = setInterval(() => {
+			if (this.batchMessages.length > 0) {
+				messagesSubject.next(this.batchMessages);
+				this.batchMessages = [];
+			}
+		}, 1000);
 
 		this.unlisten = unlisten;
 

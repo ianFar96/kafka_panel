@@ -64,33 +64,41 @@ const messageToSendMessage = (message: Message): SendMessage => {
 };
 
 const messages = ref<Message[]>([]);
-const consuming = ref(false);
+const status = ref<'starting' | 'started' | 'stopping' | 'stopped'>('stopped');
 const startListenMessages = async () => {
-	consuming.value = true;
+	status.value = 'starting';
 	messages.value = [];
 	
-	loader?.value?.show();
+	const numberOfMessages = parseInt(settingsMap['MESSAGES'].value as string);
 	
-	const messagesObservable = await kafkaService.listenMessages(topicName, parseInt(settingsMap['MESSAGES'].value as string));
+	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
 	messagesObservable.subscribe({
-		next: kafkaMessage => {
-			messages.value.unshift(kafkaMessageToMessage(kafkaMessage));
-			loader?.value?.hide();
+		next: kafkaMessages => {
+			// To avoid going from stopping to started while receiving the last message
+			if (status.value === 'starting') {
+				status.value = 'started';
+			}
 
-			// Sort by timestamp
-			messages.value.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
+			// Cast, sort and get only the number of messages we want
+			const messagesToDisplay = [
+				...messages.value,
+				...kafkaMessages.map(kafkaMessage => kafkaMessageToMessage(kafkaMessage))
+			];
+			messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
+			messages.value = messagesToDisplay.splice(0, numberOfMessages);
 		},
 		error: async error => {
 			await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
 		},
 		complete: () => {
-			consuming.value = false;
+			status.value = 'stopped';
 		}
 	});
 };
 await startListenMessages();
 
 const stopListeningMessages = async () => {
+	status.value = 'stopping';
 	kafkaService.offMessage();
 };
 
@@ -207,19 +215,20 @@ const getDisplayDate = (dateMilis: number) => {
 		<div class="mb-6 flex justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
-			<button v-if="consuming" type="button" @click="stopListeningMessages()"
-				class="text-2xl bi-stop">
-			</button>
-			<button v-else type="button" @click="startListenMessages()"
-				class="text-2xl bi-play">
-			</button>
-		</div>
-
-		<div class="flex justify-end mb-2">
-			<span class="text-xs text-gray-400">
-				{{ filteredMessages.length }}/{{ settingsMap['MESSAGES'].value }}
-				<i class="bi-envelope ml-0.5"></i>
-			</span>
+			<div class="flex items-center">
+				<span class="text-lg mr-4" title="Number of messages">
+					{{ filteredMessages.length }}
+					<i class="bi-envelope ml-0.5"></i>
+				</span>
+				<button v-if="status === 'stopped'" type="button" @click="startListenMessages()"
+					class="text-2xl bi-play-circle text-green-500" title="Start fetching">
+				</button>
+				<i v-if="status === 'starting' || status === 'stopping'" class="bi-arrow-clockwise text-2xl animate-spin"
+					:title="status === 'starting' ? 'Starting' : 'Stopping'"></i>
+				<button v-if="status === 'started'" type="button" @click="stopListeningMessages()"
+					class="text-2xl bi-stop-circle animate-pulse text-red-500" title="Stop fetching" >
+				</button>
+			</div>
 		</div>
 
 		<ul class="h-full overflow-auto">

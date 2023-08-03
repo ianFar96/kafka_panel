@@ -1,9 +1,12 @@
+use std::sync::{RwLock, Arc};
+
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::message::BorrowedMessage;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use rdkafka::{Message, Offset, TopicPartitionList};
 use serde::Serialize;
+use tauri::Window;
 use tokio::time::Duration;
 
 #[derive(Serialize, Clone)]
@@ -15,11 +18,12 @@ pub struct KafkaMessageResponse {
     timestamp: i64,
 }
 
-pub async fn get_messages(
+pub async fn listen_messages(
+    window: Window,
     consumer: &StreamConsumer,
     topic: String,
     messages_number: i64,
-) -> Result<Vec<KafkaMessageResponse>, String> {
+) -> Result<(), String> {
     // Manually fecth metadata and assign partition so we don't fetch using our consumer group
     let metadata = consumer
         .fetch_metadata(Some(&topic), Duration::from_secs(30))
@@ -72,10 +76,14 @@ pub async fn get_messages(
         })?;
     }
 
-    // We wait 3s initially so it has time to connect and all
-    let mut timeout = Duration::from_secs(3);
-    let mut message_results: Vec<KafkaMessageResponse> = vec![];
-    loop {
+    let keep_listening = Arc::new(RwLock::new(true));
+    let keep_listening_clone = keep_listening.clone();
+    window.once("offMessage", move |_| {
+        *keep_listening_clone.write().unwrap() = false;
+    });
+
+    while *keep_listening.read().unwrap() {
+        let timeout = Duration::from_secs(3);
         let message = match tokio::time::timeout(timeout, consumer.recv()).await {
             Ok(Ok(message)) => Ok(Some(message)),
             Ok(Err(err)) => Err(err.to_string()),
@@ -84,9 +92,6 @@ pub async fn get_messages(
 
         match message {
             Some(message) => {
-                // Once we receive the first message we shorten the timeout so the user does not wait too much
-                timeout = Duration::from_secs(1);
-
                 let message_result = process_message(&message).map_err(|err| {
                     format!(
                         "Could not process message for topic: {}, partition: {}, offset: {}\n\nError: {}",
@@ -97,32 +102,15 @@ pub async fn get_messages(
                     )
                 })?;
 
-                message_results.push(message_result);
+                window.emit("onMessage", message_result).unwrap();
             }
-            None => {
-                break;
-            }
+            None => {}
         }
     }
 
     consumer.unsubscribe();
 
-    // Reorder by timestamp
-    message_results.sort_by(|a, b| {
-        let timestamp_ord = b.timestamp.cmp(&a.timestamp);
-        if std::cmp::Ordering::Equal != timestamp_ord {
-            return timestamp_ord;
-        }
-
-        // If timestamp is equal, order by offset
-        return b.offset.cmp(&a.offset);
-    });
-
-    // Get only the last [messages_number] messages
-    // Since there can be more messages than the limit when there's more than 1 partition
-    message_results.truncate(messages_number.try_into().unwrap());
-
-    Ok(message_results)
+    Ok(())
 }
 
 fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, String> {

@@ -64,17 +64,39 @@ const messageToSendMessage = (message: Message): SendMessage => {
 };
 
 const messages = ref<Message[]>([]);
-const fetchMessages = async () => {
+const consuming = ref(false);
+const startListenMessages = async () => {
+	consuming.value = true;
+	messages.value = [];
+	
 	loader?.value?.show();
-	try {
-		const kafkaMessages = await kafkaService.getMessages(topicName, parseInt(settingsMap['MESSAGES'].value as string));
-		messages.value = kafkaMessages.map(message => kafkaMessageToMessage(message));
-	} catch (error) {
-		await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
-	}
-	loader?.value?.hide();
+	
+	const messagesObservable = await kafkaService.listenMessages(topicName, parseInt(settingsMap['MESSAGES'].value as string));
+	messagesObservable.subscribe({
+		next: kafkaMessage => {
+			messages.value.unshift(kafkaMessageToMessage(kafkaMessage));
+			loader?.value?.hide();
+
+			// Sort by timestamp
+			messages.value.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
+		},
+		error: async error => {
+			await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
+		},
+		complete: () => {
+			consuming.value = false;
+		}
+	});
 };
-await fetchMessages();
+await startListenMessages();
+
+const stopListeningMessages = async () => {
+	kafkaService.offMessage();
+};
+
+onBeforeUnmount(() => {
+	stopListeningMessages();
+});
 
 const copyToClipboard = async (event: MouseEvent, text: string) => {
 	event.preventDefault();
@@ -142,8 +164,6 @@ const sendMessage = async (key: string, value: string) => {
 		await kafkaService.sendMessage(topicName, key, value);
 
 		sendMessageDialog.value?.close();
-		
-		await fetchMessages();
 	} catch (error) {
 		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -161,16 +181,6 @@ const getDisplayDate = (dateMilis: number) => {
 	const seconds = date.getSeconds().toString().padStart(2, '0');
 	return `${day}/${month}/${fullyear} ${hours}:${minutes}:${seconds}`;
 };
-
-const refreshEvent = (event: KeyboardEvent) => {
-	if (event.ctrlKey && event.key === 'r') {
-		fetchMessages();
-	}
-};
-window.addEventListener('keydown', refreshEvent);
-onBeforeUnmount(() => {
-	window.removeEventListener('keydown', refreshEvent);
-});
 </script>
 
 <template>
@@ -197,8 +207,11 @@ onBeforeUnmount(() => {
 		<div class="mb-6 flex justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
-			<button type="button" @click="fetchMessages()"
-				class="text-2xl bi-arrow-clockwise">
+			<button v-if="consuming" type="button" @click="stopListeningMessages()"
+				class="text-2xl bi-stop">
+			</button>
+			<button v-else type="button" @click="startListenMessages()"
+				class="text-2xl bi-play">
 			</button>
 		</div>
 

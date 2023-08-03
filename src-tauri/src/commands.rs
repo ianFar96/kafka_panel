@@ -2,44 +2,24 @@
  * This module is meant to be a safe abstraction on the tauri ecosystem and its internal state
  */
 use kafka_panel::{
-    create_topic, delete_topic, get_groups_from_topic, get_messages, get_topics, get_topics_state,
-    reset_offsets, send_message, GroupState, KafkaGroupResponse, KafkaMessageResponse,
+    create_topic, delete_topic, get_groups_from_topic, get_topics, get_topics_state,
+    listen_messages, reset_offsets, send_message, GroupState, KafkaGroupResponse,
     KafkaTopicResponse,
 };
 use rdkafka::{
-    admin::AdminClient, client::DefaultClientContext, consumer::StreamConsumer,
-    producer::FutureProducer, ClientConfig,
+    admin::AdminClient, consumer::StreamConsumer, producer::FutureProducer, ClientConfig,
 };
 use serde::Deserialize;
-use std::{collections::HashMap, sync::Arc};
-use tauri::State;
-use tokio::sync::RwLock;
+use std::collections::HashMap;
+use tauri::{State, Window};
+
+use crate::state::KafkaState;
 
 #[derive(Deserialize, Debug)]
 pub struct SaslConfig {
     mechanism: String,
     username: String,
     password: String,
-}
-
-pub struct KafkaState {
-    admin: Arc<RwLock<Option<AdminClient<DefaultClientContext>>>>,
-    consumer: Arc<RwLock<Option<StreamConsumer>>>,
-    producer: Arc<RwLock<Option<FutureProducer>>>,
-    common_config: Arc<RwLock<Option<ClientConfig>>>,
-}
-
-pub fn create_empty_state() -> KafkaState {
-    let admin = Arc::new(RwLock::new(None));
-    let consumer = Arc::new(RwLock::new(None));
-    let producer = Arc::new(RwLock::new(None));
-    let common_config = Arc::new(RwLock::new(None));
-    KafkaState {
-        admin,
-        consumer,
-        producer,
-        common_config,
-    }
 }
 
 #[tauri::command]
@@ -184,18 +164,19 @@ pub async fn delete_topic_command<'a>(
 }
 
 #[tauri::command]
-pub async fn get_messages_command<'a>(
+pub async fn listen_messages_command<'a>(
+    window: Window,
     state: State<'a, KafkaState>,
     topic: String,
     messages_number: i64,
-) -> Result<Vec<KafkaMessageResponse>, String> {
+) -> Result<(), String> {
     let binding = state.consumer.read().await;
     let consumer = match *binding {
         None => return Err("Connection not set".into()),
         Some(ref x) => x,
     };
 
-    get_messages(consumer, topic, messages_number).await
+    listen_messages(window, consumer, topic, messages_number).await
 }
 
 #[tauri::command]

@@ -1,7 +1,7 @@
 [package]
 name = "kafka_panel"
-version = "1.0.0"
-description = "A Tauri App"
+version = "1.1.0"
+description = "Admin panel for Apache Kafka"
 authors = ["ianFar96"]
 license = ""
 repository = ""

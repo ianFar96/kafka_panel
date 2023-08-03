@@ -64,17 +64,47 @@ const messageToSendMessage = (message: Message): SendMessage => {
 };
 
 const messages = ref<Message[]>([]);
-const fetchMessages = async () => {
-	loader?.value?.show();
-	try {
-		const kafkaMessages = await kafkaService.getMessages(topicName, parseInt(settingsMap['MESSAGES'].value as string));
-		messages.value = kafkaMessages.map(message => kafkaMessageToMessage(message));
-	} catch (error) {
-		await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
-	}
-	loader?.value?.hide();
+const status = ref<'starting' | 'started' | 'stopping' | 'stopped'>('stopped');
+const startListenMessages = async () => {
+	status.value = 'starting';
+	messages.value = [];
+	
+	const numberOfMessages = parseInt(settingsMap['MESSAGES'].value as string);
+	
+	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
+	messagesObservable.subscribe({
+		next: kafkaMessages => {
+			// To avoid going from stopping to started while receiving the last message
+			if (status.value === 'starting') {
+				status.value = 'started';
+			}
+
+			// Cast, sort and get only the number of messages we want
+			const messagesToDisplay = [
+				...messages.value,
+				...kafkaMessages.map(kafkaMessage => kafkaMessageToMessage(kafkaMessage))
+			];
+			messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
+			messages.value = messagesToDisplay.splice(0, numberOfMessages);
+		},
+		error: async error => {
+			await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
+		},
+		complete: () => {
+			status.value = 'stopped';
+		}
+	});
 };
-await fetchMessages();
+await startListenMessages();
+
+const stopListeningMessages = async () => {
+	status.value = 'stopping';
+	kafkaService.offMessage();
+};
+
+onBeforeUnmount(() => {
+	stopListeningMessages();
+});
 
 const copyToClipboard = async (event: MouseEvent, text: string) => {
 	event.preventDefault();
@@ -142,8 +172,6 @@ const sendMessage = async (key: string, value: string) => {
 		await kafkaService.sendMessage(topicName, key, value);
 
 		sendMessageDialog.value?.close();
-		
-		await fetchMessages();
 	} catch (error) {
 		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -161,16 +189,6 @@ const getDisplayDate = (dateMilis: number) => {
 	const seconds = date.getSeconds().toString().padStart(2, '0');
 	return `${day}/${month}/${fullyear} ${hours}:${minutes}:${seconds}`;
 };
-
-const refreshEvent = (event: KeyboardEvent) => {
-	if (event.ctrlKey && event.key === 'r') {
-		fetchMessages();
-	}
-};
-window.addEventListener('keydown', refreshEvent);
-onBeforeUnmount(() => {
-	window.removeEventListener('keydown', refreshEvent);
-});
 </script>
 
 <template>
@@ -197,16 +215,20 @@ onBeforeUnmount(() => {
 		<div class="mb-6 flex justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
-			<button type="button" @click="fetchMessages()"
-				class="text-2xl bi-arrow-clockwise">
-			</button>
-		</div>
-
-		<div class="flex justify-end mb-2">
-			<span class="text-xs text-gray-400">
-				{{ filteredMessages.length }}/{{ settingsMap['MESSAGES'].value }}
-				<i class="bi-envelope ml-0.5"></i>
-			</span>
+			<div class="flex items-center">
+				<span class="text-lg mr-4" title="Number of messages">
+					{{ filteredMessages.length }}
+					<i class="bi-envelope ml-0.5"></i>
+				</span>
+				<button v-if="status === 'stopped'" type="button" @click="startListenMessages()"
+					class="text-2xl bi-play-circle text-green-500" title="Start fetching">
+				</button>
+				<i v-if="status === 'starting' || status === 'stopping'" class="bi-arrow-clockwise text-2xl animate-spin"
+					:title="status === 'starting' ? 'Starting' : 'Stopping'"></i>
+				<button v-if="status === 'started'" type="button" @click="stopListeningMessages()"
+					class="text-2xl bi-stop-circle animate-pulse text-red-500" title="Stop fetching" >
+				</button>
+			</div>
 		</div>
 
 		<ul class="h-full overflow-auto">

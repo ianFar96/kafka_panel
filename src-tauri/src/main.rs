@@ -4,10 +4,11 @@
 )]
 
 mod commands;
+mod state;
 
 fn main() {
     tauri::Builder::default()
-        .manage(commands::create_empty_state())
+        .manage(state::create_empty_state())
         .invoke_handler(tauri::generate_handler![
             // Generic kafka commands
             commands::set_connection_command,
@@ -20,7 +21,7 @@ fn main() {
             commands::create_topic_command,
             commands::delete_topic_command,
             // Message commands
-            commands::get_messages_command,
+            commands::listen_messages_command,
             commands::send_message_command,
         ])
         .run(tauri::generate_context!())

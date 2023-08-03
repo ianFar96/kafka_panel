@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+### Changed
+
+- Messages page listens to new messages (unless stopped). New messages are displayed as they arrive maintaining always in page the number of messages defined in the settings.
+
 ## 1.0.0
 
 ### Added

@@ -1,5 +1,9 @@
 # Changelog
 
+### Fixed
+
+- Fixed undefined messages sent counter when switching between pages back to running autosends
+
 ## 1.1.0
 
 ### Changed

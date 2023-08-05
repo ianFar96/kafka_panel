@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { clone } from 'ramda';
 import { ActiveAutosend, AutosendTime } from '../types/autosend';
 import kafkaService from './kafka';
-import { Subject } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { Timer } from './Timer';
 import { Duration } from 'luxon';
 
@@ -10,7 +10,7 @@ class AutosendsService {
 	private intervals: Record<string, NodeJS.Timer> = {};
 
 	startAutosend(autosend: ActiveAutosend) {
-		const messagesCounter = new Subject<number>();
+		const messagesCounter = new BehaviorSubject<number>(0);
 
 		const duration = this.castAutosendTimeToDuration(autosend.options.duration);
 		const timer = new Timer(duration);
@@ -24,7 +24,6 @@ class AutosendsService {
 		const interval = this.castAutosendTimeToDuration(autosend.options.interval);
 		this.intervals[autosend.id] = setInterval((autosend: ActiveAutosend) => {
 			try {
-				// TODO: avoid this clone
 				const interpolatedKey = this.interpolateFakeValues(clone(autosend.key), {faker});
 				const interpolatedValue = this.interpolateFakeValues(clone(autosend.value), {faker, key: interpolatedKey});
 
@@ -43,8 +42,9 @@ class AutosendsService {
 		}, interval.as('milliseconds'), autosend);
 
 		return {
-			messagesSent: messagesCounter.asObservable(),
-			timer: timer.remaining
+			messagesSentObservable: messagesCounter.asObservable(),
+			remainingTimeObservable: timer.remainingObservable,
+			onFinish: timer.onFinish.bind(timer)
 		};
 	}
 

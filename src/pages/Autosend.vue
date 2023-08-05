@@ -1,4 +1,3 @@
-<!-- eslint-disable no-empty -->
 <script setup lang="ts">
 import { message } from '@tauri-apps/api/dialog';
 import { Ref, computed, ref } from 'vue';
@@ -40,8 +39,8 @@ const autosendStore = useAutosendsStore();
 const displayAutosends = computed(() => autosendStore.autosends.map(autosend => ({
 	...autosend,
 	valueVisible: ref(false),
-	timerDisplay: useObservable(autosend.timer!),
-	messagesSentDisplay: useObservable(autosend.messagesSent!),
+	timerDisplay: useObservable(autosend.remainingTimeObservable!),
+	messagesSentDisplay: useObservable(autosend.messagesSentObservable!),
 }) as DisplayAutosend));
 
 const searchQuery = ref('');
@@ -141,7 +140,7 @@ const saveMessageInStorage = async (tags: string[]) => {
 						</button>
 						<button @click="autosendStore.stopAutosend(autosend)"
 							title="Stop"
-							class="text-2xl leading-none bi-stop transition-colors duration-300 cursor-pointer hover:text-red-500">
+							class="text-xl leading-none bi-stop-circle transition-colors duration-300 cursor-pointer hover:text-red-500">
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">

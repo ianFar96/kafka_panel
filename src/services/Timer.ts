@@ -8,22 +8,22 @@ export class Timer {
 	private interval?: NodeJS.Timer;
 	private callbacks: TimerCallback[] = [];
 
-	private _remaining: BehaviorSubject<Duration>;
-	get remaining() {
-		return this._remaining.asObservable();
+	private remainingSubject: BehaviorSubject<Duration>;
+	get remainingObservable() {
+		return this.remainingSubject.asObservable();
 	}
 
 	constructor(duration: Duration) {
 		this.startTime = DateTime.now().plus(duration);
-		this._remaining = new BehaviorSubject(this.startTime.diffNow('seconds'));
+		this.remainingSubject = new BehaviorSubject(this.startTime.diffNow('seconds'));
 	}
 
 	start() {
 		if (!this.interval) {
 			this.interval = setInterval(async () => {
-				this._remaining.next(this.startTime.diffNow('seconds'));
+				this.remainingSubject.next(this.startTime.diffNow('seconds'));
 
-				if (Math.floor(this._remaining.value.seconds) <= 0) {
+				if (Math.floor(this.remainingSubject.value.seconds) <= 0) {
 					this.stop();
 
 					for (const callback of this.callbacks) {

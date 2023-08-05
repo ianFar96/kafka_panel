@@ -9,8 +9,8 @@ export type Autosend = {
 
 export type ActiveAutosend = Autosend & {
   id: string,
-  timer?: Observable<string>,
-  messagesSent?: Observable<number>
+  remainingTimeObservable?: Observable<string>,
+  messagesSentObservable?: Observable<number>
 }
 
 export type AutosendOptions = {

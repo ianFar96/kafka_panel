@@ -18,18 +18,23 @@ export const useAutosendsStore = defineStore('autosends', () => {
 		};
 
 		// Start seding messages
-		const {timer, messagesSent} = autosendsService.startAutosend(activeAutosend);
+		const {remainingTimeObservable, messagesSentObservable, onFinish} = autosendsService.startAutosend(activeAutosend);
 
-		activeAutosend.timer = timer.pipe(map(timer =>  timer.toFormat('hh::mm:ss')));
-		activeAutosend.messagesSent = messagesSent;
+		activeAutosend.remainingTimeObservable = remainingTimeObservable.pipe(map(time =>  time.toFormat('hh::mm:ss')));
+		activeAutosend.messagesSentObservable = messagesSentObservable;
 
 		autosends.value.push(activeAutosend);
 
-		messagesSent.subscribe({
+		messagesSentObservable.subscribe({
 			error: async error => {
 				await message(error as string, { title: 'Error', type: 'error' });
 				await stopAutosend(activeAutosend);
 			}
+		});
+
+		// On autosend finish remove it from store
+		onFinish(() => {
+			popAutosend(id);
 		});
 	}
 
@@ -37,7 +42,12 @@ export const useAutosendsStore = defineStore('autosends', () => {
 		// Stop sending messages
 		autosendsService.stopAutosend(autosend);
 
-		const index = autosends.value.findIndex(autosendTmp => autosendTmp.id === autosend.id);
+		// On autosend is stopped remove it from store
+		popAutosend(autosend.id);
+	}
+
+	function popAutosend(id: string) {
+		const index = autosends.value.findIndex(autosendTmp => autosendTmp.id === id);
 		autosends.value.splice(index, 1);
 	}
 

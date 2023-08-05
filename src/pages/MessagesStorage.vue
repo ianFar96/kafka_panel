@@ -16,7 +16,6 @@ import { StorageMessage } from '../types/message';
 import { Setting, SettingKey } from '../types/settings';
 import StartAutosendStepper from '../components/StartAutosendStepper.vue';
 import { useAutosendsStore } from '../composables/autosends';
-import { pick } from 'ramda';
 
 type Message = {
 	id: number

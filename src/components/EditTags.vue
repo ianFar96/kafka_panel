@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { randomColor } from '../services/chipColors';
+import { getRandomColor } from '../services/chipColors';
 import Chip, { Tag } from './Chip.vue';
 
 const props = defineProps<{
@@ -9,7 +9,7 @@ const props = defineProps<{
 	submitButtonText: string
 }>();
 
-const tags = ref<Tag[]>(props.tags?.map(tag => ({name: tag, color: randomColor()})) || []);
+const tags = ref<Tag[]>(props.tags?.map(tag => ({name: tag, color: getRandomColor()})) || []);
 
 const handleSubmit = async () => {
 	if (tags.value.length <= 0) return;
@@ -32,7 +32,7 @@ const addTagOnEnter = (event: KeyboardEvent) => {
 		if (input.value !== '' && !tags.value.some(tag => tag.name === input.value)) {
 			tags.value.push({
 				name: input.value,
-				color: randomColor()
+				color: getRandomColor()
 			});
 		}
 		input.value = '';

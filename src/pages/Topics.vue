@@ -1,34 +1,21 @@
 <script setup lang="ts">
 import { confirm, message } from '@tauri-apps/api/dialog';
 import { computed, onActivated, onBeforeUnmount, onDeactivated, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import CreateTopic from '../components/CreateTopic.vue';
+import Dialog from '../components/Dialog.vue';
 import SelectConnection from '../components/SelectConnection.vue';
+import { useConnection } from '../composables/connection';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
-import db from '../services/database';
+import kafkaService from '../services/kafka';
+import storageService from '../services/storage';
 import { Connection } from '../types/connection';
 import { ConsumerGroupState } from '../types/consumerGroup';
-import { Setting, SettingKey } from '../types/settings';
 import { Topic } from '../types/topic';
-import Dialog from '../components/Dialog.vue';
-import { useConnection } from '../composables/connection';
-import kafkaService from '../services/kafka';
 
 await checkSettings('topics');
 
-const router = useRouter();
-
-const settingKeys: SettingKey[] = ['CONNECTIONS'];
-const settings = await db.settings.bulkGet(settingKeys) as Setting[];
-const settingsMap: { [key: string]: Setting } = settings.reduce((acc, setting) => ({ ...acc, [setting.key]: setting }), {});
-
-const connections: Connection[] = JSON.parse(settingsMap['CONNECTIONS'].value);
-
-if (connections.length <= 0) {
-	await message('Please make sure you have at least one connection configured for Connections setting', { title: 'Error', type: 'error' });
-	router.push('/settings');
-}
+const connections = (await storageService.settings.get('CONNECTIONS') ?? []) as Connection[];
 
 const loader = useLoader();
 
@@ -124,7 +111,6 @@ const setNewConnection = async (newConnection: Connection) => {
 	try {
 		// Set connection and make sure it works
 		await setConnection(newConnection);
-
 		topics.value = await kafkaService.listTopics();
 
 		await startFetchTopicsState();

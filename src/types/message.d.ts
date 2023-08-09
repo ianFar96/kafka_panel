@@ -12,7 +12,7 @@ export type SendMessage = {
 }
 
 export type StorageMessage = {
-  id?: number
+  id: string
   key: string
   value: string
   tags: string[]

@@ -1,26 +1,17 @@
 /**
  * This module is meant to be a safe abstraction on the tauri ecosystem and its internal state
  */
+use jfs::Store;
 use kafka_panel::{
-    create_topic, delete_topic, get_groups_from_topic, get_topics, get_topics_state,
-    listen_messages, reset_offsets, send_message, GroupState, KafkaGroupResponse,
-    KafkaTopicResponse,
+    create_connections, create_topic, delete_topic, get_from_store, get_all_from_store, get_groups_from_topic,
+    get_topics, get_topics_state, listen_messages, reset_offsets, save_in_store, send_message, GroupState,
+    KafkaGroupResponse, KafkaTopicResponse, SaslConfig, delete_from_store,
 };
-use rdkafka::{
-    admin::AdminClient, consumer::StreamConsumer, producer::FutureProducer, ClientConfig,
-};
-use serde::Deserialize;
-use std::collections::HashMap;
+use serde_json::Value;
+use std::collections::{BTreeMap, HashMap};
 use tauri::{State, Window};
 
-use crate::state::KafkaState;
-
-#[derive(Deserialize, Debug)]
-pub struct SaslConfig {
-    mechanism: String,
-    username: String,
-    password: String,
-}
+use crate::state::{KafkaState, StorageState};
 
 #[tauri::command]
 pub async fn set_connection_command<'a>(
@@ -29,39 +20,12 @@ pub async fn set_connection_command<'a>(
     group_id: String,
     sasl: Option<SaslConfig>,
 ) -> Result<(), String> {
-    let mut common_config = ClientConfig::new();
-    common_config.set("bootstrap.servers", &brokers.join(","));
+    let connections = create_connections(brokers, group_id, sasl).await?;
 
-    if let Some(sasl) = sasl {
-        if sasl.mechanism != "PLAIN" {
-            common_config.set("security.protocol", "SASL_SSL");
-        }
-
-        common_config
-            .set("sasl.mechanism", sasl.mechanism)
-            .set("sasl.username", sasl.username)
-            .set("sasl.password", sasl.password);
-    }
-    *kafka.common_config.write().await = Some(common_config.clone());
-
-    let admin: AdminClient<_> = common_config
-        .create()
-        .map_err(|err| format!("Error creating admin connection: {}", err.to_string()))?;
-    *kafka.admin.write().await = Some(admin);
-
-    let consumer: StreamConsumer = common_config
-        .set("group.id", group_id)
-        .set("enable.auto.commit", "false")
-        .set("auto.offset.reset", "earliest")
-        .create()
-        .map_err(|err| format!("Error creating consumer connection: {}", err.to_string()))?;
-    *kafka.consumer.write().await = Some(consumer);
-
-    let producer: FutureProducer = common_config
-        .set("message.timeout.ms", "5000")
-        .create()
-        .map_err(|err| format!("Error creating producer connection: {}", err.to_string()))?;
-    *kafka.producer.write().await = Some(producer);
+    *kafka.common_config.write().await = Some(connections.common_config);
+    *kafka.admin.write().await = Some(connections.admin);
+    *kafka.consumer.write().await = Some(connections.consumer);
+    *kafka.producer.write().await = Some(connections.producer);
 
     Ok(())
 }
@@ -193,4 +157,57 @@ pub async fn send_message_command<'a>(
     };
 
     send_message(producer, topic, key, value).await
+}
+
+fn get_store<'a>(
+    state: &'a State<'a, StorageState>,
+    store_name: &str,
+) -> Result<&'a Store, String> {
+    let store = match store_name {
+        "settings" => Ok(&state.settings),
+        "messages" => Ok(&state.messages),
+        &_ => Err(format!("Unexpected error, unknown store {}", store_name)),
+    }?;
+
+    Ok(store)
+}
+
+#[tauri::command]
+pub fn save_in_store_command<'a>(
+    state: State<'a, StorageState>,
+    store_name: &str,
+    key: Option<&str>,
+    value: Value,
+) -> Result<String, String> {
+    let store = get_store(&state, store_name)?;
+    save_in_store(store, value, key)
+}
+
+#[tauri::command]
+pub fn get_from_store_command<'a>(
+    state: State<'a, StorageState>,
+    store_name: &str,
+    key: &str,
+) -> Result<Option<Value>, String> {
+    let store = get_store(&state, store_name)?;
+    get_from_store(store, key)
+}
+
+#[tauri::command]
+pub fn get_all_from_store_command<'a>(
+    state: State<'a, StorageState>,
+    store_name: &str,
+) -> Result<BTreeMap<String, Value>, String> {
+    let store = get_store(&state, store_name)?;
+    get_all_from_store(store)
+}
+
+#[tauri::command]
+pub fn delete_from_store_command<'a>(
+    state: State<'a, StorageState>,
+    store_name: &str,
+    key: &str,
+) -> Result<(), String> {
+    let store = get_store(&state, store_name)?;
+    delete_from_store(store, key)
 }

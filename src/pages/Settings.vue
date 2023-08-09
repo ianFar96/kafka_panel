@@ -1,11 +1,33 @@
 <script setup lang="ts">
-import MonacoEditor from 'monaco-editor-vue3';
-import db from '../services/database';
-import { Setting } from '../types/settings';
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { appWindow } from '@tauri-apps/api/window';
+import MonacoEditor from 'monaco-editor-vue3';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import storageService from '../services/storage';
+import { SettingKey } from '../types/settings';
 
-const settings = await db.settings.toArray();
+const storageConnections = ref(await storageService.settings.get('CONNECTIONS'));
+const storageConnectionsStringified = computed(() => {	
+	if (typeof storageConnections.value === 'object' ) {
+		return JSON.stringify(storageConnections.value, null ,2);
+	}
+	return storageConnections.value;
+});
+
+const onConnectionsChange = async (value: string, key: SettingKey) => {
+	let json: unknown = value;
+	// eslint-disable-next-line no-empty
+	try { json = JSON.parse(value); } catch (error) {}
+
+	storageConnections.value = json;
+	await storageService.settings.save(json, key);
+};
+
+const storageNumberOfMessages = ref(await storageService.settings.get('MESSAGES'));
+
+const onMessagesChange = async (event: Event, key: SettingKey) => {
+	const value = (event.target as HTMLInputElement).value;
+	await storageService.settings.save(value, key);
+};
 
 const editorOptions = {
 	colorDecorators: true,
@@ -23,14 +45,6 @@ const editorOptions = {
 		horizontal: 'hidden',
 	},
 	folding: false
-};
-
-const onChange = async (event: Event, setting: Setting) => {
-	const value = (event.target as HTMLInputElement).value;
-	await db.settings.put({ ...setting, value });
-};
-const onMonacoEditorChange = async (value: string, setting: Setting) => {
-	await db.settings.put({ ...setting, value });
 };
 
 type Sizes = {
@@ -63,23 +77,33 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<div ref="page" >
-		<div class="mb-4" v-for="setting, key in settings" :key="key">
-			<label class="mb-2 block text-lg">{{ setting.label }}</label>
-			<div class="rounded-xl overflow-hidden" v-if="setting.type === 'json'">
+	<div ref="page">
+
+		<!-- CONNECTIONS -->
+		<div class="mb-4">
+			<label class="mb-2 block text-lg">Connections</label>
+			<div class="rounded-xl overflow-hidden">
 				<template v-if="monacoEditorSizes">
 					<MonacoEditor class="border-b border-gray-400 mb-1" theme="vs-dark" :options="editorOptions" language="json"
 						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" 
-						@change="onMonacoEditorChange($event, setting)" :value="setting.value">
+						@change="onConnectionsChange($event, 'CONNECTIONS')" :value="storageConnectionsStringified">
 					</MonacoEditor>
 				</template>
 			</div>
-			<div v-else>
-				<input :type="setting.type"
-					class="text-sm block mb-1 bg-transparent outline-none border-b border-gray-400 py-1 w-full"
-					:value="setting.value" @change="onChange($event, setting)" />
-			</div>
-			<small class="text-xs text-gray-500">{{ setting.description }}</small>
+			<small class="text-xs text-gray-500">
+				Check out the example <a href="https://github.com/ianFar96/kafka_panel#settings">here</a>
+			</small>
+		</div>
+
+		<!-- MESSAGES -->
+		<div class="mb-4">
+			<label class="mb-2 block text-lg">Number of messages</label>
+			<input type="number"
+				class="text-sm block mb-1 bg-transparent outline-none border-b border-gray-400 py-1 w-full"
+				v-model="storageNumberOfMessages" @change="onMessagesChange($event, 'MESSAGES')" />
+			<small class="text-xs text-gray-500">
+				Number of messages to display for each partition when subscribing to a topic. Ex. the last 20 messages
+			</small>
 		</div>
 	</div>
 </template>

@@ -1,5 +1,9 @@
 # Changelog
 
+### Changed
+
+- Migrate from dexie DB to file storage for settings and stored messages
+
 ### Fixed
 
 - Fixed undefined messages sent counter when switching between pages back to running autosends

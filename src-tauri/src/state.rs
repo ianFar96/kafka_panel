@@ -62,8 +62,8 @@ pub fn init_storage() -> Result<StorageState, String> {
             )
         })?;
 
-    set_default(&settings, "CONNECTIONS", &json!([]))?;
-    set_default(&settings, "MESSAGES", &json!(20))?;
+    set_storage_default(&settings, "CONNECTIONS", &json!([]))?;
+    set_storage_default(&settings, "MESSAGES", &json!(20))?;
 
     let messages = Store::new_with_cfg(format!("{}/messages.json", app_folder), store_config)
         .map_err(|err| {
@@ -76,7 +76,7 @@ pub fn init_storage() -> Result<StorageState, String> {
     Ok(StorageState { settings, messages })
 }
 
-fn set_default(store: &Store, key: &str, value: &Value) -> Result<(), String> {
+fn set_storage_default(store: &Store, key: &str, value: &Value) -> Result<(), String> {
     match store.get::<Value>(key) {
         Ok(_) => {}
         Err(err) if err.kind() == ErrorKind::NotFound => {

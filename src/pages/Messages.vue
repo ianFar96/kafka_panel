@@ -83,6 +83,7 @@ const startListenMessages = async () => {
 			messages.value = messagesToDisplay.splice(0, numberOfMessages);
 		},
 		error: async error => {
+			status.value = 'stopped';
 			await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
 		},
 		complete: () => {

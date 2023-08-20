@@ -49,11 +49,12 @@ class KafkaService {
 	}
 
 	async listenMessages(topic: string, messagesNumber: number) {
+		const messagesSubject = new Subject<KafkaMessage[]>();
+
 		if (this.unlisten) {
-			throw new Error('Unexpected error: previous listening for messages is still active');
+			messagesSubject.error('Unexpected error: previous listening for messages is still active');
 		}
 
-		const messagesSubject = new Subject<KafkaMessage[]>();
 		invoke('listen_messages_command', {topic, messagesNumber})
 			.then(() => {
 				messagesSubject.complete();

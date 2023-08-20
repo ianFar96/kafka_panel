@@ -3,12 +3,22 @@
     windows_subsystem = "windows"
 )]
 
+use tauri::Manager;
+
 mod commands;
 mod state;
 
 fn main() {
     tauri::Builder::default()
-        .manage(state::create_empty_state())
+        .setup(|app| {
+            let storage = state::init_storage()?;
+            app.manage(storage);
+            
+            let kafka = state::init_kafka();
+            app.manage(kafka);
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Generic kafka commands
             commands::set_connection_command,
@@ -23,6 +33,11 @@ fn main() {
             // Message commands
             commands::listen_messages_command,
             commands::send_message_command,
+            // Store commands
+            commands::save_in_store_command,
+            commands::get_from_store_command,
+            commands::get_all_from_store_command,
+            commands::delete_from_store_command
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -9,10 +9,9 @@ import EditMessage from '../components/EditMessage.vue';
 import EditTags from '../components/EditTags.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
-import db from '../services/database';
 import kafkaService from '../services/kafka';
 import { KafkaMessage, SendMessage } from '../types/message';
-import { Setting, SettingKey } from '../types/settings';
+import storageService from '../services/storage';
 
 type Message = {
 	key: Record<string, unknown> | string
@@ -23,13 +22,11 @@ type Message = {
 	valueVisible: boolean
 }
 
-await checkSettings('topics');
+await checkSettings('messages');
 
 const route = useRoute();
 
-const settingKeys: SettingKey[] = ['MESSAGES'];
-const settings = await db.settings.bulkGet(settingKeys) as Setting[];
-const settingsMap: { [key: string]: Setting } = settings.reduce((acc, setting) => ({ ...acc, [setting.key]: setting }), {});
+const numberOfMessages = await storageService.settings.get('MESSAGES') as number;
 
 const topicName = route.params.topicName as string;
 
@@ -69,8 +66,6 @@ const startListenMessages = async () => {
 	status.value = 'starting';
 	messages.value = [];
 	
-	const numberOfMessages = parseInt(settingsMap['MESSAGES'].value as string);
-	
 	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
 	messagesObservable.subscribe({
 		next: kafkaMessages => {
@@ -88,6 +83,7 @@ const startListenMessages = async () => {
 			messages.value = messagesToDisplay.splice(0, numberOfMessages);
 		},
 		error: async error => {
+			status.value = 'stopped';
 			await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
 		},
 		complete: () => {
@@ -147,7 +143,7 @@ const chooseTags = (message: Message) => {
 };
 
 const saveMessageInStorage = async (tags: string[]) => {
-	await db.messages.add({
+	await storageService.messages.save({
 		key: typeof selectedMessage.value!.key === 'object' ?
 			JSON.stringify(selectedMessage.value!.key) :
 			selectedMessage.value!.key,

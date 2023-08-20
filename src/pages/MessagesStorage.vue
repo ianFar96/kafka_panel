@@ -3,22 +3,20 @@
 import { writeText } from '@tauri-apps/api/clipboard';
 import { message } from '@tauri-apps/api/dialog';
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import Chip, { Tag } from '../components/Chip.vue';
 import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import SendStorageMessageStepper from '../components/SendStorageMessageStepper.vue';
-import { useLoader } from '../composables/loader';
-import checkSettings from '../services/checkSettings';
-import { randomColor } from '../services/chipColors';
-import db from '../services/database';
-import { Connection } from '../types/connection';
-import { StorageMessage } from '../types/message';
-import { Setting, SettingKey } from '../types/settings';
 import StartAutosendStepper from '../components/StartAutosendStepper.vue';
 import { useAutosendsStore } from '../composables/autosends';
+import { useLoader } from '../composables/loader';
+import checkSettings from '../services/checkSettings';
+import { getRandomColor } from '../services/chipColors';
+import storageService from '../services/storage';
+import { Connection } from '../types/connection';
+import { StorageMessage } from '../types/message';
 
 type Message = {
-	id: number
+	id: string
 	key: Record<string, unknown> | string
   value: Record<string, unknown> | string
 	tags: Tag[]
@@ -27,18 +25,7 @@ type Message = {
 
 await checkSettings('messages-storage');
 
-const router = useRouter();
-
-const settingKeys: SettingKey[] = ['CONNECTIONS'];
-const settings = await db.settings.bulkGet(settingKeys) as Setting[];
-const settingsMap: { [key: string]: Setting } = settings.reduce((acc, setting) => ({ ...acc, [setting.key]: setting }), {});
-
-const connections: Connection[] = JSON.parse(settingsMap['CONNECTIONS'].value);
-
-if (connections.length <= 0) {
-	await message('Please make sure you have at least one connection configured for Connections setting', { title: 'Error', type: 'error' });
-	router.push('/settings');
-}
+const connections = await storageService.settings.get('CONNECTIONS') as Connection[];
 
 const loader = useLoader();
 
@@ -56,10 +43,10 @@ const storeMessageToMessage = (storageMessage: StorageMessage): Message => {
 	return {
 		id: storageMessage.id!,
 		key,
-		value, 
+		value,
 		tags: storageMessage.tags.map(tag => ({
 			name: tag,
-			color: randomColor()
+			color: getRandomColor()
 		})),
 		valueVisible: false,
 	};
@@ -78,8 +65,8 @@ const messages = ref<Message[]>([]);
 const fetchMessages = async () => {
 	loader?.value?.show();
 	try {
-		const storageMessages = await db.messages.toArray();
-		messages.value = storageMessages.map(message => storeMessageToMessage(message));
+		const storageMessages = await storageService.messages.getAll();
+		messages.value = Object.entries(storageMessages).map(([id, message]) => storeMessageToMessage({id, ...message}));
 	} catch (error) {
 		await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -89,7 +76,7 @@ await fetchMessages();
 
 const deleteMessage = async (storageMessage: Message) => {
 	try {
-		await db.messages.delete(storageMessage.id!);
+		await storageService.messages.delete(storageMessage.id);
 		await fetchMessages();
 	} catch (error) {
 		await message(`Could not delete message from storage: ${error}`, { title: 'Error', type: 'error' });
@@ -97,11 +84,11 @@ const deleteMessage = async (storageMessage: Message) => {
 };
 
 const saveMessage = async (message: StorageMessage) => {
-	await db.messages.update(message.id!, {
+	await storageService.messages.save({
 		key: message.key,
 		value: message.value,
 		tags: message.tags.slice(),
-	});
+	}, message.id);
 
 	await fetchMessages();
 };

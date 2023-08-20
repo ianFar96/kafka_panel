@@ -1,17 +1,14 @@
 <script setup lang="ts">
-import { message } from '@tauri-apps/api/dialog';
+import { useObservable } from '@vueuse/rxjs';
 import { Ref, computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import Dialog from '../components/Dialog.vue';
 import EditTags from '../components/EditTags.vue';
 import StartAutosendStepper from '../components/StartAutosendStepper.vue';
 import { useAutosendsStore } from '../composables/autosends';
 import checkSettings from '../services/checkSettings';
-import db from '../services/database';
+import storageService from '../services/storage';
 import { ActiveAutosend } from '../types/autosend';
 import { Connection } from '../types/connection';
-import { Setting, SettingKey } from '../types/settings';
-import { useObservable } from '@vueuse/rxjs';
 
 type DisplayAutosend = ActiveAutosend & {
 	valueVisible: Ref<boolean>
@@ -21,18 +18,7 @@ type DisplayAutosend = ActiveAutosend & {
 
 await checkSettings('autosend');
 
-const router = useRouter();
-
-const settingKeys: SettingKey[] = ['CONNECTIONS'];
-const settings = await db.settings.bulkGet(settingKeys) as Setting[];
-const settingsMap: { [key: string]: Setting } = settings.reduce((acc, setting) => ({ ...acc, [setting.key]: setting }), {});
-
-const connections: Connection[] = JSON.parse(settingsMap['CONNECTIONS'].value);
-
-if (connections.length <= 0) {
-	await message('Please make sure you have at least one connection configured for Connections setting', { title: 'Error', type: 'error' });
-	router.push('/settings');
-}
+const connections = await storageService.settings.get('CONNECTIONS') as Connection[];
 
 const autosendStore = useAutosendsStore();
 
@@ -65,7 +51,7 @@ const chooseTags = (autosend: ActiveAutosend) => {
 };
 
 const saveMessageInStorage = async (tags: string[]) => {
-	await db.messages.add({
+	await storageService.messages.save({
 		key: typeof selectedAutosend.value!.key === 'object' ?
 			JSON.stringify(selectedAutosend.value!.key) :
 			selectedAutosend.value!.key,

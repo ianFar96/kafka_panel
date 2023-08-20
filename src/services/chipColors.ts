@@ -20,7 +20,7 @@ export const chipColors = {
 
 export const disabledColor = /*tw*/ 'border-gray-400 text-gray-400 bg-gray-400 bg-opacity-10';
 
-export const randomColor = () => {
+export const getRandomColor = () => {
 	const colorKeys = Object.keys(chipColors);
 	const randomIndex = Math.floor(Math.random() * colorKeys.length);
 	return colorKeys[randomIndex] as keyof typeof chipColors;

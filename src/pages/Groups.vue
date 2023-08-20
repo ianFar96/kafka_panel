@@ -7,7 +7,7 @@ import checkSettings from '../services/checkSettings';
 import kafkaService from '../services/kafka';
 import { ConsumerGroup } from '../types/consumerGroup';
 
-await checkSettings('topics');
+await checkSettings('groups');
 
 const route = useRoute();
 

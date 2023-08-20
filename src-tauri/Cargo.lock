@@ -1331,7 +1331,7 @@ dependencies = [
 
 [[package]]
 name = "kafka_panel"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "byteorder",
  "futures",

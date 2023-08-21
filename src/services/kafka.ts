@@ -8,7 +8,7 @@ import { Subject } from 'rxjs';
 
 class KafkaService {
 	private unlisten?: UnlistenFn;
-	private batchingInterval?: NodeJS.Timer;
+	private batchingInterval?: NodeJS.Timeout;
 	private batchMessages: KafkaMessage[] = [];
 	
 	async setConnection(brokers: string[], groupId: string, sasl?: SaslConfig) {

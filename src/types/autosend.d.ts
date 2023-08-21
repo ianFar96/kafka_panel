@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 export type Autosend = {
   topic: string,
   key: Record<string, unknown>,
-  value: Record<string, unknonw>,
+  value: Record<string, unknown>,
   options: AutosendOptions
 }
 

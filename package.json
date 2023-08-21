@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "wdio run ./wdio.conf.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^8.0.2",
@@ -30,18 +31,26 @@
   "devDependencies": {
     "@tauri-apps/cli": "^1.4.0",
     "@types/luxon": "^3.3.0",
+    "@types/mocha": "^10.0.1",
     "@types/node": "^18.7.10",
     "@types/ramda": "^0.29.1",
     "@typescript-eslint/eslint-plugin": "^5.36.2",
     "@typescript-eslint/parser": "^5.36.2",
     "@vitejs/plugin-vue": "^3.0.1",
+    "@wdio/cli": "^8.15.5",
+    "@wdio/local-runner": "^8.15.4",
+    "@wdio/mocha-framework": "^8.15.4",
+    "@wdio/spec-reporter": "^8.15.0",
     "autoprefixer": "^10.4.8",
     "eslint": "^8.23.0",
     "eslint-plugin-vue": "^9.4.0",
     "postcss": "^8.4.16",
     "tailwindcss": "^3.1.8",
+    "ts-node": "^10.9.1",
     "typescript": "^4.9.5",
     "vite": "^3.0.2",
-    "vue-tsc": "^1.0.0"
+    "vue-tsc": "^1.0.0",
+    "wdio-vite-service": "^1.0.3",
+    "wdio-wait-for": "^3.0.6"
   }
 }

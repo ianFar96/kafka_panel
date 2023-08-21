@@ -7,7 +7,7 @@ import { Timer } from './Timer';
 import { Duration } from 'luxon';
 
 class AutosendsService {
-	private intervals: Record<string, NodeJS.Timer> = {};
+	private intervals: Record<string, NodeJS.Timeout> = {};
 
 	startAutosend(autosend: ActiveAutosend) {
 		const messagesCounter = new BehaviorSubject<number>(0);

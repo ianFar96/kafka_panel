@@ -37,17 +37,10 @@ jobs:
           toolchain: stable
 
       # we run our rust tests before the webdriver tests to avoid testing a broken application
-      - name: Cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-
-      # build a release build of our application to be used during our WebdriverIO tests
-      - name: Cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
+      # - name: Cargo test
+      #   uses: actions-rs/cargo@v1
+      #   with:
+      #     command: test
 
       # install the latest stable node version at the time of writing
       - name: Node v18
@@ -66,6 +59,10 @@ jobs:
         with:
           command: install
           args: tauri-driver
+
+      # build the app
+      - name: Tauri build
+        run: npm run tauri build
 
       # run the WebdriverIO test suite.
       # we run it through `xvfb-run` (the dependency we installed earlier) to have a fake

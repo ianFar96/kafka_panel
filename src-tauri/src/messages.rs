@@ -4,6 +4,7 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use rdkafka::{Message, Offset, TopicPartitionList};
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tauri::Window;
@@ -11,9 +12,9 @@ use tokio::time::Duration;
 
 #[derive(Serialize, Clone)]
 pub struct KafkaMessageResponse {
-    headers: Option<HashMap<String, Option<String>>>,
-    value: String,
-    key: String,
+    headers: Option<HashMap<String, Option<Value>>>,
+    value: Option<Value>,
+    key: Option<Value>,
     offset: i64,
     partition: i32,
     timestamp: i64,
@@ -120,11 +121,13 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
             let mut headers_map = HashMap::new();
             for header in headers.iter() {
                 let value = match header.value {
-                    Some(value) => Some(
-                        std::str::from_utf8(value)
-                            .map_err(|err| err.to_string())?
-                            .to_string(),
-                    ),
+                    Some(value) => {
+                        let stringified_value =
+                            std::str::from_utf8(value).map_err(|err| err.to_string())?;
+                        let parsed_value = serde_json::from_str::<Value>(stringified_value)
+                            .unwrap_or(stringified_value.into());
+                        Some(parsed_value)
+                    }
                     None => None,
                 };
                 headers_map.insert(header.key.to_string(), value);
@@ -135,16 +138,24 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
     };
 
     let key = match message.key() {
-        Some(key) => std::str::from_utf8(key).map_err(|err| err.to_string())?,
-        None => "null",
-    }
-    .to_string();
+        Some(key) => {
+            let stringified_key = std::str::from_utf8(key).map_err(|err| err.to_string())?;
+            let parsed_key =
+                serde_json::from_str::<Value>(stringified_key).unwrap_or(stringified_key.into());
+            Some(parsed_key)
+        }
+        None => None,
+    };
 
     let value = match message.payload() {
-        Some(value) => std::str::from_utf8(value).map_err(|err| err.to_string())?,
-        None => "null",
-    }
-    .to_string();
+        Some(value) => {
+            let stringified_value = std::str::from_utf8(value).map_err(|err| err.to_string())?;
+            let parsed_value =
+                serde_json::from_str::<Value>(stringified_value).unwrap_or(stringified_value.into());
+            Some(parsed_value)
+        }
+        None => None,
+    };
 
     let timestamp_millis = message
         .timestamp()

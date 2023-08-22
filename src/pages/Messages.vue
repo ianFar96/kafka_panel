@@ -35,39 +35,6 @@ const loader = useLoader();
 
 const selectedMessage = ref<Message>();
 
-const kafkaMessageToMessage = (kafkaMessage: KafkaMessage): Message => {
-	let headers = kafkaMessage.headers;
-	headers = kafkaMessage.headers && Object.entries(kafkaMessage.headers).reduce((acc, [key, rawValue]) => {
-		let value = rawValue;
-		try {
-			value = value && JSON.parse(value);
-		} catch (error) { }
-
-		return {
-			...acc,
-			[key]: value,
-		};
-	}, {});
-
-	let key = kafkaMessage.key;
-	try {
-		key = JSON.parse(kafkaMessage.key);
-	} catch (error) { }
-
-	let value = kafkaMessage.value;
-	try {
-		value = JSON.parse(kafkaMessage.value);
-	} catch (error) { }
-	
-	return {
-		...kafkaMessage,
-		headers,
-		key,
-		value,
-		valueVisible: false,
-	};
-};
-
 const messageToSendMessage = (message: Message): SendMessage => {
 	return {
 		key: typeof message.key === 'object' ? JSON.stringify(message.key, null, 2) : message.key,
@@ -92,7 +59,10 @@ const startListenMessages = async () => {
 			// Cast, sort and get only the number of messages we want
 			const messagesToDisplay = [
 				...messages.value,
-				...kafkaMessages.map(kafkaMessage => kafkaMessageToMessage(kafkaMessage))
+				...kafkaMessages.map(kafkaMessage =>  ({
+					...kafkaMessage,
+					valueVisible: false,
+				}) as Message)
 			];
 			messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
 			messages.value = messagesToDisplay.splice(0, numberOfMessages);

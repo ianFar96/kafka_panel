@@ -14,6 +14,7 @@ import { KafkaMessage, SendMessage } from '../types/message';
 import storageService from '../services/storage';
 
 type Message = {
+	headers: Record<string, unknown | null> | null
 	key: Record<string, unknown> | string
   value: Record<string, unknown> | string
   timestamp: number
@@ -35,6 +36,19 @@ const loader = useLoader();
 const selectedMessage = ref<Message>();
 
 const kafkaMessageToMessage = (kafkaMessage: KafkaMessage): Message => {
+	let headers = kafkaMessage.headers;
+	headers = kafkaMessage.headers && Object.entries(kafkaMessage.headers).reduce((acc, [key, rawValue]) => {
+		let value = rawValue;
+		try {
+			value = value && JSON.parse(value);
+		} catch (error) { }
+
+		return {
+			...acc,
+			[key]: value,
+		};
+	}, {});
+
 	let key = kafkaMessage.key;
 	try {
 		key = JSON.parse(kafkaMessage.key);
@@ -47,6 +61,7 @@ const kafkaMessageToMessage = (kafkaMessage: KafkaMessage): Message => {
 	
 	return {
 		...kafkaMessage,
+		headers,
 		key,
 		value,
 		valueVisible: false,
@@ -185,6 +200,14 @@ const getDisplayDate = (dateMilis: number) => {
 	const seconds = date.getSeconds().toString().padStart(2, '0');
 	return `${day}/${month}/${fullyear} ${hours}:${minutes}:${seconds}`;
 };
+
+const stringifyMessage = (message: Message) => {
+	return JSON.stringify({
+		headers: message.headers, 
+		key: message.key,
+		value: message.value
+	}, null, 2);
+};
 </script>
 
 <template>
@@ -266,7 +289,7 @@ const getDisplayDate = (dateMilis: number) => {
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
-						<highlightjs :language="'json'" :code="JSON.stringify({key: message.key, value: message.value}, null, 2)" />
+						<highlightjs :language="'json'" :code="stringifyMessage(message)" />
 					</div>
 				</div>
 			</li>

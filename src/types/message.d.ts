@@ -1,4 +1,5 @@
 export type KafkaMessage = {
+  headers: Record<string, string | null> | null
   key: string
   value: string
   timestamp: number

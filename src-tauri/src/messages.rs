@@ -1,16 +1,17 @@
-use std::sync::{RwLock, Arc};
-
 use rdkafka::consumer::{Consumer, StreamConsumer};
-use rdkafka::message::BorrowedMessage;
+use rdkafka::message::{BorrowedMessage, Headers};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use rdkafka::{Message, Offset, TopicPartitionList};
 use serde::Serialize;
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use tauri::Window;
 use tokio::time::Duration;
 
 #[derive(Serialize, Clone)]
 pub struct KafkaMessageResponse {
+    headers: Option<HashMap<String, Option<String>>>,
     value: String,
     key: String,
     offset: i64,
@@ -114,6 +115,25 @@ pub async fn listen_messages(
 }
 
 fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, String> {
+    let headers = match message.headers() {
+        Some(headers) => {
+            let mut headers_map = HashMap::new();
+            for header in headers.iter() {
+                let value = match header.value {
+                    Some(value) => Some(
+                        std::str::from_utf8(value)
+                            .map_err(|err| err.to_string())?
+                            .to_string(),
+                    ),
+                    None => None,
+                };
+                headers_map.insert(header.key.to_string(), value);
+            }
+            Some(headers_map)
+        }
+        None => None,
+    };
+
     let key = match message.key() {
         Some(key) => std::str::from_utf8(key).map_err(|err| err.to_string())?,
         None => "null",
@@ -132,6 +152,7 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
         .ok_or("Couldn't convert timestamp to millis")?;
 
     Ok(KafkaMessageResponse {
+        headers,
         key,
         value,
         offset: message.offset(),

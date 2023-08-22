@@ -7,6 +7,7 @@ describe('Topics', () => {
 		const title = await $('#page-content h2');
 		expect(await title.getText()).toBe('Choose Connection');
 
+		// FIXME: UnsupportedOperationError
 		const connection = await $('li=Localhost');
 		await connection.click();
 

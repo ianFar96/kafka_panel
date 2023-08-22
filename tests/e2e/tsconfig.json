@@ -1,21 +1,29 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "ESNext",
     "useDefineForClassFields": true,
     "module": "ESNext",
     "moduleResolution": "Node",
     "strict": true,
     "jsx": "preserve",
+    "sourceMap": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "lib": ["ESNext", "DOM"],
-    "allowSyntheticDefaultImports": true,
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "types": [
       "node",
       "@wdio/globals/types",
       "@wdio/mocha-framework"
-    ]
+    ],
   },
-  "include": ["**/*.test.ts"]
+  "include": [
+    "specs/*.spec.ts",
+    "pages/*.page.ts",
+    "**/*.ts"
+  ]
 }

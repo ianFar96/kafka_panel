@@ -16,7 +16,7 @@ export const config: Options.Testrunner = {
 	autoCompileOpts: {
 		autoCompile: true,
 		tsNodeOpts: {
-			project: './tsconfig.e2e.json',
+			project: './tests/e2e/tsconfig.json',
 			transpileOnly: true
 		}
 	},
@@ -38,7 +38,7 @@ export const config: Options.Testrunner = {
 	// will be called from there.
 	//
 	specs: [
-		'./e2e/**/*.test.ts'
+		'./tests/e2e/specs/**/*.spec.ts'
 	],
 	// Patterns to exclude.
 	exclude: [
@@ -122,7 +122,7 @@ export const config: Options.Testrunner = {
 	// Services take over a specific job you don't want to take care of. They enhance
 	// your test setup with almost no effort. Unlike plugins, they don't add new
 	// commands. Instead, they hook themselves up into the test process.
-	services: ['vite'],
+	services: [],
 
 	// Framework you want to run your specs with.
 	// The following are supported: Mocha, Jasmine, and Cucumber

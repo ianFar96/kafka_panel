@@ -5,21 +5,15 @@ import { message } from '@tauri-apps/api/dialog';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import Dialog from '../components/Dialog.vue';
-import EditMessage from '../components/EditMessage.vue';
+import EditMessageStepper from '../components/EditMessageStepper.vue';
 import EditTags from '../components/EditTags.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import kafkaService from '../services/kafka';
-import { KafkaMessage, SendMessage } from '../types/message';
 import storageService from '../services/storage';
+import { Message, MessageContent } from '../types/message';
 
-type Message = {
-	headers: Record<string, unknown | null> | null
-	key: Record<string, unknown> | string
-  value: Record<string, unknown> | string
-  timestamp: number
-  offset: number
-  partition: number
+type DisplayMessage = Message & {
 	valueVisible: boolean
 }
 
@@ -33,20 +27,13 @@ const topicName = route.params.topicName as string;
 
 const loader = useLoader();
 
-const selectedMessage = ref<Message>();
+const selectedMessage = ref<MessageContent>();
 
-const messageToSendMessage = (message: Message): SendMessage => {
-	return {
-		key: typeof message.key === 'object' ? JSON.stringify(message.key, null, 2) : message.key,
-		value: typeof message.value === 'object' ? JSON.stringify(message.value, null, 2) : message.value,
-	};
-};
-
-const messages = ref<Message[]>([]);
+const displayMessages = ref<DisplayMessage[]>([]);
 const status = ref<'starting' | 'started' | 'stopping' | 'stopped'>('stopped');
 const startListenMessages = async () => {
 	status.value = 'starting';
-	messages.value = [];
+	displayMessages.value = [];
 	
 	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
 	messagesObservable.subscribe({
@@ -58,14 +45,14 @@ const startListenMessages = async () => {
 
 			// Cast, sort and get only the number of messages we want
 			const messagesToDisplay = [
-				...messages.value,
+				...displayMessages.value,
 				...kafkaMessages.map(kafkaMessage =>  ({
 					...kafkaMessage,
 					valueVisible: false,
-				}) as Message)
+				}) as DisplayMessage)
 			];
 			messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
-			messages.value = messagesToDisplay.splice(0, numberOfMessages);
+			displayMessages.value = messagesToDisplay.splice(0, numberOfMessages);
 		},
 		error: async error => {
 			status.value = 'stopped';
@@ -104,8 +91,8 @@ const copyToClipboard = async (event: MouseEvent, text: string) => {
 const searchQuery = ref('');
 
 const filteredMessages = computed(() => {
-	if (!searchQuery.value) return messages.value;
-	return messages.value
+	if (!searchQuery.value) return displayMessages.value;
+	return displayMessages.value
 		.filter(message => {
 			const query = searchQuery.value.toLowerCase();
 
@@ -129,35 +116,31 @@ const chooseTags = (message: Message) => {
 
 const saveMessageInStorage = async (tags: string[]) => {
 	await storageService.messages.save({
-		key: typeof selectedMessage.value!.key === 'object' ?
-			JSON.stringify(selectedMessage.value!.key) :
-			selectedMessage.value!.key,
-		value: typeof selectedMessage.value!.value === 'object' ?
-			JSON.stringify(selectedMessage.value!.value) :
-			selectedMessage.value!.value,
+		headers: selectedMessage.value!.headers,
+		key: selectedMessage.value!.key,
+		value: selectedMessage.value!.value,
 		tags
 	});
 
 	editTagsDialog.value?.close();
 };
 
-const defineMessageToSend = (message?: Message) => {
+const setMessageToSend = (message?: MessageContent) => {
 	selectedMessage.value = message;
-	sendMessageDialog?.value?.open();
+	sendMessageStepper?.value?.openDialog(message);
 };
 
-const sendMessageDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const sendMessage = async (key: string, value: string) => {
+const sendMessageStepper = ref<InstanceType<typeof EditMessageStepper> | null>(null); // Template ref
+const sendMessage = async (messageContent: MessageContent) => {
 	loader?.value?.show();
 	try {
-		await kafkaService.sendMessage(topicName, key, value);
+		await kafkaService.sendMessage(topicName, messageContent);
 
-		sendMessageDialog.value?.close();
+		sendMessageStepper.value?.closeDialog();
 	} catch (error) {
 		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
 	}
 	loader?.value?.hide();
-
 };
 
 const getDisplayDate = (dateMilis: number) => {
@@ -171,7 +154,7 @@ const getDisplayDate = (dateMilis: number) => {
 	return `${day}/${month}/${fullyear} ${hours}:${minutes}:${seconds}`;
 };
 
-const stringifyMessage = (message: Message) => {
+const stringifyMessage = (message: DisplayMessage) => {
 	return JSON.stringify({
 		headers: message.headers, 
 		key: message.key,
@@ -193,7 +176,7 @@ const stringifyMessage = (message: Message) => {
 					<i class="mr-2 bi-people cursor-pointer"></i>
 					Groups
 				</router-link>
-				<button @click="defineMessageToSend()"
+				<button @click="setMessageToSend()"
 					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center">
 					<i class="mr-2 bi-send cursor-pointer"></i>
 					Send message
@@ -253,7 +236,7 @@ const stringifyMessage = (message: Message) => {
 							title="Save in storage"
 							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="defineMessageToSend(message)"
+						<button @click="setMessageToSend(message)"
 							title="Send again"
 							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
 						</button>
@@ -266,9 +249,7 @@ const stringifyMessage = (message: Message) => {
 		</ul>
   </div>
 
-	<Dialog ref="sendMessageDialog" title="Send message" modal-class="w-full h-full">
-		<EditMessage :submit="sendMessage" :message="selectedMessage && messageToSendMessage(selectedMessage)" :submit-button-text="'Send'"/>
-	</Dialog>
+	<EditMessageStepper ref="sendMessageStepper" :submit="sendMessage"/>
 
 	<Dialog ref="editTagsDialog" title="Select tags">
 		<EditTags :submit="saveMessageInStorage" :submit-button-text="'Save'"/>

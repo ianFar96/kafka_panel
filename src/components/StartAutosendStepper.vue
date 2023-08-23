@@ -9,7 +9,7 @@ import kafkaService from '../services/kafka';
 import { Connection } from '../types/connection';
 import { Topic } from '../types/topic';
 import Dialog from './Dialog.vue';
-import EditMessage from './EditMessage.vue';
+import EditMessageContent from './EditMessageContent.vue';
 import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
@@ -190,7 +190,7 @@ const exampleKeyReuse = {
 			<template #message>
 				<div class="flex h-full">
 					<div class="w-[75%] mr-6">
-						<EditMessage :submit="startAutosend" :message="initialMessage" :submit-button-text="'Start'" />
+						<EditMessageContent :submit="startAutosend" :message="initialMessage" :submit-button-text="'Start'" />
 					</div>
 					<div class="w-[25%] relative">
 						<div class="absolute right-0 top-0 overflow-auto h-full w-full">

@@ -6,7 +6,7 @@ import { useLoader } from '../composables/loader';
 import { Connection } from '../types/connection';
 import { SendMessage } from '../types/message';
 import { Topic } from '../types/topic';
-import EditMessage from './EditMessage.vue';
+import EditMessageContent from './EditMessageContent.vue';
 import SelectTopic from './SelectTopic.vue';
 import SelectConnection from './SelectConnection.vue';
 import Dialog from './Dialog.vue';
@@ -109,7 +109,7 @@ const sendMessage = async (key: string, value: string) => {
 				<SelectTopic :submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
-				<EditMessage :message="selectedMessage!" :submit="sendMessage" :submit-button-text="'Send'" />
+				<EditMessageContent :message="selectedMessage!" :submit="sendMessage" :submit-button-text="'Send'" />
 			</template>
 		</Stepper>
   </Dialog>

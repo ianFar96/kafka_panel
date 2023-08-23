@@ -1,15 +1,16 @@
 import { invoke } from '@tauri-apps/api';
 import { SaslConfig } from '../types/connection';
 import { ConsumerGroup, ConsumerGroupState } from '../types/consumerGroup';
-import { KafkaMessage } from '../types/message';
+import { Message, MessageContent, ParsedHeaders } from '../types/message';
 import { Topic } from '../types/topic';
 import { UnlistenFn, emit, listen } from '@tauri-apps/api/event';
 import { Subject } from 'rxjs';
+import { messageToSendMessage } from './utils';
 
 class KafkaService {
 	private unlisten?: UnlistenFn;
 	private batchingInterval?: NodeJS.Timer;
-	private batchMessages: KafkaMessage[] = [];
+	private batchMessages: Message[] = [];
 	
 	async setConnection(brokers: string[], groupId: string, sasl?: SaslConfig) {
 		await invoke('set_connection_command', {brokers, groupId, sasl});
@@ -49,7 +50,7 @@ class KafkaService {
 	}
 
 	async listenMessages(topic: string, messagesNumber: number) {
-		const messagesSubject = new Subject<KafkaMessage[]>();
+		const messagesSubject = new Subject<Message[]>();
 
 		if (this.unlisten) {
 			messagesSubject.error('Unexpected error: previous listening for messages is still active');
@@ -68,7 +69,7 @@ class KafkaService {
 				messagesSubject.error(error);
 			});
 
-		const unlisten = await listen<KafkaMessage>('onMessage', (event) => {
+		const unlisten = await listen<Message>('onMessage', (event) => {
 			const kafkaMessage = event.payload;
 			this.batchMessages.push(kafkaMessage);
 		});
@@ -91,8 +92,14 @@ class KafkaService {
 		await emit('offMessage');
 	}
 
-	async sendMessage(topic: string, key: string, value: string) {
-		await invoke('send_message_command', {topic, key, value});
+	async sendMessage(topic: string, message: MessageContent) {
+		const messageToSend = messageToSendMessage(message);
+		await invoke('send_message_command', {
+			topic, 
+			headers: messageToSend.headers, 
+			key: messageToSend.key,
+			value: messageToSend.value
+		});
 	}
 }
 

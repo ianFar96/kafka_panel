@@ -1,5 +1,5 @@
 use rdkafka::consumer::{Consumer, StreamConsumer};
-use rdkafka::message::{BorrowedMessage, Headers};
+use rdkafka::message::{BorrowedMessage, Header, Headers, OwnedHeaders};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use rdkafka::{Message, Offset, TopicPartitionList};
@@ -150,8 +150,8 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
     let value = match message.payload() {
         Some(value) => {
             let stringified_value = std::str::from_utf8(value).map_err(|err| err.to_string())?;
-            let parsed_value =
-                serde_json::from_str::<Value>(stringified_value).unwrap_or(stringified_value.into());
+            let parsed_value = serde_json::from_str::<Value>(stringified_value)
+                .unwrap_or(stringified_value.into());
             Some(parsed_value)
         }
         None => None,
@@ -175,10 +175,24 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
 pub async fn send_message(
     producer: &FutureProducer,
     topic: String,
+    headers: Option<HashMap<String, String>>,
     key: String,
     value: String,
 ) -> Result<(), String> {
-    let record = FutureRecord::to(&topic).key(&key).payload(&value);
+    let mut record = FutureRecord::to(&topic).key(&key).payload(&value);
+
+    if let Some(headers) = headers {
+        let mut headers_to_send = OwnedHeaders::new();
+        for (key, value) in headers {
+            headers_to_send = headers_to_send.insert(Header {
+                key: &key,
+                value: Some(&value),
+            });
+        }
+
+        record = record.headers(headers_to_send);
+    }
+
     producer
         .send(record, Timeout::Never)
         .await

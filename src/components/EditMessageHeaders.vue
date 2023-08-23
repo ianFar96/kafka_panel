@@ -3,17 +3,22 @@
 import { appWindow } from '@tauri-apps/api/window';
 import MonacoEditor from 'monaco-editor-vue3';
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import { SendMessage } from '../types/message';
+import { messageToSendMessage } from '../services/utils';
+import { ParsedHeaders } from '../types/message';
 
 const props = defineProps<{
-	submit: (key: string, value: string) => Promise<void>,
+	submit: (headers: ParsedHeaders) => Promise<void>,
 	submitButtonText: string,
-	message?: SendMessage
+	headers?: ParsedHeaders
 }>();
 
-const key = ref<string>(props.message?.key || '');
-const value = ref<string>(props.message?.value || '');
-	
+const sendMessage = props.headers && messageToSendMessage({
+	key: {},
+	value: {},
+	headers: props.headers
+});
+const headers = ref(sendMessage?.headers ?? null);
+
 onMounted(() => {
 	setMonacoEditorSizes();
 });
@@ -37,13 +42,10 @@ const editorOptions = {
 };
 
 const handleSubmit = async () => {
-	if (!key.value || !value.value) return;
-
-	await props.submit(key.value, value.value);
+	await props.submit(headers.value);
 
 	// Reset form
-	key.value = '';
-	value.value = '';
+	headers.value = {};
 };
 
 type Sizes = {
@@ -77,26 +79,17 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<form class="h-full flex flex-col" @submit="handleSubmit()">
-		<div class="flex h-full">
-			<div class="flex flex-col w-full">
-				<label class="mb-4">Key</label>
+	<form class="h-full w-full" @submit="handleSubmit()">
+		<template v-if="headers">
+			<div class="mb-4" v-for="key in Object.keys(headers)" :key="key">
+				<label class="block mb-2">{{ key }}</label>
 				<div class="h-full rounded-xl overflow-hidden">
 					<MonacoEditor v-if="monacoEditorSizes" theme="vs-dark" :options="editorOptions" language="json"
-						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" v-model:value="key">
+						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" v-model:value="headers[key]">
 					</MonacoEditor>
 				</div>
 			</div>
-			<div class="h-full bg-white w-px mx-4 shrink-0"></div>
-			<div class="flex flex-col w-full">
-				<label class="mb-4">Value</label>
-				<div class="h-full rounded-xl overflow-hidden" ref="valueSlotRef">
-					<MonacoEditor v-if="monacoEditorSizes" theme="vs-dark" :options="editorOptions" language="json"
-						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" v-model:value="value">
-					</MonacoEditor>
-				</div>
-			</div>
-		</div>
+		</template>
 		<div class="mt-8 flex justify-end flex-none">
 			<button type="submit"
 				class="border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500">

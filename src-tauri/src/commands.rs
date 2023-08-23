@@ -3,9 +3,10 @@
  */
 use jfs::Store;
 use kafka_panel::{
-    create_connections, create_topic, delete_topic, get_from_store, get_all_from_store, get_groups_from_topic,
-    get_topics, get_topics_state, listen_messages, reset_offsets, save_in_store, send_message, GroupState,
-    KafkaGroupResponse, KafkaTopicResponse, SaslConfig, delete_from_store,
+    create_connections, create_topic, delete_from_store, delete_topic, get_all_from_store,
+    get_from_store, get_groups_from_topic, get_topics, get_topics_state, listen_messages,
+    reset_offsets, save_in_store, send_message, GroupState, KafkaGroupResponse, KafkaTopicResponse,
+    SaslConfig,
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
@@ -147,6 +148,7 @@ pub async fn listen_messages_command<'a>(
 pub async fn send_message_command<'a>(
     state: State<'a, KafkaState>,
     topic: String,
+    headers: Option<HashMap<String, String>>,
     key: String,
     value: String,
 ) -> Result<(), String> {
@@ -156,7 +158,7 @@ pub async fn send_message_command<'a>(
         Some(ref x) => x,
     };
 
-    send_message(producer, topic, key, value).await
+    send_message(producer, topic, headers, key, value).await
 }
 
 fn get_store<'a>(

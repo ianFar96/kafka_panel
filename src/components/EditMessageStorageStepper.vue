@@ -4,7 +4,7 @@ import { ref } from 'vue';
 import { useLoader } from '../composables/loader';
 import { StorageMessage } from '../types/message';
 import EditTags from './EditTags.vue';
-import EditMessage from './EditMessage.vue';
+import EditMessageContent from './EditMessageContent.vue';
 import Dialog from './Dialog.vue';
 import { clone } from 'ramda';
 import Stepper, { Step } from './Stepper.vue';
@@ -69,7 +69,7 @@ const onStepClick = (step: Step) => {
 				<EditTags class="mt-8" :tags="selectedMessage?.tags || []" :submit="setTags" :submit-button-text="'Next'" />
 			</template>
 			<template #message>
-				<EditMessage :message="selectedMessage" :submit="saveMessage" :submit-button-text="'Save'" />
+				<EditMessageContent :message="selectedMessage" :submit="saveMessage" :submit-button-text="'Save'" />
 			</template>
 		</Stepper>
 	</Dialog>

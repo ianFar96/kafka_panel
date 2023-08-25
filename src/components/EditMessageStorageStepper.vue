@@ -2,16 +2,18 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useLoader } from '../composables/loader';
-import { StorageMessage } from '../types/message';
+import { MessageContent, ParsedHeaders, StorageMessage } from '../types/message';
 import EditTags from './EditTags.vue';
 import EditMessageContent from './EditMessageContent.vue';
 import Dialog from './Dialog.vue';
 import { clone } from 'ramda';
 import Stepper, { Step } from './Stepper.vue';
+import EditMessageHeaders from './EditMessageHeaders.vue';
 
 const steps: Step[] = [
-	{name:'tags', label: 'Edit tags'},
-	{name:'message', label: 'Edit message'},
+	{name:'tags', label: 'Tags'},
+	{name:'message', label: 'Content'},
+	{name:'headers', label: 'Headers '},
 ];
 
 const selectedMessage = ref<StorageMessage>();
@@ -41,14 +43,22 @@ const setTags = (selectedTags: string[]) => {
 	activeStep.value = steps[1];
 };
 
-const saveMessage = async (key: string, value: string) => {
-	if (!key || !value) return;
+const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {
+	if (!message.key || !message.value) return;
 
+	selectedMessage.value!.key = message.key;
+	selectedMessage.value!.value = message.value;
+
+	activeStep.value = steps[2];
+};
+
+const saveMessage = async (headers: ParsedHeaders) => {
 	loader?.value?.show();
 	await props.submit({
 		id: selectedMessage.value!.id,
-		key,
-		value,
+		headers,
+		key: selectedMessage.value!.key,
+		value: selectedMessage.value!.value,
 		tags: selectedMessage.value!.tags
 	});
 	loader?.value?.hide();
@@ -58,7 +68,23 @@ const saveMessage = async (key: string, value: string) => {
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const onStepClick = (step: Step) => {
-	activeStep.value = step;
+	switch (step.name) {
+	case 'message':
+		if ((selectedMessage.value?.tags.length || 0) > 0) {
+			activeStep.value = step;
+		}
+		break;
+
+	case 'headers':
+		if ((selectedMessage.value?.tags.length || 0) > 0 && selectedMessage.value?.key && selectedMessage.value?.value) {
+			activeStep.value = step;
+		}
+		break;
+
+	default:
+		activeStep.value = step;
+		break;
+	}
 };
 </script>
 
@@ -69,7 +95,10 @@ const onStepClick = (step: Step) => {
 				<EditTags class="mt-8" :tags="selectedMessage?.tags || []" :submit="setTags" :submit-button-text="'Next'" />
 			</template>
 			<template #message>
-				<EditMessageContent :message="selectedMessage" :submit="saveMessage" :submit-button-text="'Save'" />
+				<EditMessageContent :message="selectedMessage" :submit="setMessageContent" :submit-button-text="'Next'" />
+			</template>
+			<template #headers>
+				<EditMessageHeaders :headers="selectedMessage?.headers" :submit="saveMessage" :submit-button-text="'Save'" />
 			</template>
 		</Stepper>
 	</Dialog>

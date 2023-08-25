@@ -28,8 +28,8 @@ const connectionsRef = ref<HTMLDivElement | null>(null); // Template ref
 		<div class="mb-4">
 			<label class="mb-2 block text-lg">Connections</label>
 			<div class="rounded-xl overflow-hidden h-[calc(100vh/2)]" ref="connectionsRef">
-				<CodeEditor :wrapper-ref="connectionsRef!" @code-change="onConnectionsChange($event, 'CONNECTIONS')" 
-					:code="storageConnections">
+				<CodeEditor v-if="connectionsRef" :wrapper-ref="connectionsRef"
+					@code-change="onConnectionsChange($event, 'CONNECTIONS')" :code="storageConnections">
 				</CodeEditor>
 			</div>
 			<small class="text-xs text-gray-500 border-t border-gray-400 mt-1 pt-1 block">

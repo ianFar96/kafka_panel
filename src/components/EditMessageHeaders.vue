@@ -54,7 +54,7 @@ const handleSubmit = async () => {
 	headers.value = [];
 };
 
-const codeWrapperRef = ref<HTMLElement | null>(null);
+const codeWrapperRefs = ref<HTMLElement[] | null>([]);
 </script>
 
 <template>
@@ -67,10 +67,9 @@ const codeWrapperRef = ref<HTMLElement | null>(null);
 					<i class="bi-trash hover:text-red-500 transition-colors cursor-pointer text-lg border-b border-gray-400"
 						@click="removeHeader(index)"></i>
 				</div>
-
-				<!-- FIXME: writing first the name of the headers breaks it's value monaco editor -->
-				<div class="h-[250px] w-[500px] rounded-xl overflow-hidden" ref="codeWrapperRef">
-					<CodeEditor v-if="codeWrapperRef" :wrapper-ref="codeWrapperRef" :code="header.value" @code-change="onHeaderValueChange($event, index)">
+				<div class="h-[250px] min-w-[500px] w-full rounded-xl overflow-hidden" ref="codeWrapperRefs">
+					<CodeEditor v-if="codeWrapperRefs" :wrapper-ref="codeWrapperRefs[index]"
+						:code="header.value" @code-change="onHeaderValueChange($event, index)">
 					</CodeEditor>
 				</div>
 			</div>

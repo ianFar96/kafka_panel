@@ -2,33 +2,35 @@
 <script setup lang="ts">
 import { message } from '@tauri-apps/api/dialog';
 import { ref } from 'vue';
-import { useLoader } from '../composables/loader';
-import { Connection } from '../types/connection';
-import { SendMessage } from '../types/message';
-import { Topic } from '../types/topic';
-import EditMessageContent from './EditMessageContent.vue';
-import SelectTopic from './SelectTopic.vue';
-import SelectConnection from './SelectConnection.vue';
-import Dialog from './Dialog.vue';
-import Stepper, { Step } from './Stepper.vue';
 import { useConnection } from '../composables/connection';
+import { useLoader } from '../composables/loader';
 import kafkaService from '../services/kafka';
+import { Connection } from '../types/connection';
+import { MessageContent, ParsedHeaders } from '../types/message';
+import { Topic } from '../types/topic';
+import Dialog from './Dialog.vue';
+import EditMessageContent from './EditMessageContent.vue';
+import EditMessageHeaders from './EditMessageHeaders.vue';
+import SelectConnection from './SelectConnection.vue';
+import SelectTopic from './SelectTopic.vue';
+import Stepper, { Step } from './Stepper.vue';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
-const selectedMessage = ref<SendMessage>();
+const selectedMessage = ref<MessageContent>();
 
 const selectedTopic = ref<Topic>();
 
 const steps: Step[] = [
 	{name: 'connection', label: 'Select connection'},
 	{name: 'topic', label: 'Select topic'},
-	{name: 'message', label: 'Send message'},
+	{name: 'message', label: 'Message Content'},
+	{name: 'headers', label: 'Message Headers'},
 ];
 const activeStep = ref<Step>(steps[0]);
 
 defineExpose({
-	openDialog: (settingsConnections: Connection[], messageToSend: SendMessage) => {
+	openDialog: (settingsConnections: Connection[], messageToSend: MessageContent) => {
 		connections.value = settingsConnections;
 		selectedMessage.value = messageToSend;
 		activeStep.value = steps[0];
@@ -53,6 +55,11 @@ const onStepClick = (step: Step) => {
 		break;
 	case 'message':
 		if (connection.value && selectedTopic.value) {
+			activeStep.value = step;
+		}
+		break;
+	case 'headers':
+		if (connection.value && selectedTopic.value && selectedMessage.value?.key && selectedMessage.value?.value) {
 			activeStep.value = step;
 		}
 		break;
@@ -85,10 +92,21 @@ const selectTopic = async (topic: Topic) => {
 	activeStep.value = steps[2];
 };
 
-const sendMessage = async (key: string, value: string) => {
+const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {
+	if (!message.key || !message.value) return;
+
+	selectedMessage.value!.key = message.key;
+	selectedMessage.value!.value = message.value;
+
+	// Next step
+	activeStep.value = steps[3];
+};
+
+const sendMessage = async (headers: ParsedHeaders) => {
 	loader?.value?.show();
 	try {
-		await kafkaService.sendMessage(selectedTopic.value!.name, key, value);
+		selectedMessage.value!.headers = headers;
+		await kafkaService.sendMessage(selectedTopic.value!.name, selectedMessage.value!);
 
 		stepperDialog.value?.close();
 	} catch (error) {
@@ -109,7 +127,10 @@ const sendMessage = async (key: string, value: string) => {
 				<SelectTopic :submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
-				<EditMessageContent :message="selectedMessage!" :submit="sendMessage" :submit-button-text="'Send'" />
+				<EditMessageContent :message="selectedMessage!" :submit="setMessageContent" :submit-button-text="'Next'" />
+			</template>
+			<template #headers>
+				<EditMessageHeaders :headers="selectedMessage?.headers" :submit="sendMessage" :submit-button-text="'Send'" />
 			</template>
 		</Stepper>
   </Dialog>

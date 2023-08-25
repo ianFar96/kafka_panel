@@ -43,14 +43,18 @@ const keySlotRef = ref<HTMLElement | null>(null);
 			<div class="flex flex-col w-full">
 				<label class="mb-4">Key</label>
 				<div class="h-full rounded-xl overflow-hidden" ref="keySlotRef">
-					<CodeEditor v-if="keySlotRef" :wrapper-ref="keySlotRef" :code="key" @code-change="onKeyChange"></CodeEditor>
+					<CodeEditor v-if="keySlotRef" :wrapper-ref="keySlotRef"
+						:code="key" @code-change="onKeyChange">
+					</CodeEditor>
 				</div>
 			</div>
 			<div class="h-full bg-white w-px mx-4 shrink-0"></div>
 			<div class="flex flex-col w-full">
 				<label class="mb-4">Value</label>
 				<div class="h-full rounded-xl overflow-hidden">
-					<CodeEditor v-if="keySlotRef" :wrapper-ref="keySlotRef" :code="value" @code-change="onValueChange"></CodeEditor>
+					<CodeEditor v-if="keySlotRef" :wrapper-ref="keySlotRef"
+						:code="value" @code-change="onValueChange">
+					</CodeEditor>
 				</div>
 			</div>
 		</div>

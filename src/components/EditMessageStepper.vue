@@ -10,7 +10,7 @@ import EditMessageHeaders from './EditMessageHeaders.vue';
 import Stepper, { Step } from './Stepper.vue';
 
 const steps: Step[] = [
-	{name:'message', label: 'Message'},
+	{name:'message', label: 'Content'},
 	{name:'headers', label: 'Headers'},
 ];
 
@@ -60,11 +60,17 @@ const saveMessage = async (headers: ParsedHeaders) => {
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const onStepClick = (step: Step) => {
-	if (!selectedMessage.value?.value || !selectedMessage.value.value) {
-		return;
+	switch (step.name) {
+	case 'headers':
+		if (selectedMessage.value?.key && selectedMessage.value?.value) {
+			activeStep.value = step;
+		}
+		break;
+	
+	default:
+		activeStep.value = step;
+		break;
 	}
-
-	activeStep.value = step;
 };
 </script>
 

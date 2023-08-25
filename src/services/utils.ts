@@ -13,34 +13,24 @@ export const messageToSendMessage = (message: MessageContent): SendMessage => {
 };
 
 export const sendMessageToMessage = (message: SendMessage): MessageContent => {
-	let key = message.key;
-	try {
-		if (typeof message.key === 'string') {
-			key = JSON.parse(message.key);
-		}
-	} catch (error) { }
-
-	let value = message.value;
-	try {
-		if (typeof message.value === 'string') {
-			value = JSON.parse(message.value);
-		}
-	} catch (error) { }
-  
 	return {
 		headers: message.headers && Object.entries(message.headers).reduce((acc, [key, value]) => {
-			try {
-				if (typeof value === 'string') {
-					value = JSON.parse(value);
-				}
-			} catch (error) { }
-
 			return {
 				...acc,
-				[key]: value
+				[key]: tryJsonParse(value)
 			};
 		}, {}),
-		key,
-		value,
+		key: tryJsonParse(message.key),
+		value: tryJsonParse(message.value),
 	};
+};
+
+export const tryJsonParse = (text: unknown): unknown => {
+	try {
+		if (typeof text === 'string') {
+			return JSON.parse(text);
+		}
+	} catch (error) { }
+
+	return text;
 };

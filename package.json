@@ -19,7 +19,7 @@
     "eslint-plugin-typescript": "^0.14.0",
     "highlight.js": "^11.6.0",
     "luxon": "^3.3.0",
-    "monaco-editor-vue3": "^0.1.8",
+    "monaco-editor": "^0.40.0",
     "pinia": "^2.1.4",
     "ramda": "^0.29.0",
     "rxjs": "^7.8.1",

@@ -19,7 +19,8 @@ const selectedMessage = ref<MessageContent | undefined>();
 const activeStep = ref<Step>(steps[0]);
 
 const props = defineProps<{
-  submit: (message: MessageContent) => Promise<unknown> | unknown
+  submit: (message: MessageContent) => Promise<unknown> | unknown,
+	submitButtonText?: string
 }>();
 
 defineExpose({
@@ -74,7 +75,7 @@ const onStepClick = (step: Step) => {
 				<EditMessageContent :message="selectedMessage" :submit="setMessageContent" :submit-button-text="'Next'" />
 			</template>
 			<template #headers>
-				<EditMessageHeaders class="mt-8" :headers="selectedMessage?.headers" :submit="saveMessage" :submit-button-text="'Save'" />
+				<EditMessageHeaders class="mt-8" :headers="selectedMessage?.headers" :submit="saveMessage" :submit-button-text="submitButtonText ?? 'Save'" />
 			</template>
 		</Stepper>
 	</Dialog>

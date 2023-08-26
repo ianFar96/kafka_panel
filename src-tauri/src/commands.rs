@@ -148,9 +148,9 @@ pub async fn listen_messages_command<'a>(
 pub async fn send_message_command<'a>(
     state: State<'a, KafkaState>,
     topic: String,
-    headers: Option<HashMap<String, String>>,
-    key: String,
-    value: String,
+    headers: Option<HashMap<String, Value>>,
+    key: Value,
+    value: Value,
 ) -> Result<(), String> {
     let binding = state.producer.read().await;
     let producer = match *binding {

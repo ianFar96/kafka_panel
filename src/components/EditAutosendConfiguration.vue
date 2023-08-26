@@ -12,7 +12,6 @@ const timeUnits: Record<AutosendTime['time_unit'], AutosendTime['time_unit']> = 
 	Seconds: 'Seconds',
 	Milliseconds: 'Milliseconds',
 };
-
 </script>
 
 <template>

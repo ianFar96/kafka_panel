@@ -6,16 +6,17 @@ import { ref } from 'vue';
 import { useConnection } from '../composables/connection';
 import { useLoader } from '../composables/loader';
 import kafkaService from '../services/kafka';
+import { Autosend, AutosendOptions } from '../types/autosend';
 import { Connection } from '../types/connection';
+import { MessageContent, ParsedHeaders } from '../types/message';
 import { Topic } from '../types/topic';
 import Dialog from './Dialog.vue';
+import EditAutosendConfiguration from './EditAutosendConfiguration.vue';
 import EditMessageContent from './EditMessageContent.vue';
+import EditMessageHeaders from './EditMessageHeaders.vue';
 import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
-import { Autosend, AutosendOptions } from '../types/autosend';
-import EditAutosendConfiguration from './EditAutosendConfiguration.vue';
-import { SendMessage } from '../types/message';
 
 const props = defineProps<{
 	submit: (autosend: Autosend) => Promise<void>,
@@ -34,25 +35,23 @@ const configuration = ref<AutosendOptions>({
 	}
 });
 const selectedTopic = ref<Topic>();
+const selectedContent = ref<MessageContent>();
 
 const steps: Step[] = [
 	{name: 'configuration', label: 'Configuration'},
 	{name: 'connection', label: 'Select connection'},
 	{name: 'topic', label: 'Select topic'},
-	{name: 'message', label: 'Start autosend'},
+	{name: 'message', label: 'Edit Message'},
+	{name: 'headers', label: 'Edit Headers'},
 ];
 const activeStep = ref<Step>(steps[0]);
 
-const initialMessage = ref<SendMessage>();
-
 defineExpose({
-	openDialog: (settingsConnections: Connection[], message?: SendMessage) => {
+	openDialog: (settingsConnections: Connection[], messageContent?: MessageContent) => {
 		connections.value = settingsConnections;
-		activeStep.value = steps[0];
+		selectedContent.value = messageContent;
 
-		if (message) {
-			initialMessage.value = message;
-		}
+		activeStep.value = steps[0];
 
 		stepperDialog.value?.open();
 	},
@@ -85,6 +84,11 @@ const onStepClick = (step: Step) => {
 			activeStep.value = step;
 		}
 		break;
+	case 'headers':
+		if (connection.value && selectedTopic.value && selectedContent.value?.value && selectedContent.value?.key) {
+			activeStep.value = step;
+		}
+		break;
 	
 	default:
 		activeStep.value = step;
@@ -114,12 +118,26 @@ const selectTopic = async (topic: Topic) => {
 	activeStep.value = steps[3];
 };
 
-const startAutosend = async (key: string, value: string) => {
+const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {
+	if (!message.key || !message.value) return;
+	
+	selectedContent.value = {
+		key: message.key,
+		value: message.value,
+		headers: selectedContent.value?.headers ?? null
+	};
+
+	// Next step
+	activeStep.value = steps[4];
+};
+
+const startAutosend = async (headers: ParsedHeaders) => {
 	loader?.value?.show();
 	try {
 		const autosend: Autosend = {
-			key: JSON.parse(key),
-			value: JSON.parse(value),
+			headers,
+			key: selectedContent.value!.key,
+			value: selectedContent.value!.value,
 			options: configuration.value!,
 			topic: selectedTopic.value!.name
 		};
@@ -190,7 +208,7 @@ const exampleKeyReuse = {
 			<template #message>
 				<div class="flex h-full">
 					<div class="w-[75%] mr-6">
-						<EditMessageContent :submit="startAutosend" :message="initialMessage" :submit-button-text="'Start'" />
+						<EditMessageContent :submit="setMessageContent" :message="selectedContent" :submit-button-text="'Next'" />
 					</div>
 					<div class="w-[25%] relative">
 						<div class="absolute right-0 top-0 overflow-auto h-full w-full">
@@ -215,6 +233,9 @@ const exampleKeyReuse = {
 						</div>
 					</div>
 				</div>
+			</template>
+			<template #headers>
+				<EditMessageHeaders :submit="startAutosend" submit-button-text="Start" :headers="selectedContent?.headers" />
 			</template>
 		</Stepper>
   </Dialog>

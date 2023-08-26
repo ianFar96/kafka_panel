@@ -13,7 +13,6 @@ import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import { getRandomColor } from '../services/chipColors';
 import storageService from '../services/storage';
-import { messageToSendMessage } from '../services/utils';
 import { Connection } from '../types/connection';
 import { StorageMessage } from '../types/message';
 
@@ -155,7 +154,7 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 							title="Copy JSON"
 							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="startAutosendStepper?.openDialog(connections, messageToSendMessage(message))"
+						<button @click="startAutosendStepper?.openDialog(connections, message)"
 							title="Start autosend"
 							class="text-xl bi-repeat transition-colors duration-300 cursor-pointer hover:text-orange-400 mr-3">
 						</button>

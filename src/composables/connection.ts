@@ -3,7 +3,7 @@ import { Connection } from '../types/connection';
 import kafkaService from '../services/kafka';
 
 export function useConnection() {
-	const connection = ref<Connection | undefined>();
+	const connection = ref<Connection>();
 
 	async function setConnection(newConnection: Connection) {
 		const groupId = `${newConnection.groupPrefix ? `${newConnection.groupPrefix}.` : ''}kafka-panel`;

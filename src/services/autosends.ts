@@ -5,6 +5,7 @@ import kafkaService from './kafka';
 import { BehaviorSubject } from 'rxjs';
 import { Timer } from './Timer';
 import { Duration } from 'luxon';
+import { MessageContent } from '../types/message';
 
 class AutosendsService {
 	private intervals: Record<string, NodeJS.Timer> = {};
@@ -24,17 +25,21 @@ class AutosendsService {
 		const interval = this.castAutosendTimeToDuration(autosend.options.interval);
 		this.intervals[autosend.id] = setInterval((autosend: ActiveAutosend) => {
 			try {
+				const interpolatedHeaders = this.interpolateFakeValues(clone(autosend.headers), {faker});
 				const interpolatedKey = this.interpolateFakeValues(clone(autosend.key), {faker});
 				const interpolatedValue = this.interpolateFakeValues(clone(autosend.value), {faker, key: interpolatedKey});
 
-				kafkaService.sendMessage(
-					autosend.topic,
-					JSON.stringify(interpolatedKey),
-					JSON.stringify(interpolatedValue)
-				).then(() => {
-					messagesSent += 1;
-					messagesCounter.next(messagesSent);
-				});
+				const messageContent: MessageContent = {
+					headers: interpolatedHeaders,
+					key: interpolatedKey,
+					value: interpolatedValue
+				};
+
+				kafkaService.sendMessage(autosend.topic, messageContent)
+					.then(() => {
+						messagesSent += 1;
+						messagesCounter.next(messagesSent);
+					});
 			} catch (error) {
 				messagesCounter.error(error);
 				this.stopAutosend(autosend);
@@ -52,7 +57,7 @@ class AutosendsService {
 		clearInterval(this.intervals[autosend.id]);
 	}
 
-	private interpolateFakeValues(input: unknown, context: unknown) {
+	private interpolateFakeValues<T = unknown>(input: T, context: Record<string, unknown>): T {
 		if (typeof input === 'object') {
 			if (Array.isArray(input)) {
 				for (const key in input) {
@@ -65,7 +70,7 @@ class AutosendsService {
 				}
 			}
 		} else if (typeof input === 'string') {
-			input = input.replace(/\{\{(.*?)\}\}/gm, (_, group) => {
+			(input as string) = input.replace(/\{\{(.*?)\}\}/gm, (_, group) => {
 				try {
 					return this.scopeEval(context, `this.${group}`).toString();
 				} catch (error) {

@@ -175,18 +175,36 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
 pub async fn send_message(
     producer: &FutureProducer,
     topic: String,
-    headers: Option<HashMap<String, String>>,
-    key: String,
-    value: String,
+    headers: Option<HashMap<String, Value>>,
+    key: Value,
+    value: Value,
 ) -> Result<(), String> {
-    let mut record = FutureRecord::to(&topic).key(&key).payload(&value);
+    let stringified_key: String = serde_json::from_value(key)
+        .map_err(|err| format!("Error while stringifying message key: {}", err.to_string()))?;
+    let stringified_value: String = serde_json::from_value(value).map_err(|err| {
+        format!(
+            "Error while stringifying message value: {}",
+            err.to_string()
+        )
+    })?;
+
+    let mut record = FutureRecord::to(&topic)
+        .key(&stringified_key)
+        .payload(&stringified_value);
 
     if let Some(headers) = headers {
         let mut headers_to_send = OwnedHeaders::new();
-        for (key, value) in headers {
+        for (header_key, header_value) in headers {
+            let stringified_header_value: String = serde_json::from_value(header_value).map_err(|err| {
+                format!(
+                    "Error while stringifying header's value: {}",
+                    err.to_string()
+                )
+            })?;
+
             headers_to_send = headers_to_send.insert(Header {
-                key: &key,
-                value: Some(&value),
+                key: &header_key,
+                value: Some(&stringified_header_value),
             });
         }
 

@@ -52,12 +52,9 @@ const chooseTags = (autosend: ActiveAutosend) => {
 
 const saveMessageInStorage = async (tags: string[]) => {
 	await storageService.messages.save({
-		key: typeof selectedAutosend.value!.key === 'object' ?
-			JSON.stringify(selectedAutosend.value!.key) :
-			selectedAutosend.value!.key,
-		value: typeof selectedAutosend.value!.value === 'object' ?
-			JSON.stringify(selectedAutosend.value!.value) :
-			selectedAutosend.value!.value,
+		headers: selectedAutosend.value!.headers,
+		key: selectedAutosend.value!.key,
+		value: selectedAutosend.value!.value,
 		tags
 	});
 
@@ -139,6 +136,7 @@ const saveMessageInStorage = async (tags: string[]) => {
 
 	<StartAutosendStepper ref="startAutosendStepper" :submit="autosendStore.startAutosend" />
 
+	<!-- TODO: make this a stepper with edit message content and headers -->
 	<Dialog ref="editTagsDialog" title="Select tags">
 		<EditTags :tags="['autosend template']" :submit="saveMessageInStorage" :submit-button-text="'Save'"/>
 	</Dialog>

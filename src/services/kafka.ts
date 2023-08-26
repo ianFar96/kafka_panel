@@ -1,11 +1,10 @@
 import { invoke } from '@tauri-apps/api';
+import { emit, listen, UnlistenFn } from '@tauri-apps/api/event';
+import { Subject } from 'rxjs';
 import { SaslConfig } from '../types/connection';
 import { ConsumerGroup, ConsumerGroupState } from '../types/consumerGroup';
-import { Message, MessageContent, ParsedHeaders } from '../types/message';
+import { Message, MessageContent } from '../types/message';
 import { Topic } from '../types/topic';
-import { UnlistenFn, emit, listen } from '@tauri-apps/api/event';
-import { Subject } from 'rxjs';
-import { messageToSendMessage } from './utils';
 
 class KafkaService {
 	private unlisten?: UnlistenFn;
@@ -17,12 +16,12 @@ class KafkaService {
 	}
 
 	async getTopicsState() {
-		const topicsGroups: Record<string, ConsumerGroupState> = await invoke('get_topics_state_command');
+		const topicsGroups = await invoke<Record<string, ConsumerGroupState>>('get_topics_state_command');
 		return topicsGroups;
 	}
 
 	async listGroupsFromTopic(topicName: string) {
-		const groups: ConsumerGroup[] = await invoke('get_groups_from_topic_command', {topicName});
+		const groups = await invoke<ConsumerGroup[]>('get_groups_from_topic_command', {topicName});
 		return groups;
 	}
 
@@ -31,7 +30,7 @@ class KafkaService {
 	}
 
 	async listTopics() {
-		const topics: Topic[] = await invoke('get_topics_command');
+		const topics = await invoke<Topic[]>('get_topics_command');
 		return topics;
 	}
 
@@ -93,12 +92,9 @@ class KafkaService {
 	}
 
 	async sendMessage(topic: string, message: MessageContent) {
-		const messageToSend = messageToSendMessage(message);
 		await invoke('send_message_command', {
 			topic, 
-			headers: messageToSend.headers, 
-			key: messageToSend.key,
-			value: messageToSend.value
+			...message
 		});
 	}
 }

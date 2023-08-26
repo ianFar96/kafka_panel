@@ -14,7 +14,7 @@ const steps: Step[] = [
 	{name:'headers', label: 'Headers'},
 ];
 
-const selectedMessage = ref<MessageContent | undefined>();
+const selectedMessage = ref<MessageContent>();
 
 const activeStep = ref<Step>(steps[0]);
 

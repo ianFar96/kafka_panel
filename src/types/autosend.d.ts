@@ -1,9 +1,8 @@
 import { Observable } from 'rxjs';
+import { MessageContent } from './message';
 
-export type Autosend = {
+export type Autosend = MessageContent &  {
   topic: string,
-  key: Record<string, unknown>,
-  value: Record<string, unknonw>,
   options: AutosendOptions
 }
 

@@ -246,6 +246,7 @@ const stringifyMessage = (message: DisplayMessage) => {
 
 	<EditMessageStepper ref="sendMessageStepper" submit-button-text="Send" :submit="sendMessage"/>
 
+	<!-- TODO: make this a stepper with edit message content and headers -->
 	<Dialog ref="editTagsDialog" title="Select tags">
 		<EditTags :submit="saveMessageInStorage" :submit-button-text="'Save'"/>
 	</Dialog>

@@ -12,6 +12,7 @@ import checkSettings from '../services/checkSettings';
 import kafkaService from '../services/kafka';
 import storageService from '../services/storage';
 import { Message, MessageContent } from '../types/message';
+import { DateTime } from 'luxon';
 
 type DisplayMessage = Message & {
 	valueVisible: boolean
@@ -144,14 +145,8 @@ const sendMessage = async (messageContent: MessageContent) => {
 };
 
 const getDisplayDate = (dateMilis: number) => {
-	const date = new Date(dateMilis);	
-	const day = date.getDate().toString().padStart(2, '0');
-	const month = date.getMonth().toString().padStart(2, '0');
-	const fullyear = date.getFullYear();
-	const hours = date.getHours().toString().padStart(2, '0');
-	const minutes = date.getMinutes().toString().padStart(2, '0');
-	const seconds = date.getSeconds().toString().padStart(2, '0');
-	return `${day}/${month}/${fullyear} ${hours}:${minutes}:${seconds}`;
+	const dateTime = DateTime.fromMillis(dateMilis);
+	return dateTime.toFormat('dd/LL/yyyy HH:mm:ss');
 };
 
 const stringifyMessage = (message: DisplayMessage) => {

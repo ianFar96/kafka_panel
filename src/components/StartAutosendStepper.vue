@@ -187,16 +187,20 @@ const exampleKeyReuse = {
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Start autosend" :modal-class="activeStep.name === 'message' ? 'w-full h-full' : ''">
+	<Dialog ref="stepperDialog" title="Start autosend">
 		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
 			<!-- Steps -->
 			<template #configuration>
-				<EditAutosendConfiguration :configuration="configuration" />
-				<div class="flex justify-end">
-					<button class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400"
-						@click="onStepClick(steps[1])">
-						Next
-					</button>
+				<div class="flex flex-col h-full">
+					<div class="h-full">
+						<EditAutosendConfiguration :configuration="configuration" />
+					</div>
+					<div class="flex justify-end">
+						<button class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400"
+							@click="onStepClick(steps[1])">
+							Next
+						</button>
+					</div>
 				</div>
 			</template>
 			<template #connection>

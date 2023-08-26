@@ -54,11 +54,13 @@ const setMonacoEditorSizes = () => {
 			scrollbar: {
 				vertical: 'hidden',
 				horizontal: 'hidden',
+				alwaysConsumeMouseWheel: false
 			},
 			folding: false,
-			dimension: sizes
+			dimension: sizes,
+			scrollBeyondLastLine: false,
 		});
-			
+
 		// Debounce system
 		let debounce: any;
 		editor.onDidChangeModelContent(() => {

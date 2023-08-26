@@ -75,13 +75,13 @@ const onStepClick = (step: Step) => {
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Edit message" :modal-class="activeStep.name === 'message' ? 'w-full h-full' : ''">
+	<Dialog ref="stepperDialog" title="Edit message">
 		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
 			<template #message>
 				<EditMessageContent :message="selectedMessage" :submit="setMessageContent" :submit-button-text="'Next'" />
 			</template>
 			<template #headers>
-				<EditMessageHeaders class="mt-8" :headers="selectedMessage?.headers" :submit="saveMessage" :submit-button-text="submitButtonText ?? 'Save'" />
+				<EditMessageHeaders :headers="selectedMessage?.headers" :submit="saveMessage" :submit-button-text="submitButtonText ?? 'Save'" />
 			</template>
 		</Stepper>
 	</Dialog>

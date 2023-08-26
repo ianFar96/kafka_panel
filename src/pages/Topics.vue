@@ -221,7 +221,7 @@ onBeforeUnmount(() => {
 		<CreateTopic :createTopic="createTopic" />
 	</Dialog>
 
-  <Dialog ref="selectConnectionDialog" :title="'Choose Connection'">
+  <Dialog ref="selectConnectionDialog" size="s" :title="'Choose Connection'">
 		<SelectConnection :connections="connections" :submit="setNewConnection" />
   </Dialog>
 </template>

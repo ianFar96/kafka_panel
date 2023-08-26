@@ -34,12 +34,12 @@ const removeHeader = (index: number) => {
 	}
 };
 
-const onHeaderValueChange = (code: unknown, index: number) => {
-	headers.value![index].value = code;
-};
-
 const onHeaderKeyChange = (event: Event, index: number) => {
 	headers.value![index].key = (event.target as HTMLInputElement).value;
+};
+
+const onHeaderValueChange = (code: unknown, index: number) => {
+	headers.value![index].value = code;
 };
 
 const handleSubmit = async () => {
@@ -58,27 +58,29 @@ const codeWrapperRefs = ref<HTMLElement[] | null>([]);
 </script>
 
 <template>
-	<form @submit="handleSubmit()">
-		<div class="" v-if="headers">
-			<div ref="headerItemRef" class="mb-4" v-for="header, index in headers" :key="header.key">
-				<div class="flex items-end mb-2">
-					<input type="text" :value="header.key" @change="onHeaderKeyChange($event, index)"
-						class="block bg-transparent outline-none border-b border-gray-400 py-1 w-full" placeholder="Name*">
-					<i class="bi-trash hover:text-red-500 transition-colors cursor-pointer text-lg border-b border-gray-400"
-						@click="removeHeader(index)"></i>
+	<form class="h-full flex flex-col overflow-auto" @submit="handleSubmit()">
+		<div class="h-full overflow-auto">
+			<template v-if="headers">
+				<div ref="headerItemRef" class="mb-4" v-for="header, index in headers" :key="header.key">
+					<div class="flex items-end mb-2">
+						<input type="text" :value="header.key" @change="onHeaderKeyChange($event, index)"
+							class="block bg-transparent outline-none border-b border-gray-400 py-1 w-full" placeholder="Name*">
+						<i class="bi-trash hover:text-red-500 transition-colors cursor-pointer text-lg border-b border-gray-400"
+							@click="removeHeader(index)"></i>
+					</div>
+					<div class="h-[250px] min-w-[500px] w-full rounded-xl overflow-hidden" ref="codeWrapperRefs">
+						<CodeEditor v-if="codeWrapperRefs" :wrapper-ref="codeWrapperRefs[index]"
+							:code="header.value" @code-change="onHeaderValueChange($event, index)">
+						</CodeEditor>
+					</div>
 				</div>
-				<div class="h-[250px] min-w-[500px] w-full rounded-xl overflow-hidden" ref="codeWrapperRefs">
-					<CodeEditor v-if="codeWrapperRefs" :wrapper-ref="codeWrapperRefs[index]"
-						:code="header.value" @code-change="onHeaderValueChange($event, index)">
-					</CodeEditor>
-				</div>
-			</div>
+			</template>
 		</div>
-		<button class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400 w-full"
-			type="button" @click="addHeader">
-			Add Header
-		</button>
-		<div class="mt-8 flex justify-end flex-none">
+		<div class="mt-4 flex justify-between flex-none">
+			<button class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400"
+				type="button" @click="addHeader">
+				Add Header
+			</button>
 			<button type="submit"
 				class="border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500">
 				{{ submitButtonText }}

@@ -89,7 +89,7 @@ const onStepClick = (step: Step) => {
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Edit storage message" :modal-class="activeStep.name === 'message' ? 'w-full h-full' : ''">
+	<Dialog ref="stepperDialog" title="Edit storage message">
 		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
 			<template #tags>
 				<EditTags class="mt-8" :tags="selectedMessage?.tags || []" :submit="setTags" :submit-button-text="'Next'" />

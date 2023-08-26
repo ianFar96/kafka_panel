@@ -117,7 +117,7 @@ const sendMessage = async (headers: ParsedHeaders) => {
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Send storage message" :modal-class="activeStep.name === 'message' ? 'w-full h-full' : ''">
+	<Dialog ref="stepperDialog" title="Send storage message">
 		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
 			<!-- Steps -->
 			<template #connection>

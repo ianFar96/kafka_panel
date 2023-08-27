@@ -37,8 +37,6 @@ defineExpose({
 const loader = useLoader();
 
 const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {
-	if (!message.key || !message.value) return;
-
 	selectedMessage.value = {
 		key: message.key,
 		value: message.value,

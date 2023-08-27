@@ -9,3 +9,15 @@ export const tryJsonParse = (text: unknown): unknown => {
 
 	return text;
 };
+
+export const isSendValid = ( value: unknown) => {
+	if (value === undefined) {
+		return false;
+	}
+
+	if (value === '') {
+		return false;
+	}
+
+	return true;
+};

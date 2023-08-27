@@ -118,9 +118,7 @@ const selectTopic = async (topic: Topic) => {
 	activeStep.value = steps[3];
 };
 
-const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {
-	if (!message.key || !message.value) return;
-	
+const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {	
 	selectedContent.value = {
 		key: message.key,
 		value: message.value,

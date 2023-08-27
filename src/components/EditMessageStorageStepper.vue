@@ -44,8 +44,6 @@ const setTags = (selectedTags: string[]) => {
 };
 
 const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {
-	if (!message.key || !message.value) return;
-
 	selectedMessage.value!.key = message.key;
 	selectedMessage.value!.value = message.value;
 

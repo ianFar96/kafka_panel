@@ -1,8 +1,9 @@
 
 <script setup lang="ts">
-import { Ref, ref } from 'vue';
+import { ref } from 'vue';
 import { MessageContent } from '../types/message';
 import CodeEditor from './CodeEditor.vue';
+import { isSendValid } from '../services/utils';
 
 const props = defineProps<{
 	submit: (message: Omit<MessageContent, 'headers'>) => Promise<void>,
@@ -21,7 +22,7 @@ const onValueChange = (code: unknown) => {
 };
 	
 const handleSubmit = async () => {
-	if (!key.value || !value.value) return;
+	if (!isSendValid(key.value) || !isSendValid(value.value)) return;
 
 	await props.submit({
 		key: key.value,

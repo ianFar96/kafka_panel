@@ -5,7 +5,7 @@ use rdkafka::{
     admin::AdminClient, client::DefaultClientContext, consumer::StreamConsumer,
     producer::FutureProducer, ClientConfig,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use tauri::api::path::home_dir;
 use tokio::sync::RwLock;
 
@@ -40,7 +40,15 @@ pub fn init_storage() -> Result<StorageState, String> {
         None => Err("Could not determine your home path with https://docs.rs/dirs/latest/dirs/fn.home_dir.html# function"),
         Some(dir) => Ok(dir)
     }?;
-    let app_folder = format!("{}/.kafka_panel", home_dir.to_string_lossy());
+
+    #[allow(unused_mut)]
+    let mut app_folder = format!("{}/.kafka_panel", home_dir.to_string_lossy());
+
+    // Get settings from /dev folder in case of running in development
+    #[cfg(dev)]
+    {
+        app_folder = format!("{}/dev", app_folder);
+    }
 
     if !Path::new(&app_folder).is_dir() {
         create_dir_all(&app_folder).map_err(|err| {

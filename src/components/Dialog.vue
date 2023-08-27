@@ -6,9 +6,10 @@ type Props = {
   onClose?: () => void
   modalClass?: string
   underlayClass?: string
-  size?: 's' | 'fullpage'
+  size?: 's' | 'fullpage',
+  closable?: boolean
 }
-const props = withDefaults(defineProps<Props>(), { modalClass: '', underlayClass: '' });
+const props = withDefaults(defineProps<Props>(), { modalClass: '', underlayClass: '', closable: true });
 
 const open = () => visible.value = true;
 const close = () => {
@@ -33,7 +34,7 @@ const dimensionClasses = computed(() => {
 });
 
 const refreshEvent = (event: KeyboardEvent) => {
-	if (event.key === 'Escape') {
+	if (event.key === 'Escape' && props.closable) {
 		close();
 	}
 };
@@ -45,8 +46,8 @@ onBeforeUnmount(() => {
 <template>
   <Teleport to="#page-content">
     <div v-if="visible" :class="`z-10 absolute top-0 left-0 h-full w-full bg-black bg-opacity-40 ${props.underlayClass} p-10 flex items-start justify-center`">
-      <div :class="`relative rounded bg-gray-800 flex flex-col h-full p-6 shrink-0 ${dimensionClasses} ${props.modalClass}`">
-        <button @click="close()" alt="close"
+      <div :class="`relative rounded bg-gray-800 flex flex-col p-6 shrink-0 ${dimensionClasses} ${props.modalClass}`">
+        <button @click="close()" alt="close" v-if="props.closable"
           class="absolute top-0 right-0 bi-x-lg cursor-pointer hover:text-gray-300 hover:bg-gray-700 text-xs px-4 py-3">
         </button>
         <h2 class="mb-6 text-xl">

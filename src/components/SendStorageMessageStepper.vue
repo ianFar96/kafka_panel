@@ -2,7 +2,6 @@
 <script setup lang="ts">
 import { message } from '@tauri-apps/api/dialog';
 import { ref } from 'vue';
-import { useConnection } from '../composables/connection';
 import { useLoader } from '../composables/loader';
 import kafkaService from '../services/kafka';
 import { Connection } from '../types/connection';
@@ -14,6 +13,7 @@ import EditMessageHeaders from './EditMessageHeaders.vue';
 import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
+import { useConnectionStore } from '../composables/connection';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
@@ -43,23 +43,23 @@ defineExpose({
 
 const loader = useLoader();
 
-const { connection, setConnection } = useConnection();
+const connectionStore = useConnectionStore();
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const onStepClick = (step: Step) => {
 	switch (step.name) {
 	case 'topic':
-		if (connection.value) {
+		if (connectionStore.connection) {
 			activeStep.value = step;
 		}
 		break;
 	case 'message':
-		if (connection.value && selectedTopic.value) {
+		if (connectionStore.connection && selectedTopic.value) {
 			activeStep.value = step;
 		}
 		break;
 	case 'headers':
-		if (connection.value && selectedTopic.value && selectedMessage.value?.key && selectedMessage.value?.value) {
+		if (connectionStore.connection && selectedTopic.value && selectedMessage.value?.key && selectedMessage.value?.value) {
 			activeStep.value = step;
 		}
 		break;
@@ -73,7 +73,7 @@ const onStepClick = (step: Step) => {
 const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
 	try {
-		await setConnection(newConnection);
+		await connectionStore.setConnection(newConnection);
 
 		topics.value = await kafkaService.listTopics();
 

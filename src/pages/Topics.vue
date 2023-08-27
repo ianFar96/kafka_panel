@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { confirm, message } from '@tauri-apps/api/dialog';
-import { computed, onActivated, onBeforeUnmount, onDeactivated, ref } from 'vue';
+import { computed, onActivated, onDeactivated, ref } from 'vue';
 import CreateTopic from '../components/CreateTopic.vue';
 import Dialog from '../components/Dialog.vue';
 import SelectConnection from '../components/SelectConnection.vue';
-import { useConnection } from '../composables/connection';
+import { useConnectionStore } from '../composables/connection';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import kafkaService from '../services/kafka';
@@ -19,7 +19,7 @@ const connections = (await storageService.settings.get('CONNECTIONS') ?? []) as 
 
 const loader = useLoader();
 
-const { connection, setConnection } = useConnection();
+const connectionStore = useConnectionStore();
 
 const topics = ref<Topic[]>([]);
 const topicsState = ref<Record<string, ConsumerGroupState>>({});
@@ -61,8 +61,8 @@ onDeactivated(() => {
 	selectConnectionDialog?.value?.close();
 });
 onActivated(async () => {
-	if (connection.value) {
-		await startFetchTopicsState();
+	if (connectionStore.connection) {
+		await fetchTopics();
 	} else {
 		selectConnectionDialog?.value?.open();
 	}
@@ -110,7 +110,7 @@ const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
 	try {
 		// Set connection and make sure it works
-		await setConnection(newConnection);
+		await connectionStore.setConnection(newConnection);
 		topics.value = await kafkaService.listTopics();
 
 		await startFetchTopicsState();
@@ -138,17 +138,19 @@ const refreshEvent = (event: KeyboardEvent) => {
 		fetchTopics();
 	}
 };
-window.addEventListener('keydown', refreshEvent);
-onBeforeUnmount(() => {
+onActivated(() => {
+	window.addEventListener('keydown', refreshEvent);
+});
+onDeactivated(() => {
 	window.removeEventListener('keydown', refreshEvent);
 });
 </script>
 
 <template>
-	<div class="flex flex-col h-full relative" v-if="connection">
+	<div class="flex flex-col h-full relative" v-if="connectionStore.connection">
 		<div class="flex items-center justify-between mb-6">
-			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="connection.name">
-				{{ connection.name }} topics
+			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="connectionStore.connection.name">
+				{{ connectionStore.connection.name }} topics
 			</h2>
 			<div class="flex">
 				<button
@@ -221,7 +223,7 @@ onBeforeUnmount(() => {
 		<CreateTopic :createTopic="createTopic" />
 	</Dialog>
 
-  <Dialog ref="selectConnectionDialog" size="s" :title="'Choose Connection'">
+  <Dialog ref="selectConnectionDialog" size="s" :title="'Choose Connection'" :closable="!!connectionStore.connection">
 		<SelectConnection :connections="connections" :submit="setNewConnection" />
   </Dialog>
 </template>

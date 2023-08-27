@@ -179,9 +179,9 @@ pub async fn send_message(
     key: Value,
     value: Value,
 ) -> Result<(), String> {
-    let stringified_key: String = serde_json::from_value(key)
+    let stringified_key = serde_json::to_string(&key)
         .map_err(|err| format!("Error while stringifying message key: {}", err.to_string()))?;
-    let stringified_value: String = serde_json::from_value(value).map_err(|err| {
+    let stringified_value: String = serde_json::to_string(&value).map_err(|err| {
         format!(
             "Error while stringifying message value: {}",
             err.to_string()
@@ -195,7 +195,7 @@ pub async fn send_message(
     if let Some(headers) = headers {
         let mut headers_to_send = OwnedHeaders::new();
         for (header_key, header_value) in headers {
-            let stringified_header_value: String = serde_json::from_value(header_value).map_err(|err| {
+            let stringified_header_value: String = serde_json::to_string(&header_value).map_err(|err| {
                 format!(
                     "Error while stringifying header's value: {}",
                     err.to_string()

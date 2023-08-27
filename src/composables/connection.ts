@@ -1,8 +1,9 @@
 import { readonly, ref } from 'vue';
 import { Connection } from '../types/connection';
 import kafkaService from '../services/kafka';
+import { defineStore } from 'pinia';
 
-export function useConnection() {
+export const useConnectionStore = defineStore('connection', () => {
 	const connection = ref<Connection>();
 
 	async function setConnection(newConnection: Connection) {
@@ -16,4 +17,4 @@ export function useConnection() {
 		// Override setConnection function so we can update our connection
 		setConnection,
 	};
-}
+});

@@ -3,6 +3,7 @@
 import { ref } from 'vue';
 import { ParsedHeaders } from '../types/message';
 import CodeEditor from './CodeEditor.vue';
+import { isSendValid } from '../services/utils';
 
 const props = defineProps<{
 	submit: (headers: ParsedHeaders) => Promise<void>,
@@ -43,6 +44,12 @@ const onHeaderValueChange = (code: unknown, index: number) => {
 };
 
 const handleSubmit = async () => {
+	for (const header of headers.value ?? []) {
+		if (!isSendValid(header.key) || !isSendValid(header.value)) {
+			return;
+		}
+	}
+
 	const headersToSubmit = headers.value ? headers.value.reduce((acc, header) => ({
 		...acc,
 		[header.key]: header.value

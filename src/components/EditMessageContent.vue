@@ -11,8 +11,17 @@ const props = defineProps<{
 	message?: Omit<MessageContent, 'headers'>
 }>();
 
-const key = ref(props.message?.key);
-const value = ref(props.message?.value);
+const defaultKey = {
+	id: '{{faker.string.uuid()}}'
+};
+
+const defaultMessage = {
+	id: '{{key.id}}',
+	name: '{{faker.person.fullName()}}'
+};
+
+const key = ref<unknown>(props.message?.key ?? defaultKey);
+const value = ref<unknown>(props.message?.value ?? defaultMessage);
 
 const onKeyChange = (code: unknown) => {
 	key.value = code;

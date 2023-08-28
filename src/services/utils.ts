@@ -1,5 +1,7 @@
 /* eslint-disable no-empty */
 
+import { MessageContent } from '../types/message';
+
 export const tryJsonParse = (text: unknown): unknown => {
 	try {
 		if (typeof text === 'string') {
@@ -20,4 +22,12 @@ export const isSendValid = ( value: unknown) => {
 	}
 
 	return true;
+};
+
+export const stringifyMessage = (message: MessageContent) => {
+	return JSON.stringify({
+		headers: message.headers, 
+		key: message.key,
+		value: message.value
+	}, null, 2);
 };

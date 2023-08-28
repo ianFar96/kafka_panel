@@ -1,3 +1,5 @@
+import { faker } from '@faker-js/faker';
+import { clone } from 'ramda';
 import { invoke } from '@tauri-apps/api';
 import { emit, listen, UnlistenFn } from '@tauri-apps/api/event';
 import { Subject } from 'rxjs';
@@ -92,10 +94,45 @@ class KafkaService {
 	}
 
 	async sendMessage(topic: string, message: MessageContent) {
+		const interpolatedHeaders = this.interpolateFakeValues(clone(message.headers), {faker});
+		const interpolatedKey = this.interpolateFakeValues(clone(message.key), {faker});
+		const interpolatedValue = this.interpolateFakeValues(clone(message.value), {faker, key: interpolatedKey});
+		
 		await invoke('send_message_command', {
 			topic, 
-			...message
+			headers: interpolatedHeaders,
+			key: interpolatedKey,
+			value: interpolatedValue,
 		});
+	}
+
+	private interpolateFakeValues<T = unknown>(input: T, context: Record<string, unknown>): T {
+		if (typeof input === 'object') {
+			if (Array.isArray(input)) {
+				for (const key in input) {
+					input[key] = this.interpolateFakeValues(input[key], context);
+				}
+			} else if (input !== null) {
+				for (const key of Object.keys(input)) {
+					const obj = input as Record<string, unknown>;
+					obj[key] = this.interpolateFakeValues(obj[key], context);
+				}
+			}
+		} else if (typeof input === 'string') {
+			(input as string) = input.replace(/\{\{(.*?)\}\}/gm, (_, group) => {
+				try {
+					return this.scopeEval(context, `this.${group}`).toString();
+				} catch (error) {
+					throw new Error(`Interpolation error with "${group}"\n${error}`);
+				}
+			});
+		}
+
+		return input;
+	}
+
+	private scopeEval(scope: unknown, script: string) {
+		return Function('"use strict";return (' + script + ')').bind(scope)();
 	}
 }
 

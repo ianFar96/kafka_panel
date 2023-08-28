@@ -13,6 +13,7 @@ import kafkaService from '../services/kafka';
 import storageService from '../services/storage';
 import { Message, MessageContent } from '../types/message';
 import { DateTime } from 'luxon';
+import { stringifyMessage } from '../services/utils';
 
 type DisplayMessage = Message & {
 	valueVisible: boolean
@@ -147,14 +148,6 @@ const sendMessage = async (messageContent: MessageContent) => {
 const getDisplayDate = (dateMilis: number) => {
 	const dateTime = DateTime.fromMillis(dateMilis);
 	return dateTime.toFormat('dd/LL/yyyy HH:mm:ss');
-};
-
-const stringifyMessage = (message: DisplayMessage) => {
-	return JSON.stringify({
-		headers: message.headers, 
-		key: message.key,
-		value: message.value
-	}, null, 2);
 };
 </script>
 

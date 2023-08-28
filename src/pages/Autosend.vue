@@ -9,6 +9,7 @@ import checkSettings from '../services/checkSettings';
 import storageService from '../services/storage';
 import { ActiveAutosend } from '../types/autosend';
 import { Connection } from '../types/connection';
+import { stringifyMessage } from '../services/utils';
 
 type DisplayAutosend = ActiveAutosend & {
 	valueVisible: Ref<boolean>
@@ -127,7 +128,7 @@ const saveMessageInStorage = async (tags: string[]) => {
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
-						<highlightjs :language="'json'" :code="JSON.stringify({key: autosend.key, value: autosend.value}, null, 2)" />
+						<highlightjs :language="'json'" :code="stringifyMessage(autosend)" />
 					</div>
 				</div>
 			</li>

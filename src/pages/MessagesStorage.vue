@@ -15,6 +15,7 @@ import { getRandomColor } from '../services/chipColors';
 import storageService from '../services/storage';
 import { Connection } from '../types/connection';
 import { StorageMessage } from '../types/message';
+import { stringifyMessage } from '../services/utils';
 
 type DisplayMessage = Omit<StorageMessage, 'tags'> & {
 	tags: Tag[]
@@ -68,14 +69,6 @@ const saveMessage = async (message: StorageMessage) => {
 	const messageWithoutId = omit(['id'], message);
 	await storageService.messages.save(messageWithoutId, message.id);
 	await fetchMessages();
-};
-
-const stringifyMessage = (message: DisplayMessage) => {
-	return JSON.stringify({
-		headers: message.headers, 
-		key: message.key,
-		value: message.value
-	}, null, 2);
 };
 
 const copyToClipboard = async (event: MouseEvent, text: string) => {

@@ -51,7 +51,7 @@ const editMessageStorage = (autosend: Autosend) => {
 };
 
 const saveMessageInStorage = async (message: StorageMessage) => {
-	await storageService.messages.save(message, message.id);
+	await storageService.messages.save(message);
 	editMessageStorageStepper.value?.closeDialog();
 };
 </script>

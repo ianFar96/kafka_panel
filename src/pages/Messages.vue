@@ -4,16 +4,15 @@ import { writeText } from '@tauri-apps/api/clipboard';
 import { message } from '@tauri-apps/api/dialog';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import Dialog from '../components/Dialog.vue';
 import EditMessageStepper from '../components/EditMessageStepper.vue';
-import EditTags from '../components/EditTags.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import kafkaService from '../services/kafka';
 import storageService from '../services/storage';
-import { Message, MessageContent } from '../types/message';
+import { Message, MessageContent, StorageMessage } from '../types/message';
 import { DateTime } from 'luxon';
 import { stringifyMessage } from '../services/utils';
+import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 
 type DisplayMessage = Message & {
 	valueVisible: boolean
@@ -28,8 +27,6 @@ const numberOfMessages = await storageService.settings.get('MESSAGES') as number
 const topicName = route.params.topicName as string;
 
 const loader = useLoader();
-
-const selectedMessage = ref<MessageContent>();
 
 const displayMessages = ref<DisplayMessage[]>([]);
 const status = ref<'starting' | 'started' | 'stopping' | 'stopped'>('stopped');
@@ -110,28 +107,6 @@ const filteredMessages = computed(() => {
 		});
 });
 
-const editTagsDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const chooseTags = (message: Message) => {
-	selectedMessage.value = message;
-	editTagsDialog.value?.open();
-};
-
-const saveMessageInStorage = async (tags: string[]) => {
-	await storageService.messages.save({
-		headers: selectedMessage.value!.headers,
-		key: selectedMessage.value!.key,
-		value: selectedMessage.value!.value,
-		tags
-	});
-
-	editTagsDialog.value?.close();
-};
-
-const setMessageToSend = (message?: MessageContent) => {
-	selectedMessage.value = message;
-	sendMessageStepper?.value?.openDialog(message);
-};
-
 const sendMessageStepper = ref<InstanceType<typeof EditMessageStepper> | null>(null); // Template ref
 const sendMessage = async (messageContent: MessageContent) => {
 	loader?.value?.show();
@@ -143,6 +118,16 @@ const sendMessage = async (messageContent: MessageContent) => {
 		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
 	}
 	loader?.value?.hide();
+};
+
+const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStepper> | null>(null); // Template ref
+const editStorageMessage = (message: MessageContent) => {
+	const storageMessage: StorageMessage = { ...message, tags: [] };
+	editMessageStorageStepper.value?.openDialog(storageMessage);
+};
+const saveMessageInStorage = async (message: StorageMessage) => {
+	await storageService.messages.save(message);
+	editMessageStorageStepper.value?.closeDialog();
 };
 
 const getDisplayDate = (dateMilis: number) => {
@@ -164,7 +149,7 @@ const getDisplayDate = (dateMilis: number) => {
 					<i class="mr-2 bi-people cursor-pointer"></i>
 					Groups
 				</router-link>
-				<button @click="setMessageToSend()"
+				<button @click="sendMessageStepper?.openDialog()"
 					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center">
 					<i class="mr-2 bi-send cursor-pointer"></i>
 					Send message
@@ -220,11 +205,11 @@ const getDisplayDate = (dateMilis: number) => {
 							title="Copy JSON"
 							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="chooseTags(message)"
+						<button @click="editStorageMessage(message)"
 							title="Save in storage"
 							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="setMessageToSend(message)"
+						<button @click="sendMessageStepper?.openDialog(message)"
 							title="Send again"
 							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
 						</button>
@@ -238,9 +223,5 @@ const getDisplayDate = (dateMilis: number) => {
   </div>
 
 	<EditMessageStepper ref="sendMessageStepper" submit-button-text="Send" :submit="sendMessage"/>
-
-	<!-- TODO: make this a stepper with edit message content and headers -->
-	<Dialog ref="editTagsDialog" title="Select tags">
-		<EditTags :submit="saveMessageInStorage" :submit-button-text="'Save'"/>
-	</Dialog>
+	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessageInStorage" />
 </template>

@@ -14,10 +14,10 @@ import checkSettings from '../services/checkSettings';
 import { getRandomColor } from '../services/chipColors';
 import storageService from '../services/storage';
 import { Connection } from '../types/connection';
-import { StorageMessage } from '../types/message';
+import { StorageMessage, StorageMessageWithId } from '../types/message';
 import { stringifyMessage } from '../services/utils';
 
-type DisplayMessage = Omit<StorageMessage, 'tags'> & {
+type DisplayMessage = Omit<StorageMessageWithId, 'tags'> & {
 	tags: Tag[]
 	valueVisible: boolean
 }
@@ -28,7 +28,7 @@ const connections = await storageService.settings.get('CONNECTIONS') as Connecti
 
 const loader = useLoader();
 
-const storeMessageToDisplayMessage = (message: StorageMessage): DisplayMessage => ({
+const storeMessageToDisplayMessage = (message: StorageMessageWithId): DisplayMessage => ({
 	...message,
 	tags: message.tags.map(name => ({
 		name,
@@ -37,7 +37,7 @@ const storeMessageToDisplayMessage = (message: StorageMessage): DisplayMessage =
 	valueVisible: false
 });
 
-const displayMessageToStoreMessage = (message: DisplayMessage): StorageMessage => ({
+const displayMessageToStoreMessage = (message: DisplayMessage): StorageMessageWithId => ({
 	...omit(['valueVisible'], message),
 	tags: message.tags.map(tag => tag.name)
 });

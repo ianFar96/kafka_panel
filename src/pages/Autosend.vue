@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { useObservable } from '@vueuse/rxjs';
 import { Ref, computed, ref } from 'vue';
-import Dialog from '../components/Dialog.vue';
-import EditTags from '../components/EditTags.vue';
+import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import StartAutosendStepper from '../components/StartAutosendStepper.vue';
 import { useAutosendsStore } from '../composables/autosends';
 import checkSettings from '../services/checkSettings';
 import storageService from '../services/storage';
-import { ActiveAutosend } from '../types/autosend';
+import { autosendToStorageMessage, stringifyMessage } from '../services/utils';
+import { ActiveAutosend, Autosend } from '../types/autosend';
 import { Connection } from '../types/connection';
-import { stringifyMessage } from '../services/utils';
+import { StorageMessage } from '../types/message';
 
 type DisplayAutosend = ActiveAutosend & {
 	valueVisible: Ref<boolean>
@@ -43,23 +43,16 @@ const filteredAutosends = computed(() => {
 });
 
 const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | null>(null); // Template ref
+const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStepper> | null>(null); // Template ref
 
-const editTagsDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const selectedAutosend = ref<ActiveAutosend>();
-const chooseTags = (autosend: ActiveAutosend) => {
-	selectedAutosend.value = autosend;
-	editTagsDialog.value?.open();
+const editMessageStorage = (autosend: Autosend) => {
+	const storageMessage = autosendToStorageMessage(autosend, ['autosend template']);
+	editMessageStorageStepper.value?.openDialog(storageMessage);
 };
 
-const saveMessageInStorage = async (tags: string[]) => {
-	await storageService.messages.save({
-		headers: selectedAutosend.value!.headers,
-		key: selectedAutosend.value!.key,
-		value: selectedAutosend.value!.value,
-		tags
-	});
-
-	editTagsDialog.value?.close();
+const saveMessageInStorage = async (message: StorageMessage) => {
+	await storageService.messages.save(message, message.id);
+	editMessageStorageStepper.value?.closeDialog();
 };
 </script>
 
@@ -118,7 +111,7 @@ const saveMessageInStorage = async (tags: string[]) => {
 
 				<div v-if="autosend.valueVisible.value" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<button @click="chooseTags(autosend)"
+						<button @click="editMessageStorage(autosend)"
 							title="Save in storage"
 							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
 						</button>
@@ -136,9 +129,5 @@ const saveMessageInStorage = async (tags: string[]) => {
 	</div>
 
 	<StartAutosendStepper ref="startAutosendStepper" :submit="autosendStore.startAutosend" />
-
-	<!-- TODO: make this a stepper with edit message content and headers -->
-	<Dialog ref="editTagsDialog" title="Select tags">
-		<EditTags :tags="['autosend template']" :submit="saveMessageInStorage" :submit-button-text="'Save'"/>
-	</Dialog>
+	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessageInStorage" />
 </template>

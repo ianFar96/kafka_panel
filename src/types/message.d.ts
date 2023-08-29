@@ -20,6 +20,8 @@ export type SendMessage = {
 }
 
 export type StorageMessage = MessageContent & {
-  id: string
+  id?: string
   tags: string[]
 }
+
+export type StorageMessageWithId = Required<StorageMessage>

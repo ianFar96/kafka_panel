@@ -1,6 +1,7 @@
 /* eslint-disable no-empty */
 
-import { MessageContent } from '../types/message';
+import { Autosend } from '../types/autosend';
+import { MessageContent, StorageMessage } from '../types/message';
 
 export const tryJsonParse = (text: unknown): unknown => {
 	try {
@@ -31,3 +32,10 @@ export const stringifyMessage = (message: MessageContent) => {
 		value: message.value
 	}, null, 2);
 };
+
+export const autosendToStorageMessage = (autosend: Autosend, tags?: string[]): StorageMessage => ({
+	headers: autosend.headers,
+	key: autosend.key,
+	value: autosend.value,
+	tags: tags ?? [],
+});

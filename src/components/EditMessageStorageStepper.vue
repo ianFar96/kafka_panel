@@ -90,7 +90,7 @@ const onStepClick = (step: Step) => {
 	<Dialog ref="stepperDialog" title="Edit storage message">
 		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
 			<template #tags>
-				<EditTags class="mt-8" :tags="selectedMessage?.tags || []" :submit="setTags" :submit-button-text="'Next'" />
+				<EditTags class="mt-8" :tags="selectedMessage!.tags" :submit="setTags" :submit-button-text="'Next'" />
 			</template>
 			<template #message>
 				<EditMessageContent :message="selectedMessage" :submit="setMessageContent" :submit-button-text="'Next'" />

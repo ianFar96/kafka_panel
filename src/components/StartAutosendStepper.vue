@@ -68,7 +68,7 @@ const loader = useLoader();
 const connectionStore = useConnectionStore();
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const onStepClick = (step: Step) => {
+const onStepClick = async (step: Step) => {
 	switch (step.name) {
 	case 'connection':
 		const hasDuration = configuration.value?.duration.time_unit && configuration.value?.duration.value;
@@ -78,6 +78,7 @@ const onStepClick = (step: Step) => {
 		}
 		break;
 	case 'topic':
+		topics.value = await kafkaService.listTopics();
 		if (connectionStore.connection) {
 			activeStep.value = step;
 		}
@@ -104,10 +105,8 @@ const setNewConnection = async (newConnection: Connection) => {
 	try {
 		await connectionStore.setConnection(newConnection);
 
-		topics.value = await kafkaService.listTopics();
-
 		// Next step
-		activeStep.value = steps[2];
+		onStepClick(steps[2]);
 	} catch (error) {
 		await message(`Error setting the connection: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -118,7 +117,7 @@ const selectTopic = async (topic: Topic) => {
 	selectedTopic.value = topic;
 
 	// Next step
-	activeStep.value = steps[3];
+	onStepClick(steps[3]);
 };
 
 const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
@@ -172,7 +171,7 @@ const startAutosend = async () => {
 				<SelectConnection :selected-connection="connectionStore.connection?.name"
 					:connections="connections" :submit="setNewConnection" />
 				<div class="flex justify-end mt-4">
-					<Button color="orange" @click="onStepClick(steps[1])">Next</Button>
+					<Button color="orange" @click="onStepClick(steps[2])">Next</Button>
 				</div>
 			</template>
 			<template #topic>

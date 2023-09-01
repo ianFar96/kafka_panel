@@ -28,6 +28,8 @@ pub async fn set_connection_command<'a>(
     *kafka.consumer.write().await = Some(connections.consumer);
     *kafka.producer.write().await = Some(connections.producer);
 
+    // TODO: test connection
+
     Ok(())
 }
 

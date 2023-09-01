@@ -8,7 +8,7 @@ import Button from './Button.vue';
 type EditHeaders = {
 	key: string,
 	value: unknown
-}[]
+}[] | null
 
 const props = defineProps<{
 	headers?: ParsedHeaders
@@ -23,7 +23,7 @@ const headersToEditHeaders = (headers: ParsedHeaders): EditHeaders => {
 };
 
 const editHeadersToHeaders = (headers: EditHeaders): ParsedHeaders => {
-	return headers.reduce((acc, editHeader) => ({
+	return headers && headers.reduce((acc, editHeader) => ({
 		...acc,
 		[editHeader.key]: editHeader.value
 	}), {});
@@ -49,6 +49,11 @@ const addHeader = () => {
 
 const removeHeader = (index: number) => {
 	headersToEdit.value!.splice(index, 1);
+
+	// For display purposes, it's nicer to see null
+	if ((headersToEdit.value?.length || 0) <= 0) {
+		headersToEdit.value = null;
+	}
 
 	const headers = editHeadersToHeaders(headersToEdit.value);
 	emit('change', headers);

@@ -5,6 +5,7 @@ import { Topic } from '../types/topic';
 
 const props = defineProps<{
   topics: Topic[]
+	selectedTopic?: string
   submit: (topic: Topic) => Promise<void>
 }>();
 
@@ -34,10 +35,11 @@ const submit = (topic: Topic) => {
 		</div>
 	
 		<ul class="overflow-auto">
-			<li v-for="topic, index in filteredTopics" :key="index" :class="{'border-b': index !== filteredTopics.length - 1}"
-				class="border-white overflow-hidden flex justify-between p-3 cursor-pointer hover:bg-gray-700" @click="submit(topic)">
+			<li v-for="topic, index in filteredTopics" :key="index" @click="submit(topic)"
+				:class="{'border-b': index !== filteredTopics.length - 1, 'bg-gray-700': selectedTopic === topic.name}"
+				class="border-white overflow-hidden flex justify-between p-3 cursor-pointer hover:bg-gray-700" >
 				<span class="mr-4">{{ topic.name }}</span>
-				<i class="bi-arrow-right text-xl"></i>
+				<i v-if="selectedTopic === topic.name" class="bi-check-lg text-xl text-green-600"></i>
 			</li>
 		</ul>
 	</div>

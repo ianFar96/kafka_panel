@@ -224,6 +224,7 @@ onDeactivated(() => {
 	</Dialog>
 
   <Dialog ref="selectConnectionDialog" size="s" :title="'Choose Connection'" :closable="!!connectionStore.connection">
-		<SelectConnection :connections="connections" :submit="setNewConnection" />
+		<SelectConnection :selected-connection="connectionStore.connection?.name"
+			:connections="connections" :submit="setNewConnection" />
   </Dialog>
 </template>

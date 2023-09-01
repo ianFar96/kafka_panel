@@ -121,10 +121,11 @@ const saveMessage = async () => {
 		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
 			<!-- Steps -->
 			<template #connection>
-				<SelectConnection :connections="connections" :submit="setNewConnection" />
+				<SelectConnection :selected-connection="connectionStore.connection?.name"
+					:connections="connections" :submit="setNewConnection" />
 			</template>
 			<template #topic>
-				<SelectTopic :submit="selectTopic" :topics="topics" />
+				<SelectTopic :selected-topic="selectedTopic?.name" :submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
 				<EditMessageContent :message="selectedMessage" 

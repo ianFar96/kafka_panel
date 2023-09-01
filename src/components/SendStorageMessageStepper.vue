@@ -14,6 +14,8 @@ import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
 import { useConnectionStore } from '../composables/connection';
+import { isSendValid } from '../services/utils';
+import Button from './Button.vue';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
@@ -54,12 +56,12 @@ const onStepClick = (step: Step) => {
 		}
 		break;
 	case 'message':
-		if (connectionStore.connection && selectedTopic.value) {
+		if (selectedTopic.value) {
 			activeStep.value = step;
 		}
 		break;
 	case 'headers':
-		if (connectionStore.connection && selectedTopic.value && selectedMessage.value?.key && selectedMessage.value?.value) {
+		if (isSendValid(selectedMessage.value?.key) && isSendValid(selectedMessage.value?.value)) {
 			activeStep.value = step;
 		}
 		break;
@@ -92,18 +94,18 @@ const selectTopic = async (topic: Topic) => {
 	activeStep.value = steps[2];
 };
 
-const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {
+const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
 	selectedMessage.value!.key = message.key;
 	selectedMessage.value!.value = message.value;
-
-	// Next step
-	activeStep.value = steps[3];
 };
 
-const sendMessage = async (headers: ParsedHeaders) => {
+const onHeadersChange = (headers: ParsedHeaders) => {
+	selectedMessage.value!.headers = headers;
+};
+
+const saveMessage = async () => {
 	loader?.value?.show();
 	try {
-		selectedMessage.value!.headers = headers;
 		await kafkaService.sendMessage(selectedTopic.value!.name, selectedMessage.value!);
 
 		stepperDialog.value?.close();
@@ -125,10 +127,18 @@ const sendMessage = async (headers: ParsedHeaders) => {
 				<SelectTopic :submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
-				<EditMessageContent :message="selectedMessage!" :submit="setMessageContent" :submit-button-text="'Next'" />
+				<EditMessageContent :message="selectedMessage" 
+					@change="onContentChange"/>
+				<div class="flex justify-end mt-4">
+					<Button color="orange" @click="onStepClick(steps[3])">Next</Button>
+				</div>
 			</template>
 			<template #headers>
-				<EditMessageHeaders :headers="selectedMessage?.headers" :submit="sendMessage" :submit-button-text="'Send'" />
+				<EditMessageHeaders :headers="selectedMessage?.headers"
+					@change="onHeadersChange" />
+				<div class="flex justify-end mt-4">
+					<Button color="green" @click="saveMessage">Send</Button>
+				</div>
 			</template>
 		</Stepper>
   </Dialog>

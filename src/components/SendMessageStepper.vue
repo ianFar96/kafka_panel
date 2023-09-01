@@ -8,6 +8,8 @@ import Dialog from './Dialog.vue';
 import EditMessageContent from './EditMessageContent.vue';
 import EditMessageHeaders from './EditMessageHeaders.vue';
 import Stepper, { Step } from './Stepper.vue';
+import Button from './Button.vue';
+import { getDefaultMessage, isSendValid } from '../services/utils';
 
 const steps: Step[] = [
 	{name:'message', label: 'Content'},
@@ -20,12 +22,11 @@ const activeStep = ref<Step>(steps[0]);
 
 const props = defineProps<{
   submit: (message: MessageContent) => Promise<unknown> | unknown,
-	submitButtonText?: string
 }>();
 
 defineExpose({
 	openDialog: (messageToEdit?: MessageContent) => {
-		selectedMessage.value = messageToEdit && clone(messageToEdit);
+		selectedMessage.value = messageToEdit ? clone(messageToEdit) : getDefaultMessage();
 		activeStep.value = steps[0];
 		stepperDialog.value?.open();
 	},
@@ -36,20 +37,25 @@ defineExpose({
 
 const loader = useLoader();
 
-const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {
-	selectedMessage.value = {
-		key: message.key,
-		value: message.value,
-		headers: selectedMessage.value?.headers ?? null
-	};
-
-	activeStep.value = steps[1];
+const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
+	selectedMessage.value!.key = message.key;
+	selectedMessage.value!.value = message.value;
 };
 
-const saveMessage = async (headers: ParsedHeaders) => {
+const onHeadersChange = (headers: ParsedHeaders) => {
+	selectedMessage.value!.headers = headers;
+};
+
+const saveMessage = async () => {
+	// Check on valid headers
+	for (const [key, value] of Object.entries(selectedMessage.value?.headers ?? {})) {
+		if (!isSendValid(key) || !isSendValid(value)) {
+			return;
+		}
+	}
+
 	loader?.value?.show();
 
-	selectedMessage.value!.headers = headers;
 	await props.submit(selectedMessage.value!);
 
 	loader?.value?.hide();
@@ -59,14 +65,13 @@ const saveMessage = async (headers: ParsedHeaders) => {
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const onStepClick = (step: Step) => {
 	switch (step.name) {
+	case 'message':
+		activeStep.value = step;
+		break;
 	case 'headers':
-		if (selectedMessage.value?.key && selectedMessage.value?.value) {
+		if (isSendValid(selectedMessage.value?.key) && isSendValid(selectedMessage.value?.value)) {
 			activeStep.value = step;
 		}
-		break;
-	
-	default:
-		activeStep.value = step;
 		break;
 	}
 };
@@ -76,10 +81,18 @@ const onStepClick = (step: Step) => {
 	<Dialog ref="stepperDialog" title="Edit message">
 		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
 			<template #message>
-				<EditMessageContent :message="selectedMessage" :submit="setMessageContent" :submit-button-text="'Next'" />
+				<EditMessageContent :message="selectedMessage" 
+					@change="onContentChange"/>
+				<div class="flex justify-end mt-4">
+					<Button color="orange" @click="onStepClick(steps[1])">Next</Button>
+				</div>
 			</template>
 			<template #headers>
-				<EditMessageHeaders :headers="selectedMessage?.headers" :submit="saveMessage" :submit-button-text="submitButtonText ?? 'Save'" />
+				<EditMessageHeaders :headers="selectedMessage?.headers"
+					@change="onHeadersChange" />
+				<div class="flex justify-end mt-4">
+					<Button color="green" @click="saveMessage">Send</Button>
+				</div>
 			</template>
 		</Stepper>
 	</Dialog>

@@ -17,6 +17,9 @@ import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
 import { useConnectionStore } from '../composables/connection';
+import { clone } from 'ramda';
+import { getDefaultMessage, isSendValid } from '../services/utils';
+import Button from './Button.vue';
 
 const props = defineProps<{
 	submit: (autosend: Autosend) => Promise<void>,
@@ -35,7 +38,7 @@ const configuration = ref<AutosendOptions>({
 	}
 });
 const selectedTopic = ref<Topic>();
-const selectedContent = ref<MessageContent>();
+const selectedMessage = ref<MessageContent>();
 
 const steps: Step[] = [
 	{name: 'configuration', label: 'Configuration'},
@@ -49,7 +52,7 @@ const activeStep = ref<Step>(steps[0]);
 defineExpose({
 	openDialog: (settingsConnections: Connection[], messageContent?: MessageContent) => {
 		connections.value = settingsConnections;
-		selectedContent.value = messageContent;
+		selectedMessage.value = messageContent ? clone(messageContent) : getDefaultMessage();
 
 		activeStep.value = steps[0];
 
@@ -80,12 +83,12 @@ const onStepClick = (step: Step) => {
 		}
 		break;
 	case 'message':
-		if (connectionStore.connection && selectedTopic.value) {
+		if (selectedTopic.value) {
 			activeStep.value = step;
 		}
 		break;
 	case 'headers':
-		if (connectionStore.connection && selectedTopic.value && selectedContent.value?.value && selectedContent.value?.key) {
+		if (isSendValid(selectedMessage.value?.value) && isSendValid(selectedMessage.value?.key)) {
 			activeStep.value = step;
 		}
 		break;
@@ -118,24 +121,22 @@ const selectTopic = async (topic: Topic) => {
 	activeStep.value = steps[3];
 };
 
-const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {	
-	selectedContent.value = {
-		key: message.key,
-		value: message.value,
-		headers: selectedContent.value?.headers ?? null
-	};
-
-	// Next step
-	activeStep.value = steps[4];
+const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
+	selectedMessage.value!.key = message.key;
+	selectedMessage.value!.value = message.value;
 };
 
-const startAutosend = async (headers: ParsedHeaders) => {
+const onHeadersChange = (headers: ParsedHeaders) => {
+	selectedMessage.value!.headers = headers;
+};
+
+const startAutosend = async () => {
 	loader?.value?.show();
 	try {
 		const autosend: Autosend = {
-			headers,
-			key: selectedContent.value!.key,
-			value: selectedContent.value!.value,
+			headers: selectedMessage.value!.headers,
+			key: selectedMessage.value!.key,
+			value: selectedMessage.value!.value,
 			options: configuration.value!,
 			topic: selectedTopic.value!.name
 		};
@@ -174,10 +175,18 @@ const startAutosend = async (headers: ParsedHeaders) => {
 				<SelectTopic :submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
-				<EditMessageContent :submit="setMessageContent" :message="selectedContent" :submit-button-text="'Next'" />
+				<EditMessageContent :message="selectedMessage" 
+					@change="onContentChange"/>
+				<div class="flex justify-end mt-4">
+					<Button color="orange" @click="onStepClick(steps[4])">Next</Button>
+				</div>
 			</template>
 			<template #headers>
-				<EditMessageHeaders :submit="startAutosend" submit-button-text="Start" :headers="selectedContent?.headers" />
+				<EditMessageHeaders :headers="selectedMessage?.headers"
+					@change="onHeadersChange" />
+				<div class="flex justify-end mt-4">
+					<Button color="green" @click="startAutosend">Save</Button>
+				</div>
 			</template>
 		</Stepper>
   </Dialog>

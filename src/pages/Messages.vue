@@ -4,7 +4,7 @@ import { writeText } from '@tauri-apps/api/clipboard';
 import { message } from '@tauri-apps/api/dialog';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import EditMessageStepper from '../components/EditMessageStepper.vue';
+import SendMessageStepper from '../components/SendMessageStepper.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import kafkaService from '../services/kafka';
@@ -107,7 +107,7 @@ const filteredMessages = computed(() => {
 		});
 });
 
-const sendMessageStepper = ref<InstanceType<typeof EditMessageStepper> | null>(null); // Template ref
+const sendMessageStepper = ref<InstanceType<typeof SendMessageStepper> | null>(null); // Template ref
 const sendMessage = async (messageContent: MessageContent) => {
 	loader?.value?.show();
 	try {
@@ -222,6 +222,6 @@ const getDisplayDate = (dateMilis: number) => {
 		</ul>
   </div>
 
-	<EditMessageStepper ref="sendMessageStepper" submit-button-text="Send" :submit="sendMessage"/>
+	<SendMessageStepper ref="sendMessageStepper" :submit="sendMessage"/>
 	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessageInStorage" />
 </template>

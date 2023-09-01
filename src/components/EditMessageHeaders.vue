@@ -3,95 +3,100 @@
 import { ref } from 'vue';
 import { ParsedHeaders } from '../types/message';
 import CodeEditor from './CodeEditor.vue';
-import { isSendValid } from '../services/utils';
+import Button from './Button.vue';
+
+type EditHeaders = {
+	key: string,
+	value: unknown
+}[]
 
 const props = defineProps<{
-	submit: (headers: ParsedHeaders) => Promise<void>,
-	submitButtonText: string,
 	headers?: ParsedHeaders
 }>();
 
-const headersToEdit = props.headers ? Object.entries(props.headers).map(([key, value]) => ({key, value})) : null;
-const headers = ref(headersToEdit);
+const emit = defineEmits<{
+	(event: 'change', headers: ParsedHeaders): void | Promise<void>
+}>();
+
+const headersToEditHeaders = (headers: ParsedHeaders): EditHeaders => {
+	return Object.entries(headers ?? {}).map(([key, value]) => ({key, value}));
+};
+
+const editHeadersToHeaders = (headers: EditHeaders): ParsedHeaders => {
+	return headers.reduce((acc, editHeader) => ({
+		...acc,
+		[editHeader.key]: editHeader.value
+	}), {});
+};
+
+const headersToEdit = ref(props.headers ? headersToEditHeaders(props.headers) : []);
 
 const addHeader = () => {
-	if (headers.value) {
-		headers.value.push({
+	if (headersToEdit.value) {
+		headersToEdit.value.push({
 			key: '',
 			value: ''
 		});
 	} else {
-		headers.value = [{
+		headersToEdit.value = [{
 			key: '',
 			value: ''
 		}];
 	}
+
+	// No need to trigger change since the header is empty
 };
 
 const removeHeader = (index: number) => {
-	headers.value!.splice(index, 1);
-	if (headers.value!.length <= 0) {
-		headers.value = null;
-	}
+	headersToEdit.value!.splice(index, 1);
+
+	const headers = editHeadersToHeaders(headersToEdit.value);
+	emit('change', headers);
 };
 
 const onHeaderKeyChange = (event: Event, index: number) => {
-	headers.value![index].key = (event.target as HTMLInputElement).value;
+	headersToEdit.value![index].key = (event.target as HTMLInputElement).value;
+
+	const headers = editHeadersToHeaders(headersToEdit.value);
+	emit('change', headers);
 };
 
+let valueDebounce: any;
 const onHeaderValueChange = (code: unknown, index: number) => {
-	headers.value![index].value = code;
-};
+	clearTimeout(valueDebounce);
+	valueDebounce = setTimeout(() => {
+		headersToEdit.value![index].value = code;
 
-const handleSubmit = async () => {
-	for (const header of headers.value ?? []) {
-		if (!isSendValid(header.key) || !isSendValid(header.value)) {
-			return;
-		}
-	}
-
-	const headersToSubmit = headers.value ? headers.value.reduce((acc, header) => ({
-		...acc,
-		[header.key]: header.value
-	}), {}) : null;
-
-	await props.submit(headersToSubmit);
-
-	// Reset form
-	headers.value = [];
+		const headers = editHeadersToHeaders(headersToEdit.value);
+		emit('change', headers);
+	}, 300);
 };
 
 const codeWrapperRefs = ref<HTMLElement[] | null>([]);
 </script>
 
 <template>
-	<form class="h-full flex flex-col overflow-auto" @submit="handleSubmit()">
-		<div class="h-full overflow-auto">
-			<template v-if="headers">
-				<div ref="headerItemRef" class="mb-4" v-for="header, index in headers" :key="header.key">
-					<div class="flex items-end mb-2">
-						<input type="text" :value="header.key" @change="onHeaderKeyChange($event, index)"
-							class="block bg-transparent outline-none border-b border-gray-400 py-1 w-full" placeholder="Name*">
-						<i class="bi-trash hover:text-red-500 transition-colors cursor-pointer text-lg border-b border-gray-400"
-							@click="removeHeader(index)"></i>
-					</div>
-					<div class="h-[250px] min-w-[500px] w-full rounded-xl overflow-hidden" ref="codeWrapperRefs">
-						<CodeEditor v-if="codeWrapperRefs" :wrapper-ref="codeWrapperRefs[index]"
-							:code="header.value" @code-change="onHeaderValueChange($event, index)">
-						</CodeEditor>
-					</div>
+	<div class="mb-4">
+		<Button @click="addHeader" color="orange" class="w-full flex items-center justify-center">
+			<i class="bi-card-heading mr-2"></i>
+			Add Header
+		</Button>
+	</div>
+	<div class="h-full overflow-auto">
+		<template v-if="headersToEdit">
+			<div ref="headerItemRef" class="mb-4" v-for="header, index in headersToEdit" :key="header.key">
+				<div class="flex items-end mb-2">
+					<input type="text" :value="header.key" @change="onHeaderKeyChange($event, index)"
+						class="block bg-transparent outline-none border-b border-gray-400 py-1 w-full" placeholder="Name*">
+					<i class="bi-trash hover:text-red-500 transition-colors cursor-pointer text-lg border-b border-gray-400"
+						@click="removeHeader(index)"></i>
 				</div>
-			</template>
-		</div>
-		<div class="mt-4 flex justify-between flex-none">
-			<button class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400"
-				type="button" @click="addHeader">
-				Add Header
-			</button>
-			<button type="submit"
-				class="border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500">
-				{{ submitButtonText }}
-			</button>
-		</div>
-	</form>
+				<div class="h-[250px] min-w-[500px] w-full rounded-xl overflow-hidden" ref="codeWrapperRefs">
+					<CodeEditor v-if="codeWrapperRefs" :wrapper-ref="codeWrapperRefs[index]"
+						:code="header.value" @code-change="onHeaderValueChange($event, index)">
+					</CodeEditor>
+				</div>
+			</div>
+		</template>
+	</div>
 </template>

@@ -9,6 +9,8 @@ import Dialog from './Dialog.vue';
 import { clone } from 'ramda';
 import Stepper, { Step } from './Stepper.vue';
 import EditMessageHeaders from './EditMessageHeaders.vue';
+import Button from './Button.vue';
+import { isSendValid } from '../services/utils';
 
 const steps: Step[] = [
 	{name:'tags', label: 'Tags'},
@@ -43,22 +45,18 @@ const setTags = (selectedTags: string[]) => {
 	activeStep.value = steps[1];
 };
 
-const setMessageContent = async (message: Omit<MessageContent, 'headers'>) => {
+const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
 	selectedMessage.value!.key = message.key;
 	selectedMessage.value!.value = message.value;
-
-	activeStep.value = steps[2];
 };
 
-const saveMessage = async (headers: ParsedHeaders) => {
+const onHeadersChange = (headers: ParsedHeaders) => {
+	selectedMessage.value!.headers = headers;
+};
+
+const saveMessage = async () => {
 	loader?.value?.show();
-	await props.submit({
-		id: selectedMessage.value!.id,
-		headers,
-		key: selectedMessage.value!.key,
-		value: selectedMessage.value!.value,
-		tags: selectedMessage.value!.tags
-	});
+	await props.submit(selectedMessage.value!);
 	loader?.value?.hide();
 
 	stepperDialog.value?.close();
@@ -74,7 +72,7 @@ const onStepClick = (step: Step) => {
 		break;
 
 	case 'headers':
-		if ((selectedMessage.value?.tags.length || 0) > 0 && selectedMessage.value?.key && selectedMessage.value?.value) {
+		if (isSendValid(selectedMessage.value?.key) && isSendValid(selectedMessage.value?.value)) {
 			activeStep.value = step;
 		}
 		break;
@@ -93,10 +91,18 @@ const onStepClick = (step: Step) => {
 				<EditTags class="mt-8" :tags="selectedMessage!.tags" :submit="setTags" :submit-button-text="'Next'" />
 			</template>
 			<template #message>
-				<EditMessageContent :message="selectedMessage" :submit="setMessageContent" :submit-button-text="'Next'" />
+				<EditMessageContent :message="selectedMessage" 
+					@change="onContentChange"/>
+				<div class="flex justify-end mt-4">
+					<Button color="orange" @click="onStepClick(steps[2])">Next</Button>
+				</div>
 			</template>
 			<template #headers>
-				<EditMessageHeaders :headers="selectedMessage?.headers" :submit="saveMessage" :submit-button-text="'Save'" />
+				<EditMessageHeaders :headers="selectedMessage?.headers"
+					@change="onHeadersChange" />
+				<div class="flex justify-end mt-4">
+					<Button color="green" @click="saveMessage">Send</Button>
+				</div>
 			</template>
 		</Stepper>
 	</Dialog>

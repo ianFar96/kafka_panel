@@ -39,3 +39,14 @@ export const autosendToStorageMessage = (autosend: Autosend, tags?: string[]): S
 	value: autosend.value,
 	tags: tags ?? [],
 });
+
+export const getDefaultMessage = (): MessageContent => ({
+	headers: null,
+	key: {
+		id: '{{faker.string.uuid()}}'
+	},
+	value: {
+		id: '{{key.id}}',
+		name: '{{faker.person.fullName()}}'
+	}
+});

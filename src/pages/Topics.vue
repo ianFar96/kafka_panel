@@ -219,7 +219,7 @@ onDeactivated(() => {
 			</table>
 		</div>
 	</div>
-  <Dialog ref="createTopicDialog" :title="'Create topic'">
+  <Dialog ref="createTopicDialog" size="s" :title="'Create topic'">
 		<CreateTopic :createTopic="createTopic" />
 	</Dialog>
 

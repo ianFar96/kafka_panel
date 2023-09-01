@@ -171,9 +171,15 @@ const startAutosend = async () => {
 			<template #connection>
 				<SelectConnection :selected-connection="connectionStore.connection?.name"
 					:connections="connections" :submit="setNewConnection" />
+				<div class="flex justify-end mt-4">
+					<Button color="orange" @click="onStepClick(steps[1])">Next</Button>
+				</div>
 			</template>
 			<template #topic>
 				<SelectTopic :selected-topic="selectedTopic?.name" :submit="selectTopic" :topics="topics" />
+				<div class="flex justify-end mt-4">
+					<Button color="orange" @click="onStepClick(steps[3])">Next</Button>
+				</div>
 			</template>
 			<template #message>
 				<EditMessageContent :message="selectedMessage" 

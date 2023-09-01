@@ -16,6 +16,7 @@ import Stepper, { Step } from './Stepper.vue';
 import { useConnectionStore } from '../composables/connection';
 import { isSendValid } from '../services/utils';
 import Button from './Button.vue';
+import { clone } from 'ramda';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
@@ -34,7 +35,7 @@ const activeStep = ref<Step>(steps[0]);
 defineExpose({
 	openDialog: (settingsConnections: Connection[], messageToSend: MessageContent) => {
 		connections.value = settingsConnections;
-		selectedMessage.value = messageToSend;
+		selectedMessage.value = clone(messageToSend);
 		activeStep.value = steps[0];
 		stepperDialog.value?.open();
 	},
@@ -123,9 +124,15 @@ const saveMessage = async () => {
 			<template #connection>
 				<SelectConnection :selected-connection="connectionStore.connection?.name"
 					:connections="connections" :submit="setNewConnection" />
+				<div class="flex justify-end mt-4">
+					<Button color="orange" @click="onStepClick(steps[1])">Next</Button>
+				</div>
 			</template>
 			<template #topic>
 				<SelectTopic :selected-topic="selectedTopic?.name" :submit="selectTopic" :topics="topics" />
+				<div class="flex justify-end mt-4">
+					<Button color="orange" @click="onStepClick(steps[2])">Next</Button>
+				</div>
 			</template>
 			<template #message>
 				<EditMessageContent :message="selectedMessage" 

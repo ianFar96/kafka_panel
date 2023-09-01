@@ -3,13 +3,14 @@
 import { ref } from 'vue';
 import { MessageContent } from '../types/message';
 import CodeEditor from './CodeEditor.vue';
+import { clone } from 'ramda';
 
 const props = defineProps<{
 	message?: Omit<MessageContent, 'headers'>,
 }>();
 
 // eslint-disable-next-line vue/no-setup-props-destructure
-const message: Partial<Omit<MessageContent, 'headers'>> = props.message ?? {};
+const message: Partial<Omit<MessageContent, 'headers'>> = clone(props.message) ?? {};
 
 const emit = defineEmits<{
 	(event: 'change', message: Partial<Omit<MessageContent, 'headers'>>): void | Promise<void>

@@ -15,7 +15,7 @@ const onChange = (connection: Connection) => {
 </script>
 
 <template>
-  <ul>
+  <ul class="h-full flex flex-col overflow-auto">
     <li :class="{'border-b': key !== connections.length - 1, 'bg-gray-700': selectedConnection === connection.name}" :key="key" 
       class="border-white cursor-pointer hover:bg-gray-700 p-3 flex justify-between items-center"
       v-for="connection, key of props.connections" @click="onChange(connection)">

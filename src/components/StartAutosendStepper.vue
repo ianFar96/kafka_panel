@@ -155,16 +155,9 @@ const startAutosend = async () => {
 		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
 			<!-- Steps -->
 			<template #configuration>
-				<div class="flex flex-col h-full">
-					<div class="h-full">
-						<EditAutosendConfiguration :configuration="configuration" />
-					</div>
-					<div class="flex justify-end">
-						<button class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400"
-							@click="onStepClick(steps[1])">
-							Next
-						</button>
-					</div>
+				<EditAutosendConfiguration :configuration="configuration" />
+				<div class="flex justify-end mt-4">
+					<Button color="orange" @click="onStepClick(steps[1])">Next</Button>
 				</div>
 			</template>
 			<template #connection>
@@ -191,7 +184,7 @@ const startAutosend = async () => {
 				<EditMessageHeaders :headers="selectedMessage?.headers"
 					@change="onHeadersChange" />
 				<div class="flex justify-end mt-4">
-					<Button color="green" @click="startAutosend">Save</Button>
+					<Button color="green" @click="startAutosend">Start</Button>
 				</div>
 			</template>
 		</Stepper>

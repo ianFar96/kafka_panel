@@ -12,6 +12,7 @@ import storageService from '../services/storage';
 import { Connection } from '../types/connection';
 import { ConsumerGroupState } from '../types/consumerGroup';
 import { Topic } from '../types/topic';
+import Button from '../components/Button.vue';
 
 await checkSettings('topics');
 
@@ -153,18 +154,14 @@ onDeactivated(() => {
 				{{ connectionStore.connection.name }} topics
 			</h2>
 			<div class="flex">
-				<button
-					class="mr-4 border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 whitespace-nowrap flex items-center"
-					@click="createTopicDialog?.open()">
+				<Button class="mr-4" color="green" @click="createTopicDialog?.open()">
 					<i class="bi bi-plus-lg mr-2 -ml-1"></i>
 					New topic
-				</button>
-				<button
-					class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400 whitespace-nowrap flex items-center"
-					@click="selectConnectionDialog?.open()">
+				</Button>
+				<Button color="orange" @click="selectConnectionDialog?.open()">
 					<i class="bi bi-wifi mr-2"></i>
 					Change connection
-				</button>
+				</Button>
 			</div>
 		</div>
 		<div class="flex mb-6 justify-between items-center">

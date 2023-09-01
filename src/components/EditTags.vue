@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { getRandomColor } from '../services/chipColors';
 import Chip, { Tag } from './Chip.vue';
+import Button from './Button.vue';
 
 const props = defineProps<{
 	tags?: string[] 
@@ -58,9 +59,8 @@ const addTagOnEnter = (event: KeyboardEvent) => {
 		</div>
 	</div>
 	<div class="mt-8 flex justify-end flex-shrink-0">
-		<button type="button" @click="handleSubmit()"
-			class="border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500">
+		<Button @click="handleSubmit()" color="orange">
 			{{ submitButtonText }}
-		</button>
+		</Button>
 	</div>
 </template>

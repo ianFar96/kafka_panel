@@ -10,6 +10,7 @@ import { autosendToStorageMessage, stringifyMessage } from '../services/utils';
 import { ActiveAutosend, Autosend } from '../types/autosend';
 import { Connection } from '../types/connection';
 import { StorageMessage } from '../types/message';
+import Button from '../components/Button.vue';
 
 type DisplayAutosend = ActiveAutosend & {
 	valueVisible: Ref<boolean>
@@ -63,11 +64,10 @@ const saveMessageInStorage = async (message: StorageMessage) => {
 				Autosend
 			</h2>
 			<div class="flex">
-				<button @click="startAutosendStepper?.openDialog(connections)"
-					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center">
+				<Button @click="startAutosendStepper?.openDialog(connections)" color="green">
 					<i class="mr-1 -ml-1 bi-play text-2xl leading-none cursor-pointer"></i>
 					Start autosend
-				</button>
+				</Button>
 			</div>
 		</div>
 

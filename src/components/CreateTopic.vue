@@ -1,6 +1,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import Button from './Button.vue';
 
 const name = ref<string>();
 const partitions = ref<number>();
@@ -38,10 +39,9 @@ const handleSubmit = async () => {
       class="appearance-none block mb-6 bg-transparent outline-none border-b border-gray-400 py-1 w-full"
       placeholder="Replications factor">
     <div class="mt-8 flex justify-end">
-      <button type="submit" 
-        class="border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500">
+      <Button type="submit" :color="'green'">
         Create
-      </button>
+      </Button>
     </div>
   </form>
 </template>

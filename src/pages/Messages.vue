@@ -13,6 +13,7 @@ import { Message, MessageContent, StorageMessage } from '../types/message';
 import { DateTime } from 'luxon';
 import { stringifyMessage } from '../services/utils';
 import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
+import Button from '../components/Button.vue';
 
 type DisplayMessage = Message & {
 	valueVisible: boolean
@@ -149,11 +150,10 @@ const getDisplayDate = (dateMilis: number) => {
 					<i class="mr-2 bi-people cursor-pointer"></i>
 					Groups
 				</router-link>
-				<button @click="sendMessageStepper?.openDialog()"
-					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center">
+				<Button @click="sendMessageStepper?.openDialog()" color="green">
 					<i class="mr-2 bi-send cursor-pointer"></i>
 					Send message
-				</button>
+				</Button>
 			</div>
 		</div>
 

@@ -39,7 +39,7 @@ const submit = (topic: Topic) => {
 				:class="{'border-b': index !== filteredTopics.length - 1, 'bg-gray-700': selectedTopic === topic.name}"
 				class="border-white overflow-hidden flex justify-between p-3 cursor-pointer hover:bg-gray-700" >
 				<span class="mr-4">{{ topic.name }}</span>
-				<i v-if="selectedTopic === topic.name" class="bi-check-lg text-xl text-green-600"></i>
+				<i v-if="selectedTopic === topic.name" class="h-6 bi-check-lg text-xl text-green-600"></i>
 			</li>
 		</ul>
 	</div>

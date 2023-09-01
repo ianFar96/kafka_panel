@@ -49,9 +49,11 @@ const loader = useLoader();
 const connectionStore = useConnectionStore();
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const onStepClick = (step: Step) => {
+const onStepClick = async (step: Step) => {
 	switch (step.name) {
 	case 'topic':
+		topics.value = await kafkaService.listTopics();
+
 		if (connectionStore.connection) {
 			activeStep.value = step;
 		}
@@ -77,8 +79,6 @@ const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
 	try {
 		await connectionStore.setConnection(newConnection);
-
-		topics.value = await kafkaService.listTopics();
 
 		// Next step
 		activeStep.value = steps[1];

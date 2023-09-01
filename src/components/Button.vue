@@ -50,7 +50,7 @@ const hoverClasses = computed(() => {
 
 <template>
   <button v-bind="$attrs"
-    :class="`border border-white rounded py-1 px-4 transition-colors ${hoverClasses}`">
+    :class="`whitespace-nowrap flex items-center border border-white rounded py-1 px-4 transition-colors ${hoverClasses}`">
     <slot></slot>
   </button>
 </template>

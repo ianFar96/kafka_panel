@@ -44,14 +44,14 @@ Example:
 
 ```json
 {
-	"headers": {
-		"version": "v1.0.0",
+  "headers": {
+    "version": "v1.0.0",
     "type": "{{faker.helpers.arrayElement(['locked', 'unlocked'])}}"
-	},
-	"key": {
-	  "id": "{{faker.string.uuid()}}"
-	},
-	"value": {
+  },
+  "key": {
+    "id": "{{faker.string.uuid()}}"
+  },
+  "value": {
     "id": "{{key.id}}",
     "name": "{{faker.person.fullName()}}",
     "country": "Italy"
@@ -63,11 +63,11 @@ This will result in:
 
 ```json
 {
-	"headers": {
+  "headers": {
     "version": "v1.0.0",
     "type": "unlocked"
   },
-	"key": {
+  "key": {
     "id": "4de3d8b0-d680-4b4b-b1de-a4825ff51c50"
   },
   "value": {

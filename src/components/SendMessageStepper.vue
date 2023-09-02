@@ -23,8 +23,8 @@ const steps: Step[] = [{
 
 const selectedMessage = ref<MessageContent>();
 
-const props = defineProps<{
-  submit: (message: MessageContent) => Promise<unknown> | unknown,
+const emit = defineEmits<{
+	(emit: 'submit', message: MessageContent): Promise<void> | void,
 }>();
 
 defineExpose({
@@ -50,7 +50,7 @@ const onHeadersChange = (headers: ParsedHeaders) => {
 
 const sendMessage = async () => {
 	loader?.value?.show();
-	await props.submit(selectedMessage.value!);
+	await emit('submit', selectedMessage.value!);
 	loader?.value?.hide();
 
 	stepperDialog.value?.close();

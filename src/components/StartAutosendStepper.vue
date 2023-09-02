@@ -7,7 +7,7 @@ import { ref } from 'vue';
 import { useConnectionStore } from '../composables/connection';
 import { useLoader } from '../composables/loader';
 import kafkaService from '../services/kafka';
-import { getDefaultMessage, isSendValid, isValidHeaders } from '../services/utils';
+import { getDefaultAutosendConfiguration, getDefaultMessage, isSendValid, isValidHeaders } from '../services/utils';
 import { Autosend, AutosendOptions } from '../types/autosend';
 import { Connection } from '../types/connection';
 import { MessageContent, ParsedHeaders } from '../types/message';
@@ -20,22 +20,13 @@ import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
 
-const props = defineProps<{
-	submit: (autosend: Autosend) => Promise<void>,
+const emit = defineEmits<{
+	(emit: 'submit', autosend: Autosend): Promise<void> | void,
 }>();
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
-const configuration = ref<AutosendOptions>({
-	duration:{
-		time_unit: 'Minutes',
-		value: 10
-	},
-	interval:{
-		time_unit: 'Seconds',
-		value: 1
-	}
-});
+const configuration = ref<AutosendOptions>(getDefaultAutosendConfiguration());
 const selectedTopic = ref<Topic>();
 const selectedMessage = ref<MessageContent>();
 
@@ -90,38 +81,10 @@ const connectionStore = useConnectionStore();
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const stepper = ref<InstanceType<typeof Stepper> | null>(null); // Template ref
 
-// const onStepClick = async (step: Step) => {
-// 	switch (step.name) {
-// 	case 'connection':
-// 		const hasDuration = configuration.value?.duration.time_unit && configuration.value?.duration.value;
-// 		const hasInterval = configuration.value?.interval.time_unit && configuration.value?.interval.value;
-// 		if ( hasDuration && hasInterval ) {
-// 			activeStep.value = step;
-// 		}
-// 		break;
-// 	case 'topic':
-// 		;
-// 		if (connectionStore.connection) {
-// 			activeStep.value = step;
-// 		}
-// 		break;
-// 	case 'message':
-// 		if (selectedTopic.value) {
-// 			activeStep.value = step;
-// 		}
-// 		break;
-// 	case 'headers':
-// 		if () {
-// 			activeStep.value = step;
-// 		}
-// 		break;
+const onConfigurationChange = (newConfiguration: AutosendOptions) => {
+	configuration.value = newConfiguration;
+};
 	
-// 	default:
-// 		activeStep.value = step;
-// 		break;
-// 	}
-// };
-
 const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
 	try {
@@ -158,7 +121,7 @@ const startAutosend = async () => {
 			topic: selectedTopic.value!.name
 		};
 
-		await props.submit(autosend);
+		await emit('submit', autosend);
 
 		stepperDialog.value?.close();
 	} catch (error) {
@@ -173,14 +136,14 @@ const startAutosend = async () => {
 		<Stepper ref="stepper" class="mb-8" :steps="steps" submit-button-text="Start" @submit="startAutosend">
 			<!-- Steps -->
 			<template #configuration>
-				<EditAutosendConfiguration :configuration="configuration" />
+				<EditAutosendConfiguration :configuration="configuration" @change="onConfigurationChange" />
 			</template>
 			<template #connection>
 				<SelectConnection :selected-connection="connectionStore.connection?.name"
-					:connections="connections" :submit="setNewConnection" />
+					:connections="connections" @submit="setNewConnection" />
 			</template>
 			<template #topic>
-				<SelectTopic :selected-topic="selectedTopic?.name" :submit="selectTopic" :topics="topics" />
+				<SelectTopic :selected-topic="selectedTopic?.name" @submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
 				<EditMessageContent :message="selectedMessage" @change="onContentChange"/>

@@ -1,6 +1,6 @@
 /* eslint-disable no-empty */
 
-import { Autosend } from '../types/autosend';
+import { Autosend, AutosendOptions } from '../types/autosend';
 import { MessageContent, ParsedHeaders, StorageMessage } from '../types/message';
 
 export const tryJsonParse = (text: unknown): unknown => {
@@ -59,4 +59,15 @@ export const isValidHeaders = (headers: ParsedHeaders) => {
 	}
 
 	return true;
-}; 
+};
+
+export const getDefaultAutosendConfiguration = (): AutosendOptions => ({
+	duration:{
+		time_unit: 'Minutes',
+		value: 10
+	},
+	interval:{
+		time_unit: 'Seconds',
+		value: 1
+	}
+});

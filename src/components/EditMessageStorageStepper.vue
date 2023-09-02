@@ -29,8 +29,8 @@ const steps: Step[] = [{
 	isValid: () => isValidHeaders(selectedMessage.value?.headers ?? {})
 }];
 
-const props = defineProps<{
-  submit: (message: StorageMessage) => Promise<unknown> | unknown
+const emit = defineEmits<{
+	(emit: 'submit', message: StorageMessage): Promise<void> | void,
 }>();
 
 defineExpose({
@@ -45,7 +45,7 @@ defineExpose({
 
 const loader = useLoader();
 
-const setTags = (selectedTags: string[]) => {
+const onTagsChange = (selectedTags: string[]) => {
 	selectedMessage.value!.tags = selectedTags;
 };
 
@@ -60,7 +60,7 @@ const onHeadersChange = (headers: ParsedHeaders) => {
 
 const saveMessage = async () => {
 	loader?.value?.show();
-	await props.submit(selectedMessage.value!);
+	await emit('submit', selectedMessage.value!);
 	loader?.value?.hide();
 
 	stepperDialog.value?.close();
@@ -73,16 +73,13 @@ const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template
 	<Dialog ref="stepperDialog" title="Edit storage message">
 		<Stepper class="mb-8" :steps="steps" @submit="saveMessage" submit-button-text="Save">
 			<template #tags>
-				<!-- FIXME: extract submit logic -->
-				<EditTags class="mt-8" :tags="selectedMessage!.tags" :submit="setTags" :submit-button-text="'Next'" />
+				<EditTags class="mt-8" :tags="selectedMessage!.tags" @change="onTagsChange" />
 			</template>
 			<template #message>
-				<EditMessageContent :message="selectedMessage" 
-					@change="onContentChange"/>
+				<EditMessageContent :message="selectedMessage" @change="onContentChange"/>
 			</template>
 			<template #headers>
-				<EditMessageHeaders :headers="selectedMessage?.headers"
-					@change="onHeadersChange" />
+				<EditMessageHeaders :headers="selectedMessage?.headers" @change="onHeadersChange" />
 			</template>
 		</Stepper>
 	</Dialog>

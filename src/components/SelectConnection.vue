@@ -5,11 +5,14 @@ import { Connection } from '../types/connection';
 const props = defineProps<{
   connections: Connection[]
   selectedConnection?: string,
-  submit: (connection: Connection) => Promise<void>
 }>();
 
-const onChange = (connection: Connection) => {
-	props.submit(connection);
+const emit = defineEmits<{
+  (event: 'submit', connection: Connection): Promise<void> | void
+}>();
+
+const onChange = async (connection: Connection) => {
+	await emit('submit', connection);
 };
 
 </script>

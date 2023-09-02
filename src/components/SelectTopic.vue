@@ -6,7 +6,10 @@ import { Topic } from '../types/topic';
 const props = defineProps<{
   topics: Topic[]
 	selectedTopic?: string
-  submit: (topic: Topic) => Promise<void>
+}>();
+
+const emit = defineEmits<{
+  (event:'submit', topic: Topic): Promise<void> | void
 }>();
 
 const searchQuery = ref('');
@@ -21,10 +24,9 @@ const filteredTopics = computed(() => {
 		});
 });
 
-const submit = (topic: Topic) => {
-	props.submit(topic);
+const submit = async (topic: Topic) => {
+	await emit('submit', topic);
 };
-
 </script>
 
 <template>

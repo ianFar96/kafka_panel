@@ -128,6 +128,6 @@ const saveMessageInStorage = async (message: StorageMessage) => {
 		</ul>
 	</div>
 
-	<StartAutosendStepper ref="startAutosendStepper" :submit="autosendStore.startAutosend" />
-	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessageInStorage" />
+	<StartAutosendStepper ref="startAutosendStepper" @submit="autosendStore.startAutosend" />
+	<EditMessageStorageStepper ref="editMessageStorageStepper" @submit="saveMessageInStorage" />
 </template>

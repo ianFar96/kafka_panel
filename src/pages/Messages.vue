@@ -222,6 +222,6 @@ const getDisplayDate = (dateMilis: number) => {
 		</ul>
   </div>
 
-	<SendMessageStepper ref="sendMessageStepper" :submit="sendMessage"/>
-	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessageInStorage" />
+	<SendMessageStepper ref="sendMessageStepper" @submit="sendMessage"/>
+	<EditMessageStorageStepper ref="editMessageStorageStepper" @submit="saveMessageInStorage" />
 </template>

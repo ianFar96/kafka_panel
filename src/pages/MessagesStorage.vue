@@ -164,7 +164,7 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 		</ul>
   </div>
 
-	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessage" />
+	<EditMessageStorageStepper ref="editMessageStorageStepper" @submit="saveMessage" />
 	<SendStorageMessageStepper ref="sendStorageMessageStepper" />
-	<StartAutosendStepper ref="startAutosendStepper" :submit="autosendStore.startAutosend" />
+	<StartAutosendStepper ref="startAutosendStepper" @submit="autosendStore.startAutosend" />
 </template>

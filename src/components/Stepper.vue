@@ -15,7 +15,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: 'submit'): void
+  (event: 'submit'): Promise<void> | void
 }>();
 
 defineExpose({
@@ -57,7 +57,7 @@ const onSubmit = async () => {
 		}
 	}
 
-	emit('submit');
+	await emit('submit');
 };
 
 const isActive = (step?: Step) => {

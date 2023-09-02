@@ -19,18 +19,18 @@ const emit = defineEmits<{
 let keyDebounce: any;
 const onKeyChange = (key: unknown) => {
 	clearTimeout(keyDebounce);
-	keyDebounce = setTimeout(() => {
+	keyDebounce = setTimeout(async () => {
 		message.key = key;
-		emit('change', message);
+		await emit('change', message);
 	}, 300);
 };
 
 let valueDebounce: any;
 const onValueChange = (value: unknown) => {
 	clearTimeout(valueDebounce);
-	valueDebounce = setTimeout(() => {
+	valueDebounce = setTimeout(async () => {
 		message.value = value;
-		emit('change', message);
+		await emit('change', message);
 	}, 300);
 };
 

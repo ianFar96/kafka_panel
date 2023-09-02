@@ -47,7 +47,7 @@ const addHeader = () => {
 	// No need to trigger change since the header is empty
 };
 
-const removeHeader = (index: number) => {
+const removeHeader = async (index: number) => {
 	headersToEdit.value!.splice(index, 1);
 
 	// For display purposes, it's nicer to see null
@@ -56,24 +56,24 @@ const removeHeader = (index: number) => {
 	}
 
 	const headers = editHeadersToHeaders(headersToEdit.value);
-	emit('change', headers);
+	await emit('change', headers);
 };
 
-const onHeaderKeyChange = (event: Event, index: number) => {
+const onHeaderKeyChange = async (event: Event, index: number) => {
 	headersToEdit.value![index].key = (event.target as HTMLInputElement).value;
 
 	const headers = editHeadersToHeaders(headersToEdit.value);
-	emit('change', headers);
+	await emit('change', headers);
 };
 
 let valueDebounce: any;
 const onHeaderValueChange = (code: unknown, index: number) => {
 	clearTimeout(valueDebounce);
-	valueDebounce = setTimeout(() => {
+	valueDebounce = setTimeout(async () => {
 		headersToEdit.value![index].value = code;
 
 		const headers = editHeadersToHeaders(headersToEdit.value);
-		emit('change', headers);
+		await emit('change', headers);
 	}, 300);
 };
 

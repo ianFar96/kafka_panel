@@ -117,10 +117,10 @@ const saveMessage = async () => {
 			<!-- Steps -->
 			<template #connection>
 				<SelectConnection :selected-connection="connectionStore.connection?.name"
-					:connections="connections" :submit="setNewConnection" />
+					:connections="connections" @submit="setNewConnection" />
 			</template>
 			<template #topic>
-				<SelectTopic :selected-topic="selectedTopic?.name" :submit="selectTopic" :topics="topics" />
+				<SelectTopic :selected-topic="selectedTopic?.name" @submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
 				<EditMessageContent :message="selectedMessage" @change="onContentChange"/>

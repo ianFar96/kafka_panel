@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { useObservable } from '@vueuse/rxjs';
 import { Ref, computed, ref } from 'vue';
-import Dialog from '../components/Dialog.vue';
-import EditTags from '../components/EditTags.vue';
+import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import StartAutosendStepper from '../components/StartAutosendStepper.vue';
 import { useAutosendsStore } from '../composables/autosends';
 import checkSettings from '../services/checkSettings';
 import storageService from '../services/storage';
-import { ActiveAutosend } from '../types/autosend';
+import { autosendToStorageMessage, stringifyMessage } from '../services/utils';
+import { ActiveAutosend, Autosend } from '../types/autosend';
 import { Connection } from '../types/connection';
+import { StorageMessage } from '../types/message';
+import Button from '../components/Button.vue';
 
 type DisplayAutosend = ActiveAutosend & {
 	valueVisible: Ref<boolean>
@@ -42,26 +44,16 @@ const filteredAutosends = computed(() => {
 });
 
 const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | null>(null); // Template ref
+const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStepper> | null>(null); // Template ref
 
-const editTagsDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const selectedAutosend = ref<ActiveAutosend>();
-const chooseTags = (autosend: ActiveAutosend) => {
-	selectedAutosend.value = autosend;
-	editTagsDialog.value?.open();
+const editMessageStorage = (autosend: Autosend) => {
+	const storageMessage = autosendToStorageMessage(autosend, ['autosend template']);
+	editMessageStorageStepper.value?.openDialog(storageMessage);
 };
 
-const saveMessageInStorage = async (tags: string[]) => {
-	await storageService.messages.save({
-		key: typeof selectedAutosend.value!.key === 'object' ?
-			JSON.stringify(selectedAutosend.value!.key) :
-			selectedAutosend.value!.key,
-		value: typeof selectedAutosend.value!.value === 'object' ?
-			JSON.stringify(selectedAutosend.value!.value) :
-			selectedAutosend.value!.value,
-		tags
-	});
-
-	editTagsDialog.value?.close();
+const saveMessageInStorage = async (message: StorageMessage) => {
+	await storageService.messages.save(message);
+	editMessageStorageStepper.value?.closeDialog();
 };
 </script>
 
@@ -72,11 +64,10 @@ const saveMessageInStorage = async (tags: string[]) => {
 				Autosend
 			</h2>
 			<div class="flex">
-				<button @click="startAutosendStepper?.openDialog(connections)"
-					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center">
+				<Button @click="startAutosendStepper?.openDialog(connections)" color="green">
 					<i class="mr-1 -ml-1 bi-play text-2xl leading-none cursor-pointer"></i>
 					Start autosend
-				</button>
+				</Button>
 			</div>
 		</div>
 
@@ -120,7 +111,7 @@ const saveMessageInStorage = async (tags: string[]) => {
 
 				<div v-if="autosend.valueVisible.value" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<button @click="chooseTags(autosend)"
+						<button @click="editMessageStorage(autosend)"
 							title="Save in storage"
 							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
 						</button>
@@ -130,16 +121,13 @@ const saveMessageInStorage = async (tags: string[]) => {
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
-						<highlightjs :language="'json'" :code="JSON.stringify({key: autosend.key, value: autosend.value}, null, 2)" />
+						<highlightjs :language="'json'" :code="stringifyMessage(autosend)" />
 					</div>
 				</div>
 			</li>
 		</ul>
 	</div>
 
-	<StartAutosendStepper ref="startAutosendStepper" :submit="autosendStore.startAutosend" />
-
-	<Dialog ref="editTagsDialog" title="Select tags">
-		<EditTags :tags="['autosend template']" :submit="saveMessageInStorage" :submit-button-text="'Save'"/>
-	</Dialog>
+	<StartAutosendStepper ref="startAutosendStepper" @submit="autosendStore.startAutosend" />
+	<EditMessageStorageStepper ref="editMessageStorageStepper" @submit="saveMessageInStorage" />
 </template>

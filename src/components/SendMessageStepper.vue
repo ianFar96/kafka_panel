@@ -1,24 +1,16 @@
 
 <script setup lang="ts">
+import { clone } from 'ramda';
 import { ref } from 'vue';
 import { useLoader } from '../composables/loader';
-import { MessageContent, ParsedHeaders, StorageMessage } from '../types/message';
-import EditTags from './EditTags.vue';
-import EditMessageContent from './EditMessageContent.vue';
+import { getDefaultMessage, isSendValid, isValidHeaders } from '../services/utils';
+import { MessageContent, ParsedHeaders } from '../types/message';
 import Dialog from './Dialog.vue';
-import { clone } from 'ramda';
-import Stepper, { Step } from './Stepper.vue';
+import EditMessageContent from './EditMessageContent.vue';
 import EditMessageHeaders from './EditMessageHeaders.vue';
-import { isSendValid, isValidHeaders } from '../services/utils';
-
-const selectedMessage = ref<StorageMessage>();
+import Stepper, { Step } from './Stepper.vue';
 
 const steps: Step[] = [{
-	name:'tags',
-	label: 'Tags',
-	isValid: () => (selectedMessage.value?.tags.length || 0) > 0
-},
-{
 	name:'message',
 	label: 'Content',
 	isValid: () => isSendValid(selectedMessage.value?.key) && isSendValid(selectedMessage.value?.value)
@@ -29,13 +21,15 @@ const steps: Step[] = [{
 	isValid: () => isValidHeaders(selectedMessage.value?.headers ?? {})
 }];
 
+const selectedMessage = ref<MessageContent>();
+
 const emit = defineEmits<{
-	(emit: 'submit', message: StorageMessage): Promise<void> | void,
+	(emit: 'submit', message: MessageContent): Promise<void> | void,
 }>();
 
 defineExpose({
-	openDialog: (messageToEdit: StorageMessage) => {
-		selectedMessage.value = clone(messageToEdit);
+	openDialog: (messageToEdit?: MessageContent) => {
+		selectedMessage.value = messageToEdit ? clone(messageToEdit) : getDefaultMessage();
 		stepperDialog.value?.open();
 	},
 	closeDialog: () => {
@@ -44,10 +38,6 @@ defineExpose({
 });
 
 const loader = useLoader();
-
-const onTagsChange = (selectedTags: string[]) => {
-	selectedMessage.value!.tags = selectedTags;
-};
 
 const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
 	selectedMessage.value!.key = message.key;
@@ -58,7 +48,7 @@ const onHeadersChange = (headers: ParsedHeaders) => {
 	selectedMessage.value!.headers = headers;
 };
 
-const saveMessage = async () => {
+const sendMessage = async () => {
 	loader?.value?.show();
 	await emit('submit', selectedMessage.value!);
 	loader?.value?.hide();
@@ -70,16 +60,15 @@ const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Edit storage message">
-		<Stepper class="mb-8" :steps="steps" @submit="saveMessage" submit-button-text="Save">
-			<template #tags>
-				<EditTags class="mt-8" :tags="selectedMessage!.tags" @change="onTagsChange" />
-			</template>
+	<Dialog ref="stepperDialog" title="Send message">
+		<Stepper class="mb-8" :steps="steps" @submit="sendMessage" submit-button-text="Send">
 			<template #message>
-				<EditMessageContent :message="selectedMessage" @change="onContentChange"/>
+				<EditMessageContent :message="selectedMessage" 
+					@change="onContentChange"/>
 			</template>
 			<template #headers>
-				<EditMessageHeaders :headers="selectedMessage?.headers" @change="onHeadersChange" />
+				<EditMessageHeaders :headers="selectedMessage?.headers"
+					@change="onHeadersChange" />
 			</template>
 		</Stepper>
 	</Dialog>

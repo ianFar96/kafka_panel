@@ -75,6 +75,9 @@ const route = useRoute();
       </aside>
       <main id="page-content" class="w-full overflow-auto p-10 relative">
         <Loader ref="loader" />
+
+        <!-- FIXME: when removing KeepAlive component routes stop working -->
+        <!-- Unhandled Promise Rejection: NotFoundError: The object can not be found here. -->
         <RouterView v-slot="{ Component }">
           <template v-if="Component">
             <KeepAlive include="Topics">

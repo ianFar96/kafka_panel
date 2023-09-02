@@ -3,35 +3,62 @@
 import { message } from '@tauri-apps/api/dialog';
 import { ref } from 'vue';
 import { useLoader } from '../composables/loader';
-import { Connection } from '../types/connection';
-import { SendMessage } from '../types/message';
-import { Topic } from '../types/topic';
-import EditMessage from './EditMessage.vue';
-import SelectTopic from './SelectTopic.vue';
-import SelectConnection from './SelectConnection.vue';
-import Dialog from './Dialog.vue';
-import Stepper, { Step } from './Stepper.vue';
-import { useConnection } from '../composables/connection';
 import kafkaService from '../services/kafka';
+import { Connection } from '../types/connection';
+import { MessageContent, ParsedHeaders } from '../types/message';
+import { Topic } from '../types/topic';
+import Dialog from './Dialog.vue';
+import EditMessageContent from './EditMessageContent.vue';
+import EditMessageHeaders from './EditMessageHeaders.vue';
+import SelectConnection from './SelectConnection.vue';
+import SelectTopic from './SelectTopic.vue';
+import Stepper, { Step } from './Stepper.vue';
+import { useConnectionStore } from '../composables/connection';
+import { isSendValid, isValidHeaders } from '../services/utils';
+import { clone } from 'ramda';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
-const selectedMessage = ref<SendMessage>();
+const selectedMessage = ref<MessageContent>();
 
 const selectedTopic = ref<Topic>();
 
-const steps: Step[] = [
-	{name: 'connection', label: 'Select connection'},
-	{name: 'topic', label: 'Select topic'},
-	{name: 'message', label: 'Send message'},
-];
-const activeStep = ref<Step>(steps[0]);
+const fetchTopics = async () => {
+	loader?.value?.show();
+	try {
+		topics.value = await kafkaService.listTopics();
+	} catch (error) {
+		await message(`Error setting the connection: ${error}`, { title: 'Error', type: 'error' });
+	}
+	loader?.value?.hide();
+};
+
+const steps: Step[] = [{
+	name: 'connection',
+	label: 'Select connection',
+	isValid: () => !!connectionStore.connection
+},
+{
+	name: 'topic',
+	label: 'Select topic',
+	isValid: () => !!selectedTopic.value,
+	onBeforeLoad: fetchTopics
+},
+{
+	name: 'message',
+	label: 'Message Content',
+	isValid: () => isSendValid(selectedMessage.value?.key) && isSendValid(selectedMessage.value?.value)
+},
+{
+	name: 'headers',
+	label: 'Message Headers',
+	isValid: () => isValidHeaders(selectedMessage.value?.headers ?? {})
+}];
 
 defineExpose({
-	openDialog: (settingsConnections: Connection[], messageToSend: SendMessage) => {
+	openDialog: (settingsConnections: Connection[], messageToSend: MessageContent) => {
 		connections.value = settingsConnections;
-		selectedMessage.value = messageToSend;
-		activeStep.value = steps[0];
+		selectedMessage.value = clone(messageToSend);
 		stepperDialog.value?.open();
 	},
 	closeDialog: () => {
@@ -41,37 +68,16 @@ defineExpose({
 
 const loader = useLoader();
 
-const { connection, setConnection } = useConnection();
+const connectionStore = useConnectionStore();
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const onStepClick = (step: Step) => {
-	switch (step.name) {
-	case 'topic':
-		if (connection.value) {
-			activeStep.value = step;
-		}
-		break;
-	case 'message':
-		if (connection.value && selectedTopic.value) {
-			activeStep.value = step;
-		}
-		break;
-	
-	default:
-		activeStep.value = step;
-		break;
-	}
-};
+const stepper = ref<InstanceType<typeof Stepper> | null>(null); // Template ref
 
 const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
 	try {
-		await setConnection(newConnection);
-
-		topics.value = await kafkaService.listTopics();
-
-		// Next step
-		activeStep.value = steps[1];
+		await connectionStore.setConnection(newConnection);
+		await stepper.value?.next();
 	} catch (error) {
 		await message(`Error setting the connection: ${error}`, { title: 'Error', type: 'error' });
 	}
@@ -80,15 +86,22 @@ const setNewConnection = async (newConnection: Connection) => {
 
 const selectTopic = async (topic: Topic) => {
 	selectedTopic.value = topic;
-
-	// Next step
-	activeStep.value = steps[2];
+	await stepper.value?.next();
 };
 
-const sendMessage = async (key: string, value: string) => {
+const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
+	selectedMessage.value!.key = message.key;
+	selectedMessage.value!.value = message.value;
+};
+
+const onHeadersChange = (headers: ParsedHeaders) => {
+	selectedMessage.value!.headers = headers;
+};
+
+const saveMessage = async () => {
 	loader?.value?.show();
 	try {
-		await kafkaService.sendMessage(selectedTopic.value!.name, key, value);
+		await kafkaService.sendMessage(selectedTopic.value!.name, selectedMessage.value!);
 
 		stepperDialog.value?.close();
 	} catch (error) {
@@ -99,17 +112,21 @@ const sendMessage = async (key: string, value: string) => {
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Send storage message" :modal-class="activeStep.name === 'message' ? 'w-full h-full' : ''">
-		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
+	<Dialog ref="stepperDialog" title="Send storage message">
+		<Stepper class="mb-8" ref="stepper" :steps="steps" submit-button-text="Send" @submit="saveMessage">
 			<!-- Steps -->
 			<template #connection>
-				<SelectConnection :connections="connections" :submit="setNewConnection" />
+				<SelectConnection :selected-connection="connectionStore.connection?.name"
+					:connections="connections" @submit="setNewConnection" />
 			</template>
 			<template #topic>
-				<SelectTopic :submit="selectTopic" :topics="topics" />
+				<SelectTopic :selected-topic="selectedTopic?.name" @submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
-				<EditMessage :message="selectedMessage!" :submit="sendMessage" :submit-button-text="'Send'" />
+				<EditMessageContent :message="selectedMessage" @change="onContentChange"/>
+			</template>
+			<template #headers>
+				<EditMessageHeaders :headers="selectedMessage?.headers" @change="onHeadersChange" />
 			</template>
 		</Stepper>
   </Dialog>

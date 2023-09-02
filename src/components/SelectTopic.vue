@@ -5,7 +5,11 @@ import { Topic } from '../types/topic';
 
 const props = defineProps<{
   topics: Topic[]
-  submit: (topic: Topic) => Promise<void>
+	selectedTopic?: string
+}>();
+
+const emit = defineEmits<{
+  (event:'submit', topic: Topic): Promise<void> | void
 }>();
 
 const searchQuery = ref('');
@@ -20,23 +24,25 @@ const filteredTopics = computed(() => {
 		});
 });
 
-const submit = (topic: Topic) => {
-	props.submit(topic);
+const submit = async (topic: Topic) => {
+	await emit('submit', topic);
 };
-
 </script>
 
 <template>
-	<div class="mb-6 flex justify-between items-center">
-		<input type="text" v-model="searchQuery"
-			class="block bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
+	<div class="h-full flex flex-col overflow-auto">
+		<div class="mb-6 flex justify-between items-center">
+			<input type="text" v-model="searchQuery"
+				class="block bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
+		</div>
+	
+		<ul class="overflow-auto">
+			<li v-for="topic, index in filteredTopics" :key="index" @click="submit(topic)"
+				:class="{'border-b': index !== filteredTopics.length - 1, 'bg-gray-700': selectedTopic === topic.name}"
+				class="border-white overflow-hidden flex justify-between p-3 cursor-pointer hover:bg-gray-700" >
+				<span class="mr-4">{{ topic.name }}</span>
+				<i v-if="selectedTopic === topic.name" class="h-6 bi-check-lg text-xl text-green-600"></i>
+			</li>
+		</ul>
 	</div>
-
-	<ul>
-		<li v-for="topic, index in filteredTopics" :key="index" :class="{'border-b': index !== filteredTopics.length - 1}"
-			class="border-white overflow-hidden flex justify-between p-3 cursor-pointer hover:bg-gray-700" @click="submit(topic)">
-			<span class="mr-4">{{ topic.name }}</span>
-			<i class="bi-arrow-right text-xl"></i>
-		</li>
-	</ul>
 </template>

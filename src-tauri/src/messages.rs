@@ -1,18 +1,20 @@
-use std::sync::{RwLock, Arc};
-
 use rdkafka::consumer::{Consumer, StreamConsumer};
-use rdkafka::message::BorrowedMessage;
+use rdkafka::message::{BorrowedMessage, Header, Headers, OwnedHeaders};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use rdkafka::{Message, Offset, TopicPartitionList};
 use serde::Serialize;
+use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use tauri::Window;
 use tokio::time::Duration;
 
 #[derive(Serialize, Clone)]
 pub struct KafkaMessageResponse {
-    value: String,
-    key: String,
+    headers: Option<HashMap<String, Option<Value>>>,
+    value: Option<Value>,
+    key: Option<Value>,
     offset: i64,
     partition: i32,
     timestamp: i64,
@@ -114,17 +116,46 @@ pub async fn listen_messages(
 }
 
 fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, String> {
+    let headers = match message.headers() {
+        Some(headers) => {
+            let mut headers_map = HashMap::new();
+            for header in headers.iter() {
+                let value = match header.value {
+                    Some(value) => {
+                        let stringified_value =
+                            std::str::from_utf8(value).map_err(|err| err.to_string())?;
+                        let parsed_value = serde_json::from_str::<Value>(stringified_value)
+                            .unwrap_or(stringified_value.into());
+                        Some(parsed_value)
+                    }
+                    None => None,
+                };
+                headers_map.insert(header.key.to_string(), value);
+            }
+            Some(headers_map)
+        }
+        None => None,
+    };
+
     let key = match message.key() {
-        Some(key) => std::str::from_utf8(key).map_err(|err| err.to_string())?,
-        None => "null",
-    }
-    .to_string();
+        Some(key) => {
+            let stringified_key = std::str::from_utf8(key).map_err(|err| err.to_string())?;
+            let parsed_key =
+                serde_json::from_str::<Value>(stringified_key).unwrap_or(stringified_key.into());
+            Some(parsed_key)
+        }
+        None => None,
+    };
 
     let value = match message.payload() {
-        Some(value) => std::str::from_utf8(value).map_err(|err| err.to_string())?,
-        None => "null",
-    }
-    .to_string();
+        Some(value) => {
+            let stringified_value = std::str::from_utf8(value).map_err(|err| err.to_string())?;
+            let parsed_value = serde_json::from_str::<Value>(stringified_value)
+                .unwrap_or(stringified_value.into());
+            Some(parsed_value)
+        }
+        None => None,
+    };
 
     let timestamp_millis = message
         .timestamp()
@@ -132,6 +163,7 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
         .ok_or("Couldn't convert timestamp to millis")?;
 
     Ok(KafkaMessageResponse {
+        headers,
         key,
         value,
         offset: message.offset(),
@@ -143,10 +175,42 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
 pub async fn send_message(
     producer: &FutureProducer,
     topic: String,
-    key: String,
-    value: String,
+    headers: Option<HashMap<String, Value>>,
+    key: Value,
+    value: Value,
 ) -> Result<(), String> {
-    let record = FutureRecord::to(&topic).key(&key).payload(&value);
+    let stringified_key = serde_json::to_string(&key)
+        .map_err(|err| format!("Error while stringifying message key: {}", err.to_string()))?;
+    let stringified_value: String = serde_json::to_string(&value).map_err(|err| {
+        format!(
+            "Error while stringifying message value: {}",
+            err.to_string()
+        )
+    })?;
+
+    let mut record = FutureRecord::to(&topic)
+        .key(&stringified_key)
+        .payload(&stringified_value);
+
+    if let Some(headers) = headers {
+        let mut headers_to_send = OwnedHeaders::new();
+        for (header_key, header_value) in headers {
+            let stringified_header_value: String = serde_json::to_string(&header_value).map_err(|err| {
+                format!(
+                    "Error while stringifying header's value: {}",
+                    err.to_string()
+                )
+            })?;
+
+            headers_to_send = headers_to_send.insert(Header {
+                key: &header_key,
+                value: Some(&stringified_header_value),
+            });
+        }
+
+        record = record.headers(headers_to_send);
+    }
+
     producer
         .send(record, Timeout::Never)
         .await

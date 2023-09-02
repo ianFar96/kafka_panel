@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { confirm, message } from '@tauri-apps/api/dialog';
-import { computed, onActivated, onBeforeUnmount, onDeactivated, ref } from 'vue';
+import { computed, onActivated, onDeactivated, ref } from 'vue';
 import CreateTopic from '../components/CreateTopic.vue';
 import Dialog from '../components/Dialog.vue';
 import SelectConnection from '../components/SelectConnection.vue';
-import { useConnection } from '../composables/connection';
+import { useConnectionStore } from '../composables/connection';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
 import kafkaService from '../services/kafka';
@@ -12,14 +12,14 @@ import storageService from '../services/storage';
 import { Connection } from '../types/connection';
 import { ConsumerGroupState } from '../types/consumerGroup';
 import { Topic } from '../types/topic';
+import Button from '../components/Button.vue';
 
 await checkSettings('topics');
 
-const connections = (await storageService.settings.get('CONNECTIONS') ?? []) as Connection[];
-
 const loader = useLoader();
 
-const { connection, setConnection } = useConnection();
+const connections = ref<Connection[]>([]);
+const connectionStore = useConnectionStore();
 
 const topics = ref<Topic[]>([]);
 const topicsState = ref<Record<string, ConsumerGroupState>>({});
@@ -61,8 +61,10 @@ onDeactivated(() => {
 	selectConnectionDialog?.value?.close();
 });
 onActivated(async () => {
-	if (connection.value) {
-		await startFetchTopicsState();
+	connections.value = (await storageService.settings.get('CONNECTIONS') ?? []) as Connection[];
+
+	if (connectionStore.connection) {
+		await fetchTopics();
 	} else {
 		selectConnectionDialog?.value?.open();
 	}
@@ -103,23 +105,15 @@ const removeTopic = async (topic: Topic) => {
 const selectConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
 const setNewConnection = async (newConnection: Connection) => {
-	// Clean slate
-	topics.value = [];
-	stopFetchTopicState();
-
 	loader?.value?.show();
 	try {
-		// Set connection and make sure it works
-		await setConnection(newConnection);
-		topics.value = await kafkaService.listTopics();
-
-		await startFetchTopicsState();
+		await connectionStore.setConnection(newConnection);
+		selectConnectionDialog.value?.close();
+		await fetchTopics();
 	} catch (error) {
 		await message(`Error setting connection: ${error}`, { title: 'Error', type: 'error' });
 	}
 	loader?.value?.hide();
-
-	selectConnectionDialog.value?.close();
 };
 
 const searchQuery = ref('');
@@ -138,31 +132,29 @@ const refreshEvent = (event: KeyboardEvent) => {
 		fetchTopics();
 	}
 };
-window.addEventListener('keydown', refreshEvent);
-onBeforeUnmount(() => {
+onActivated(() => {
+	window.addEventListener('keydown', refreshEvent);
+});
+onDeactivated(() => {
 	window.removeEventListener('keydown', refreshEvent);
 });
 </script>
 
 <template>
-	<div class="flex flex-col h-full relative" v-if="connection">
+	<div class="flex flex-col h-full relative" v-if="connectionStore.connection">
 		<div class="flex items-center justify-between mb-6">
-			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="connection.name">
-				{{ connection.name }} topics
+			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="connectionStore.connection.name">
+				{{ connectionStore.connection.name }} topics
 			</h2>
 			<div class="flex">
-				<button
-					class="mr-4 border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 whitespace-nowrap flex items-center"
-					@click="createTopicDialog?.open()">
+				<Button class="mr-4" color="green" @click="createTopicDialog?.open()">
 					<i class="bi bi-plus-lg mr-2 -ml-1"></i>
 					New topic
-				</button>
-				<button
-					class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400 whitespace-nowrap flex items-center"
-					@click="selectConnectionDialog?.open()">
+				</Button>
+				<Button color="orange" @click="selectConnectionDialog?.open()">
 					<i class="bi bi-wifi mr-2"></i>
 					Change connection
-				</button>
+				</Button>
 			</div>
 		</div>
 		<div class="flex mb-6 justify-between items-center">
@@ -217,11 +209,12 @@ onBeforeUnmount(() => {
 			</table>
 		</div>
 	</div>
-  <Dialog ref="createTopicDialog" :title="'Create topic'">
+  <Dialog ref="createTopicDialog" size="s" :title="'Create topic'">
 		<CreateTopic :createTopic="createTopic" />
 	</Dialog>
 
-  <Dialog ref="selectConnectionDialog" :title="'Choose Connection'">
-		<SelectConnection :connections="connections" :submit="setNewConnection" />
+  <Dialog ref="selectConnectionDialog" size="s" :title="'Choose Connection'" :closable="!!connectionStore.connection">
+		<SelectConnection :selected-connection="connectionStore.connection?.name"
+			:connections="connections" @submit="setNewConnection" />
   </Dialog>
 </template>

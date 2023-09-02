@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.2.0
+
+### Changed
+
+- Various major style changes
+
+### Fixed
+
+- Fix code editor crashing on various edge cases
+- Values are kept while moving between steps in the different steppers
+
+### Added
+
+- Support headers in messages throughout the entire application
+- Selection components like "Select connection" show current selection
+
+## 1.1.1
+
 ### Changed
 
 - Migrate from dexie DB to file storage for settings and stored messages

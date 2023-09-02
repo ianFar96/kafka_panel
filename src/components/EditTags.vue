@@ -5,28 +5,30 @@ import Chip, { Tag } from './Chip.vue';
 
 const props = defineProps<{
 	tags?: string[] 
-  submit: (tags: string[]) => Promise<void> | void
-	submitButtonText: string
 }>();
 
-const tags = ref<Tag[]>(props.tags?.map(tag => ({name: tag, color: getRandomColor()})) || []);
+const emit = defineEmits<{
+	(event: 'change', tags: string[]): Promise<void> | void
+}>();
 
-const handleSubmit = async () => {
-	if (tags.value.length <= 0) return;
-
-	await props.submit(tags.value.map(tag => tag.name));
-
-	// Reset form
-	tags.value = [];
+const stringsToTags = (strings: string[]) => {
+	return strings?.map(tag => ({name: tag, color: getRandomColor()}));
 };
 
-const deleteTag = (tagToRemove: Tag) => {
+const tagsToStrings = (tags: Tag[]) => {
+	return tags.map(tag => tag.name);
+};
+
+const tags = ref<Tag[]>(stringsToTags(props.tags || []));
+
+const deleteTag = async (tagToRemove: Tag) => {
 	tags.value = tags.value.filter(tag => tag.name !== tagToRemove.name);
+	await emit('change', tagsToStrings(tags.value));
 };
 
 const tagsInput = ref<HTMLInputElement | null>(null); // Template ref
 
-const addTagOnEnter = (event: KeyboardEvent) => {
+const addTagOnEnter = async (event: KeyboardEvent) => {
 	if (event.key === 'Enter') {
 		const input  = event.target as HTMLInputElement;
 		if (input.value !== '' && !tags.value.some(tag => tag.name === input.value)) {
@@ -35,6 +37,9 @@ const addTagOnEnter = (event: KeyboardEvent) => {
 				color: getRandomColor()
 			});
 		}
+
+		await emit('change', tagsToStrings(tags.value));
+
 		input.value = '';
 		tagsInput.value?.focus();
 	}
@@ -56,11 +61,5 @@ const addTagOnEnter = (event: KeyboardEvent) => {
 				</li>
 			</ul>
 		</div>
-	</div>
-	<div class="mt-8 flex justify-end flex-shrink-0">
-		<button type="button" @click="handleSubmit()"
-			class="border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500">
-			{{ submitButtonText }}
-		</button>
 	</div>
 </template>

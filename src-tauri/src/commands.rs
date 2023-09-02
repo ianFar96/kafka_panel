@@ -3,12 +3,14 @@
  */
 use jfs::Store;
 use kafka_panel::{
-    create_connections, create_topic, delete_topic, get_from_store, get_all_from_store, get_groups_from_topic,
-    get_topics, get_topics_state, listen_messages, reset_offsets, save_in_store, send_message, GroupState,
-    KafkaGroupResponse, KafkaTopicResponse, SaslConfig, delete_from_store,
+    create_connections, create_topic, delete_from_store, delete_topic, get_all_from_store,
+    get_from_store, get_groups_from_topic, get_topics, get_topics_state, listen_messages,
+    reset_offsets, save_in_store, send_message, GroupState, KafkaGroupResponse, KafkaTopicResponse,
+    SaslConfig,
 };
+use rdkafka::consumer::Consumer;
 use serde_json::Value;
-use std::collections::{BTreeMap, HashMap};
+use std::{collections::{BTreeMap, HashMap}, time::Duration};
 use tauri::{State, Window};
 
 use crate::state::{KafkaState, StorageState};
@@ -21,6 +23,12 @@ pub async fn set_connection_command<'a>(
     sasl: Option<SaslConfig>,
 ) -> Result<(), String> {
     let connections = create_connections(brokers, group_id, sasl).await?;
+
+    // Test the connection
+    let _ = connections
+        .consumer
+        .fetch_group_list(None, Duration::from_secs(5))
+        .map_err(|err| format!("Error while establishing connection: {}", err.to_string()))?;
 
     *kafka.common_config.write().await = Some(connections.common_config);
     *kafka.admin.write().await = Some(connections.admin);
@@ -147,8 +155,9 @@ pub async fn listen_messages_command<'a>(
 pub async fn send_message_command<'a>(
     state: State<'a, KafkaState>,
     topic: String,
-    key: String,
-    value: String,
+    headers: Option<HashMap<String, Value>>,
+    key: Value,
+    value: Value,
 ) -> Result<(), String> {
     let binding = state.producer.read().await;
     let producer = match *binding {
@@ -156,7 +165,7 @@ pub async fn send_message_command<'a>(
         Some(ref x) => x,
     };
 
-    send_message(producer, topic, key, value).await
+    send_message(producer, topic, headers, key, value).await
 }
 
 fn get_store<'a>(

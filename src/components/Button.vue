@@ -9,39 +9,39 @@ const props = defineProps<{
 const hoverClasses = computed(() => {
 	switch (props.color) {
 	case 'green':
-		return /*tw*/ 'hover:border-green-400 hover:text-green-400';
+		return /*tw*/ 'enabled:hover:border-green-400 enabled:hover:text-green-400';
 	case 'yellow':
-		return /*tw*/ 'hover:border-yellow-400 hover:text-yellow-400';
+		return /*tw*/ 'enabled:hover:border-yellow-400 enabled:hover:text-yellow-400';
 	case 'indigo':
-		return /*tw*/ 'hover:border-indigo-400 hover:text-indigo-400';
+		return /*tw*/ 'enabled:hover:border-indigo-400 enabled:hover:text-indigo-400';
 	case 'orange':
-		return /*tw*/ 'hover:border-orange-400 hover:text-orange-400';
+		return /*tw*/ 'enabled:hover:border-orange-400 enabled:hover:text-orange-400';
 	case 'teal':
-		return /*tw*/ 'hover:border-teal-400 hover:text-teal-400';
+		return /*tw*/ 'enabled:hover:border-teal-400 enabled:hover:text-teal-400';
 	case 'red':
-		return /*tw*/ 'hover:border-red-400 hover:text-red-400';
+		return /*tw*/ 'enabled:hover:border-red-400 enabled:hover:text-red-400';
 	case 'purple':
-		return /*tw*/ 'hover:border-purple-400 hover:text-purple-400';
+		return /*tw*/ 'enabled:hover:border-purple-400 enabled:hover:text-purple-400';
 	case 'amber':
-		return /*tw*/ 'hover:border-amber-400 hover:text-amber-400';
+		return /*tw*/ 'enabled:hover:border-amber-400 enabled:hover:text-amber-400';
 	case 'sky':
-		return /*tw*/ 'hover:border-sky-400 hover:text-sky-400';
+		return /*tw*/ 'enabled:hover:border-sky-400 enabled:hover:text-sky-400';
 	case 'pink':
-		return /*tw*/ 'hover:border-pink-400 hover:text-pink-400';
+		return /*tw*/ 'enabled:hover:border-pink-400 enabled:hover:text-pink-400';
 	case 'emerald':
-		return /*tw*/ 'hover:border-emerald-400 hover:text-emerald-400';
+		return /*tw*/ 'enabled:hover:border-emerald-400 enabled:hover:text-emerald-400';
 	case 'fuchsia':
-		return /*tw*/ 'hover:border-fuchsia-400 hover:text-fuchsia-400';
+		return /*tw*/ 'enabled:hover:border-fuchsia-400 enabled:hover:text-fuchsia-400';
 	case 'lime':
-		return /*tw*/ 'hover:border-lime-400 hover:text-lime-400';
+		return /*tw*/ 'enabled:hover:border-lime-400 enabled:hover:text-lime-400';
 	case 'blue':
-		return /*tw*/ 'hover:border-blue-400 hover:text-blue-400';
+		return /*tw*/ 'enabled:hover:border-blue-400 enabled:hover:text-blue-400';
 	case 'violet':
-		return /*tw*/ 'hover:border-violet-400 hover:text-violet-400';
+		return /*tw*/ 'enabled:hover:border-violet-400 enabled:hover:text-violet-400';
 	case 'cyan':
-		return /*tw*/ 'hover:border-cyan-400 hover:text-cyan-400';
+		return /*tw*/ 'enabled:hover:border-cyan-400 enabled:hover:text-cyan-400';
 	case 'rose':
-		return /*tw*/ 'hover:border-rose-400 hover:text-rose-400';
+		return /*tw*/ 'enabled:hover:border-rose-400 enabled:hover:text-rose-400';
 	default:
 		throw new Error('Unsupported color');
 	}
@@ -50,7 +50,7 @@ const hoverClasses = computed(() => {
 
 <template>
   <button v-bind="$attrs"
-    :class="`whitespace-nowrap flex items-center border border-white rounded py-1 px-4 transition-colors ${hoverClasses}`">
+    :class="`whitespace-nowrap flex items-center border border-white rounded py-1 px-4 transition-colors ${hoverClasses} disabled:opacity-50`">
     <slot></slot>
   </button>
 </template>

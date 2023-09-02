@@ -1,7 +1,7 @@
 /* eslint-disable no-empty */
 
 import { Autosend } from '../types/autosend';
-import { MessageContent, StorageMessage } from '../types/message';
+import { MessageContent, ParsedHeaders, StorageMessage } from '../types/message';
 
 export const tryJsonParse = (text: unknown): unknown => {
 	try {
@@ -13,7 +13,7 @@ export const tryJsonParse = (text: unknown): unknown => {
 	return text;
 };
 
-export const isSendValid = ( value: unknown) => {
+export const isSendValid = (value: unknown) => {
 	if (value === undefined) {
 		return false;
 	}
@@ -50,3 +50,13 @@ export const getDefaultMessage = (): MessageContent => ({
 		name: '{{faker.person.fullName()}}'
 	}
 });
+
+export const isValidHeaders = (headers: ParsedHeaders) => {
+	for (const [key, value] of Object.entries(headers ?? {})) {
+		if (!isSendValid(key) || !isSendValid(value)) {
+			return false;
+		}
+	}
+
+	return true;
+}; 

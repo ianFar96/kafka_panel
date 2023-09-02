@@ -104,23 +104,15 @@ const removeTopic = async (topic: Topic) => {
 const selectConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
 const setNewConnection = async (newConnection: Connection) => {
-	// Clean slate
-	topics.value = [];
-	stopFetchTopicState();
-
 	loader?.value?.show();
 	try {
-		// Set connection and make sure it works
 		await connectionStore.setConnection(newConnection);
-		topics.value = await kafkaService.listTopics();
-
-		await startFetchTopicsState();
+		selectConnectionDialog.value?.close();
+		await fetchTopics();
 	} catch (error) {
 		await message(`Error setting connection: ${error}`, { title: 'Error', type: 'error' });
 	}
 	loader?.value?.hide();
-
-	selectConnectionDialog.value?.close();
 };
 
 const searchQuery = ref('');

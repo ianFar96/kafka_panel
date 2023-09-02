@@ -16,10 +16,9 @@ import Button from '../components/Button.vue';
 
 await checkSettings('topics');
 
-const connections = (await storageService.settings.get('CONNECTIONS') ?? []) as Connection[];
-
 const loader = useLoader();
 
+const connections = ref<Connection[]>([]);
 const connectionStore = useConnectionStore();
 
 const topics = ref<Topic[]>([]);
@@ -62,6 +61,8 @@ onDeactivated(() => {
 	selectConnectionDialog?.value?.close();
 });
 onActivated(async () => {
+	connections.value = (await storageService.settings.get('CONNECTIONS') ?? []) as Connection[];
+
 	if (connectionStore.connection) {
 		await fetchTopics();
 	} else {

@@ -201,7 +201,7 @@ const getDisplayDate = (dateMilis: number) => {
 
 				<div v-if="message.valueVisible" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<button @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
+						<button @click="copyToClipboard($event, stringifyMessage(message))"
 							title="Copy JSON"
 							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>

@@ -143,7 +143,7 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 							title="Delete message"
 							class="text-2xl translate-y-[3px] bi-trash transition-colors duration-300 cursor-pointer mr-3 hover:text-red-500">
 						</button>
-						<button @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
+						<button @click="copyToClipboard($event, stringifyMessage(message))"
 							title="Copy JSON"
 							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>

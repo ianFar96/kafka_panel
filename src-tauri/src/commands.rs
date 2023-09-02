@@ -8,12 +8,9 @@ use kafka_panel::{
     reset_offsets, save_in_store, send_message, GroupState, KafkaGroupResponse, KafkaTopicResponse,
     SaslConfig,
 };
-use rdkafka::admin::{AdminOptions, ResourceSpecifier};
+use rdkafka::consumer::Consumer;
 use serde_json::Value;
-use std::{
-    collections::{BTreeMap, HashMap},
-    time::Duration,
-};
+use std::{collections::{BTreeMap, HashMap}, time::Duration};
 use tauri::{State, Window};
 
 use crate::state::{KafkaState, StorageState};
@@ -29,12 +26,8 @@ pub async fn set_connection_command<'a>(
 
     // Test the connection
     let _ = connections
-        .admin
-        .describe_configs(
-            &[ResourceSpecifier::Broker(0)],
-            &AdminOptions::new().request_timeout(Some(Duration::from_secs(5))),
-        )
-        .await
+        .consumer
+        .fetch_group_list(None, Duration::from_secs(5))
         .map_err(|err| format!("Error while establishing connection: {}", err.to_string()))?;
 
     *kafka.common_config.write().await = Some(connections.common_config);

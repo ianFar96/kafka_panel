@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+### Fixed
+
+- Value headers are stringified only when they are not a string already
+
 ## 1.2.0
 
 ### Changed

@@ -195,12 +195,15 @@ pub async fn send_message(
     if let Some(headers) = headers {
         let mut headers_to_send = OwnedHeaders::new();
         for (header_key, header_value) in headers {
-            let stringified_header_value: String = serde_json::to_string(&header_value).map_err(|err| {
-                format!(
-                    "Error while stringifying header's value: {}",
-                    err.to_string()
-                )
-            })?;
+            let stringified_header_value = match header_value {
+                Value::String(string_header_value) => string_header_value,
+                _ => serde_json::to_string(&header_value).map_err(|err| {
+                    format!(
+                        "Error while stringifying header's value: {}",
+                        err.to_string()
+                    )
+                })?,
+            };
 
             headers_to_send = headers_to_send.insert(Header {
                 key: &header_key,

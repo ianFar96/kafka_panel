@@ -1,7 +1,7 @@
 import router from './router';
 import { Setting, SettingKey } from '../types/settings';
-import { message } from '@tauri-apps/api/dialog';
 import storageService from './storage';
+import logger from './logger';
 
 type Page = 'topics' | 'groups' | 'messages' | 'messages-storage' | 'autosend'
 
@@ -18,7 +18,7 @@ async function checkSettings(page: Page) {
 	const dependencies = settingsDependencies[page];
 
 	if (!dependencies) {
-		await message('Unknown page in check settings', { title: 'Error', type: 'error' });
+		logger.error(`Unknown page in check settings: ${page}`);
 	} else {
 		const settings = (await Promise.all(dependencies.map(async (dependency) => 
 			await storageService.settings.get(dependency)
@@ -26,7 +26,7 @@ async function checkSettings(page: Page) {
 
 		const missingSettings = settings.filter(setting => setting.value === '');
 		if (missingSettings.length > 0) {
-			await message(`Please fill the following settings to make this page work: ${missingSettings.map(setting => setting.label).join(', ')}`, { title: 'Error', type: 'error' });
+			logger.error(`Please fill the following settings to make this page work: ${missingSettings.map(setting => setting.label).join(', ')}`);
 			await router.push('/settings');
 		}
 	}

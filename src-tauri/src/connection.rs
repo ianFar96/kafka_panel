@@ -1,4 +1,7 @@
-use rdkafka::{ClientConfig, admin::AdminClient, client::DefaultClientContext, consumer::StreamConsumer, producer::FutureProducer};
+use rdkafka::{
+    admin::AdminClient, client::DefaultClientContext, config::RDKafkaLogLevel,
+    consumer::StreamConsumer, producer::FutureProducer, ClientConfig,
+};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -22,6 +25,7 @@ pub async fn create_connections(
     sasl: Option<SaslConfig>,
 ) -> Result<Connections, String> {
     let mut common_config = ClientConfig::new();
+    common_config.set_log_level(RDKafkaLogLevel::Warning);
     common_config.set("bootstrap.servers", &brokers.join(","));
 
     if let Some(sasl) = sasl {
@@ -36,10 +40,12 @@ pub async fn create_connections(
     }
 
     let admin: AdminClient<_> = common_config
+        .clone()
         .create()
         .map_err(|err| format!("Error creating admin connection: {}", err.to_string()))?;
 
     let consumer: StreamConsumer = common_config
+        .clone()
         .set("group.id", group_id)
         .set("enable.auto.commit", "false")
         .set("auto.offset.reset", "earliest")
@@ -47,6 +53,7 @@ pub async fn create_connections(
         .map_err(|err| format!("Error creating consumer connection: {}", err.to_string()))?;
 
     let producer: FutureProducer = common_config
+        .clone()
         .set("message.timeout.ms", "5000")
         .create()
         .map_err(|err| format!("Error creating producer connection: {}", err.to_string()))?;

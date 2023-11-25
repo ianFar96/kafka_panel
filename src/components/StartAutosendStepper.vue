@@ -1,7 +1,6 @@
 <!-- eslint-disable no-case-declarations -->
 
 <script setup lang="ts">
-import { message } from '@tauri-apps/api/dialog';
 import { clone } from 'ramda';
 import { ref } from 'vue';
 import { useConnectionStore } from '../composables/connection';
@@ -19,6 +18,7 @@ import EditMessageHeaders from './EditMessageHeaders.vue';
 import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
+import logger from '../services/logger';
 
 const emit = defineEmits<{
 	(emit: 'submit', autosend: Autosend): Promise<void> | void,
@@ -91,7 +91,7 @@ const setNewConnection = async (newConnection: Connection) => {
 		await connectionStore.setConnection(newConnection);
 		stepper.value?.next();
 	} catch (error) {
-		await message(`Error setting the connection: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error setting the connection: ${error}`);
 	}
 	loader?.value?.hide();
 };
@@ -125,7 +125,7 @@ const startAutosend = async () => {
 
 		stepperDialog.value?.close();
 	} catch (error) {
-		await message(`Error starting the autosend: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error starting the autosend: ${error}`);
 	}
 	loader?.value?.hide();
 };

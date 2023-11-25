@@ -8,12 +8,12 @@ import SelectConnection from '../components/SelectConnection.vue';
 import { useConnectionStore } from '../composables/connection';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
-import kafkaService from '../services/kafka';
 import logger from '../services/logger';
 import storageService from '../services/storage';
 import { Connection } from '../types/connection';
 import { ConsumerGroupState } from '../types/consumerGroup';
 import { Topic } from '../types/topic';
+import { KafkaService } from '../services/kafka';
 
 await checkSettings('topics');
 
@@ -21,6 +21,10 @@ const loader = useLoader();
 
 const connections = ref<Connection[]>([]);
 const connectionStore = useConnectionStore();
+
+onDeactivated(async () => {
+	await kafkaService.offWatermark();
+});
 
 const fetchTopics = () => {
 	return new Promise((resolve, reject) => {
@@ -30,15 +34,17 @@ const fetchTopics = () => {
 	});
 };
 
+const kafkaService = new KafkaService();
+
 const topics = ref<Topic[]>([]);
 const fetchTopicsList = async () => {
 	topics.value = [];
 	loader?.value?.show();
 	try {
+		logger.debug('Fetching topics...', {kafkaService});
 		topics.value = await kafkaService.listTopics();
-		logger?.debug('Fetched existing topics');
 	} catch (error) {
-		logger.error(`Error fetching topics: ${error}`);
+		logger.error(`Error fetching topics: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };
@@ -47,34 +53,34 @@ const topicsState = ref<Record<string, ConsumerGroupState>>({});
 const fetchTopicsState = async () => {
 	topicsState.value = {};
 	try {
+		logger.debug('Fetching topics state...', {kafkaService});
 		topicsState.value = await kafkaService.getTopicsState();
-		logger?.debug('Retrived topics state');
 	} catch (error) {
-		logger?.error(`Error fetching topics state: ${error}`);
+		logger.error(`Error fetching topics state: ${error}`, {kafkaService});
 	}
 };
 
 const topicsWatermark = ref<Record<string, number>>({});
 const fetchTopicsWatermark = async () => {
 	// Cancel previous watermark fetching
-	logger?.debug('Aborting previous requests...');
+	logger.debug('Aborting previous requests...', {kafkaService});
 	await kafkaService.offWatermark();
 
 	topicsWatermark.value = {};
 
 	const watermarksObservable = await kafkaService.getTopicsWatermark();
-	logger?.debug('Listening for watermarks...');
+	logger.debug('Listening for watermarks...', {kafkaService});
 
 	let windowingTimeout: unknown;
 	const watermarksAcc: Record<string, number> = {};
 	watermarksObservable.subscribe({
 		next: async topicWatermark => {
-			logger?.trace('Received watermark');
+			logger.trace('Received watermark', {kafkaService});
 			watermarksAcc[topicWatermark.topic] = topicWatermark.watermark;
 
 			if (!windowingTimeout) {
 				windowingTimeout = setTimeout(() => {
-					logger?.trace('Displaying watermarks');
+					logger.trace('Displaying watermarks', {kafkaService});
 
 					const newWatermarksState = Object.assign(topicsWatermark.value, watermarksAcc);
 					topicsWatermark.value = {...newWatermarksState};
@@ -84,16 +90,15 @@ const fetchTopicsWatermark = async () => {
 			}
 		},
 		error: async error => {
-			logger.error(`Error fetching watermarks: ${error}`);
+			logger.error(`Error fetching watermarks: ${error}`, {kafkaService});
 		},
 		complete: () => {
-			logger?.debug('Stopped listening for watermarks');
+			logger.debug('Stopped listening for watermarks', {kafkaService});
 		}
 	});
 };
 
 onDeactivated(() => {
-	kafkaService.offWatermark();
 	selectConnectionDialog?.value?.close();
 });
 onActivated(async () => {
@@ -113,10 +118,10 @@ const createTopic = async (name: string, partitions?: number, replicationFactor?
 
 	loader?.value?.show();
 	try {
+		logger.debug(`Creating topic ${name}...`, {kafkaService});
 		await kafkaService.createTopic(name, partitions, replicationFactor);
-		logger?.debug(`Topic ${name} created successfully`);
 	} catch (error) {
-		logger.error(`Error creating topic: ${error}`);
+		logger.error(`Error creating topic: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 
@@ -130,10 +135,10 @@ const removeTopic = async (topic: Topic) => {
 
 	loader?.value?.show();
 	try {
+		logger.debug(`Deleting topic ${topic.name}...`, {kafkaService});
 		await kafkaService.deleteTopic(topic.name);
-		logger?.debug(`Topic ${topic.name} deleted successfully`);
 	} catch (error) {
-		logger.error(`Error removing topic: ${error}`);
+		logger.error(`Error removing topic: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 
@@ -145,12 +150,12 @@ const selectConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); //
 const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
 	try {		
+		logger.debug(`Setting connection ${newConnection.name}...`, {kafkaService});
 		await connectionStore.setConnection(newConnection);
 		selectConnectionDialog.value?.close();
 		await fetchTopics();
-		logger?.debug(`Connection ${newConnection.name} successfully set`);
 	} catch (error) {
-		logger.error(`Error setting connection: ${error}`);
+		logger.error(`Error setting connection: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };

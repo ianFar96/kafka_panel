@@ -1,9 +1,18 @@
-use std::{fs::{File, create_dir_all}, path::Path};
+use std::{
+    fs::{create_dir_all, File},
+    path::Path,
+};
 
 use log::LevelFilter;
+use serde::Deserialize;
 use simplelog::{CombinedLogger, ConfigBuilder, WriteLogger};
 
 use crate::state;
+
+#[derive(Deserialize, Debug)]
+pub struct Extras {
+    pub kafka_service_id: Option<String>,
+}
 
 pub fn init_log() -> Result<(), String> {
     let app_folder = state::get_app_dir()?;
@@ -48,16 +57,15 @@ pub fn init_log() -> Result<(), String> {
     Ok(())
 }
 
-// TODO: try to separate librdkafka logs in another file
 // TODO: add a page to visualize the logs, with search and all
 
 #[tauri::command]
-pub fn append_log(message: &str, level: &str) {
+pub fn append_log(message: &str, level: &str, extras: Option<Extras>) {
     match level {
-        "trace" => log::trace!("{}", message),
-        "debug" => log::debug!("{}", message),
-        "warn" => log::warn!("{}", message),
-        "error" => log::error!("{}", message),
-        _ => log::info!("{}", message),
+        "trace" => log::trace!("{}; extras: {:?}", message, extras),
+        "debug" => log::debug!("{}; extras: {:?}", message, extras),
+        "warn" => log::warn!("{}; extras: {:?}", message, extras),
+        "error" => log::error!("{}; extras: {:?}", message, extras),
+        _ => log::info!("{}; extras: {:?}", message, extras),
     };
 }

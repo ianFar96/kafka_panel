@@ -25,7 +25,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             // Generic commands
             commands::is_dev,
-            commands::append_log,
+            commands::append_log_command,
             // Generic kafka commands
             commands::set_connection_command,
             // Consumer Group commands

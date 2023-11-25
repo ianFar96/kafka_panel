@@ -2,7 +2,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useLoader } from '../composables/loader';
-import kafkaService from '../services/kafka';
 import { Connection } from '../types/connection';
 import { MessageContent, ParsedHeaders } from '../types/message';
 import { Topic } from '../types/topic';
@@ -16,6 +15,7 @@ import { useConnectionStore } from '../composables/connection';
 import { isSendValid, isValidHeaders } from '../services/utils';
 import { clone } from 'ramda';
 import logger from '../services/logger';
+import { KafkaService } from '../services/kafka';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
@@ -23,12 +23,14 @@ const selectedMessage = ref<MessageContent>();
 
 const selectedTopic = ref<Topic>();
 
+const kafkaService = new KafkaService();
+
 const fetchTopics = async () => {
 	loader?.value?.show();
 	try {
 		topics.value = await kafkaService.listTopics();
 	} catch (error) {
-		logger.error(`Error setting the connection: ${error}`);
+		logger.error(`Error setting the connection: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };
@@ -79,7 +81,7 @@ const setNewConnection = async (newConnection: Connection) => {
 		await connectionStore.setConnection(newConnection);
 		await stepper.value?.next();
 	} catch (error) {
-		logger.error(`Error setting the connection: ${error}`);
+		logger.error(`Error setting the connection: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };
@@ -105,7 +107,7 @@ const saveMessage = async () => {
 
 		stepperDialog.value?.close();
 	} catch (error) {
-		logger.error(`Error sending the message: ${error}`);
+		logger.error(`Error sending the message: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };

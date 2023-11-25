@@ -228,9 +228,12 @@ pub async fn get_topics_watermark(
 
     let keep_fetching = Arc::new(RwLock::new(true));
     let keep_fetching_clone = keep_fetching.clone();
-    window.lock().unwrap().once("offWatermark", move |_| {
-        *keep_fetching_clone.write().unwrap() = false;
-    });
+    window
+        .lock()
+        .unwrap()
+        .once(format!("offWatermark-{}", id.lock().unwrap()), move |_| {
+            *keep_fetching_clone.write().unwrap() = false;
+        });
 
     for handle in handles {
         if *keep_fetching.read().unwrap() {

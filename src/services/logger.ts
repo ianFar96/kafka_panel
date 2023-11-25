@@ -1,46 +1,68 @@
 import { invoke } from '@tauri-apps/api';
 import { message as alert } from '@tauri-apps/api/dialog';
+import { AutosendsService } from './autosends';
+import { KafkaService } from './kafka';
 
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'silent';
+export type Extras = {
+	kafkaService?: KafkaService
+	autosendsService?: AutosendsService
+}
 
 class Logger {
 	constructor(private level: LogLevel) {}
 
-	async trace(message: unknown) {
+	async trace(message: unknown, extras?: Extras) {
 		if (this.level === 'trace') {
-			console.log(`[${new Date().toString()}] TRACE: ${message}`);
-			await invoke('append_log', {message, level: 'trace'});
+			const extrasObject = this.getExtrasObject(extras);
+			console.log(`[${new Date().toString()}] TRACE: ${message}`, {extras: extrasObject});
+			await invoke('append_log_command', {message, level: 'trace', extras: extrasObject});
 		}
 	}
 
-	async debug(message: unknown) {
+	async debug(message: unknown, extras?: Extras) {
 		if (this.level === 'trace' || this.level === 'debug') {
-			console.log(`[${new Date().toString()}] DEBUG: ${message}`);
-			await invoke('append_log', {message, level: 'debug'});
+			const extrasObject = this.getExtrasObject(extras);
+			console.log(`[${new Date().toString()}] DEBUG: ${message}`, {extras: extrasObject});
+			await invoke('append_log_command', {message, level: 'debug', extras: extrasObject});
 		}
 	}
 
-	async info(message: unknown) {
+	async info(message: unknown, extras?: Extras) {
 		if (this.level === 'trace' || this.level === 'debug' || this.level === 'info') {
-			console.log(`[${new Date().toString()}] INFO: ${message}`);
-			await invoke('append_log', {message, level: 'info'});
+			const extrasObject = this.getExtrasObject(extras);
+			console.log(`[${new Date().toString()}] INFO: ${message}`, {extras: extrasObject});
+			await invoke('append_log_command', {message, level: 'info', extras: extrasObject});
 		}
 	}
 
-	async warn(message: unknown) {
+	async warn(message: unknown, extras?: Extras) {
 		if (this.level === 'trace' || this.level === 'debug' || this.level === 'info' || this.level === 'warn') {
-			console.log(`⚠️ [${new Date().toString()}] WARN: ${message}`);
-			await invoke('append_log', {message, level: 'warn'});
+			const extrasObject = this.getExtrasObject(extras);
+			console.log(`⚠️ [${new Date().toString()}] WARN: ${message}`, {extras: extrasObject});
+			await invoke('append_log_command', {message, level: 'warn', extras: extrasObject});
 		}
 	}
 
-	async error(message: unknown) {
+	async error(message: unknown, extras?: Extras) {
 		await alert(message as string, { title: 'Error', type: 'error' });
 
 		if (this.level !== 'silent') {
-			console.log(`❌ [${new Date().toString()}] ERROR: ${message}`);
-			await invoke('append_log', {message, level: 'error'});
+			const extrasObject = this.getExtrasObject(extras);
+			console.log(`❌ [${new Date().toString()}] ERROR: ${message}`, {extras: extrasObject});
+			await invoke('append_log_command', {message, level: 'error', extras: extrasObject});
 		}
+	}
+
+	private getExtrasObject(extras?: Extras) {
+		return {
+			...(extras?.kafkaService?.id ? {
+				kafka_service_id: extras?.kafkaService?.id
+			} : {}),
+			...(extras?.autosendsService?.kafkaService.id ? {
+				kafka_service_id: extras?.autosendsService?.kafkaService
+			} : {})
+		};
 	}
 }
 

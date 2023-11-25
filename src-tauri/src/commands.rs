@@ -6,7 +6,7 @@ use kafka_panel::{
     create_connections, create_topic, delete_from_store, delete_topic, get_all_from_store,
     get_from_store, get_groups_from_topic, get_topics, get_topics_state, get_topics_watermark,
     listen_messages, logs, reset_offsets, save_in_store, send_message, GroupState,
-    KafkaGroupResponse, SaslConfig, TopicResponse,
+    KafkaGroupResponse, SaslConfig, TopicResponse, Extras,
 };
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use serde_json::Value;
@@ -249,8 +249,8 @@ pub fn delete_from_store_command<'a>(
 }
 
 #[tauri::command]
-pub fn append_log(message: &str, level: &str) {
-    logs::append_log(message, level)
+pub fn append_log_command(message: &str, level: &str, extras: Option<Extras>) {
+    logs::append_log(message, level, extras)
 }
 
 #[tauri::command]

@@ -6,7 +6,6 @@ import { useRoute } from 'vue-router';
 import SendMessageStepper from '../components/SendMessageStepper.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
-import kafkaService from '../services/kafka';
 import storageService from '../services/storage';
 import { Message, MessageContent, StorageMessage } from '../types/message';
 import { DateTime } from 'luxon';
@@ -14,6 +13,7 @@ import { stringifyMessage } from '../services/utils';
 import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import Button from '../components/Button.vue';
 import logger from '../services/logger';
+import { KafkaService } from '../services/kafka';
 
 type DisplayMessage = Message & {
 	valueVisible: boolean
@@ -29,11 +29,13 @@ const topicName = route.params.topicName as string;
 
 const loader = useLoader();
 
+const kafkaService = new KafkaService();
+
 // Define stop before starting in case the user goes back too quickly
 const stopListeningMessages = async () => {
 	status.value = 'stopping';
+	logger.debug('Stopping to listen for messages...', {kafkaService});
 	await kafkaService.offMessage();
-	logger?.debug('Stopping to listen for messages...');
 };
 onBeforeUnmount(() => {
 	stopListeningMessages();
@@ -45,14 +47,14 @@ const startListenMessages = async () => {
 	status.value = 'starting';
 	displayMessages.value = [];
 
+	logger.debug('Listening for messages...', {kafkaService});
 	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
-	logger?.debug('Listening for messages...');
 
 	let windowingTimeout: unknown;
 	const messagesToDisplay: DisplayMessage[] = [];
 	messagesObservable.subscribe({
 		next: kafkaMessage => {
-			logger?.trace('Received message');
+			logger.trace('Received message', {kafkaService});
 
 			messagesToDisplay.push({
 				...kafkaMessage,
@@ -61,7 +63,7 @@ const startListenMessages = async () => {
 			
 			if (!windowingTimeout) {
 				windowingTimeout = setTimeout(() => {
-					logger?.trace('Displaying messages');
+					logger.trace('Displaying messages', {kafkaService});
 
 					// To avoid going from stopping to started while receiving the last message
 					if (status.value === 'starting') {
@@ -81,12 +83,12 @@ const startListenMessages = async () => {
 		},
 		error: async error => {
 			status.value = 'stopped';
-			logger.error(`Error fetching messages: ${error}`);
+			logger.error(`Error fetching messages: ${error}`, {kafkaService});
 			clearTimeout(windowingTimeout as string);
 		},
 		complete: () => {
 			status.value = 'stopped';
-			logger?.debug('Stopped listening for messages');
+			logger.debug('Stopped listening for messages', {kafkaService});
 			clearTimeout(windowingTimeout as string);
 		}
 	});
@@ -131,11 +133,11 @@ const sendMessageStepper = ref<InstanceType<typeof SendMessageStepper> | null>(n
 const sendMessage = async (messageContent: MessageContent) => {
 	loader?.value?.show();
 	try {
+		logger.debug(`Seding message to ${topicName}...`, {kafkaService});
 		await kafkaService.sendMessage(topicName, messageContent);
-
 		sendMessageStepper.value?.closeDialog();
 	} catch (error) {
-		logger.error(`Error sending the message: ${error}`);
+		logger.error(`Error sending the message: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };

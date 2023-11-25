@@ -81,7 +81,7 @@ pub async fn listen_messages(
 
     let keep_listening = Arc::new(RwLock::new(true));
     let keep_listening_clone = keep_listening.clone();
-    window.once("offMessage", move |_| {
+    window.once(format!("offMessage-{}", id), move |_| {
         *keep_listening_clone.write().unwrap() = false;
     });
 

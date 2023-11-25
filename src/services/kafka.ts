@@ -9,7 +9,9 @@ import { Message, MessageContent } from '../types/message';
 import { Topic } from '../types/topic';
 import { v4 as uuidv4 } from 'uuid';
 
-class KafkaService {
+export class KafkaService {
+	public readonly id = uuidv4();
+
 	async setConnection(brokers: string[], groupId: string, sasl?: SaslConfig) {
 		await invoke('set_connection_command', {brokers, groupId, sasl});
 	}
@@ -22,12 +24,11 @@ class KafkaService {
 	async getTopicsWatermark() {
 		const watermarksSubject = new Subject<{topic: string, watermark: number}>();
 
-		const id = uuidv4();
-		let unlisten: UnlistenFn | undefined = await listen<{topic: string, watermark: number}>(`onWatermark-${id}`, (event) => {
+		let unlisten: UnlistenFn | undefined = await listen<{topic: string, watermark: number}>(`onWatermark-${this.id}`, (event) => {
 			watermarksSubject.next(event.payload);
 		});
 
-		invoke('get_topics_watermark_command', {id})
+		invoke('get_topics_watermark_command', {id: this.id})
 			.then(() => {
 				watermarksSubject.complete();
 			})
@@ -43,7 +44,7 @@ class KafkaService {
 	}
 
 	async offWatermark() {
-		await emit('offWatermark');
+		await emit(`offWatermark-${this.id}`);
 	}
 
 	async listGroupsFromTopic(topicName: string) {
@@ -77,12 +78,11 @@ class KafkaService {
 	async listenMessages(topic: string, messagesNumber: number) {
 		const messagesSubject = new Subject<Message>();
 
-		const id = uuidv4();
-		let unlisten: UnlistenFn | undefined = await listen<Message>(`onMessage-${id}`, (event) => {
+		let unlisten: UnlistenFn | undefined = await listen<Message>(`onMessage-${this.id}`, (event) => {
 			messagesSubject.next(event.payload);
 		});
 
-		invoke('listen_messages_command', {topic, messagesNumber, id})
+		invoke('listen_messages_command', {topic, messagesNumber, id: this.id})
 			.then(() => {
 				messagesSubject.complete();
 			})
@@ -98,7 +98,7 @@ class KafkaService {
 	}
 
 	async offMessage() {
-		await emit('offMessage');
+		await emit(`offMessage-${this.id}`);
 	}
 
 	async sendMessage(topic: string, message: MessageContent) {
@@ -143,7 +143,3 @@ class KafkaService {
 		return Function('"use strict";return (' + script + ')').bind(scope)();
 	}
 }
-
-const kafkaService = new KafkaService();
-
-export default kafkaService;

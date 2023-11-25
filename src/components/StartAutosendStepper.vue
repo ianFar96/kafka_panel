@@ -5,7 +5,6 @@ import { clone } from 'ramda';
 import { ref } from 'vue';
 import { useConnectionStore } from '../composables/connection';
 import { useLoader } from '../composables/loader';
-import kafkaService from '../services/kafka';
 import { getDefaultAutosendConfiguration, getDefaultMessage, isSendValid, isValidHeaders } from '../services/utils';
 import { Autosend, AutosendOptions } from '../types/autosend';
 import { Connection } from '../types/connection';
@@ -19,6 +18,7 @@ import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
 import logger from '../services/logger';
+import { KafkaService } from '../services/kafka';
 
 const emit = defineEmits<{
 	(emit: 'submit', autosend: Autosend): Promise<void> | void,
@@ -29,6 +29,8 @@ const topics = ref<Topic[]>([]);
 const configuration = ref<AutosendOptions>(getDefaultAutosendConfiguration());
 const selectedTopic = ref<Topic>();
 const selectedMessage = ref<MessageContent>();
+
+const kafkaService = new KafkaService();
 
 const steps: Step[] = [{
 	name: 'configuration',
@@ -91,7 +93,7 @@ const setNewConnection = async (newConnection: Connection) => {
 		await connectionStore.setConnection(newConnection);
 		stepper.value?.next();
 	} catch (error) {
-		logger.error(`Error setting the connection: ${error}`);
+		logger.error(`Error setting the connection: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };
@@ -125,7 +127,7 @@ const startAutosend = async () => {
 
 		stepperDialog.value?.close();
 	} catch (error) {
-		logger.error(`Error starting the autosend: ${error}`);
+		logger.error(`Error starting the autosend: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };

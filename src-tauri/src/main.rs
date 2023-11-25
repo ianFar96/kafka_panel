@@ -14,7 +14,7 @@ fn main() {
         .setup(|app| {
             let storage = state::init_storage()?;
             app.manage(storage);
-            
+
             let kafka = state::init_kafka();
             app.manage(kafka);
 
@@ -34,6 +34,7 @@ fn main() {
             // Topic commands
             commands::get_topics_command,
             commands::get_topics_state_command,
+            commands::get_topics_watermark_command,
             commands::create_topic_command,
             commands::delete_topic_command,
             // Message commands

@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     time::Duration,
 };
 
@@ -11,14 +11,26 @@ use rdkafka::{
     ClientConfig,
 };
 use serde::Serialize;
+use tauri::Window;
 use tokio::task::JoinHandle;
 
 use crate::groups::{get_group_offsets, get_groups_without_ours, GroupState};
 
 #[derive(Serialize, Debug, PartialEq)]
-pub struct KafkaTopicResponse {
+pub struct TopicResponse {
     pub name: String,
     pub partitions: usize,
+}
+
+struct TopicThread {
+    name: String,
+    partitions: Vec<i32>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct TopicWatermarkResponse {
+    pub topic: String,
+    pub watermark: usize,
 }
 
 pub async fn create_topic(
@@ -52,16 +64,16 @@ pub async fn delete_topic(
     Ok(())
 }
 
-pub async fn get_topics(consumer: &StreamConsumer) -> Result<Vec<KafkaTopicResponse>, String> {
+pub async fn get_topics(consumer: &StreamConsumer) -> Result<Vec<TopicResponse>, String> {
     let metadata = consumer
-        .fetch_metadata(None, Duration::from_secs(5))
+        .fetch_metadata(None, Duration::from_secs(30))
         .map_err(|err| format!("Could not get metadata from cluster: {}", err.to_string()))?;
 
-    let mut topic_results: Vec<KafkaTopicResponse> = metadata
+    let mut topic_results: Vec<TopicResponse> = metadata
         .topics()
         .iter()
         .filter(|topic| topic.name() != "__consumer_offsets")
-        .map(|topic| KafkaTopicResponse {
+        .map(|topic| TopicResponse {
             name: topic.name().to_string(),
             partitions: topic.partitions().len(),
         })
@@ -72,9 +84,10 @@ pub async fn get_topics(consumer: &StreamConsumer) -> Result<Vec<KafkaTopicRespo
     Ok(topic_results)
 }
 
+// TODO: transform this to an event based system where every state is passed to the frontend asap
 pub async fn get_topics_state(
     consumer: &StreamConsumer,
-    common_config: ClientConfig,
+    common_config: &ClientConfig,
 ) -> Result<HashMap<String, GroupState>, String> {
     let mut topics_map: HashMap<String, GroupState> = HashMap::new();
 
@@ -144,4 +157,88 @@ pub async fn get_topics_state(
 
     let topics_map = Arc::try_unwrap(topics_map).unwrap().into_inner().unwrap();
     Ok(topics_map)
+}
+
+pub async fn get_topics_watermark(
+    window: Window,
+    consumer: StreamConsumer,
+    id: String,
+) -> Result<(), String> {
+    let window = Arc::new(Mutex::new(window));
+    let id = Arc::new(Mutex::new(id));
+    let consumer = Arc::new(RwLock::new(consumer));
+
+    let mut handles = vec![];
+
+    let metadata = consumer
+        .read()
+        .unwrap()
+        .fetch_metadata(None, Duration::from_secs(10))
+        .map_err(|err| format!("Could not fetch topic metadata: {}", err.to_string()))?;
+
+    let topics: Vec<TopicThread> = metadata
+        .topics()
+        .iter()
+        .filter(|topic| topic.name() != "__consumer_offsets")
+        .map(|topic| TopicThread {
+            name: topic.name().to_string(),
+            partitions: topic
+                .partitions()
+                .iter()
+                .map(|partition| partition.id())
+                .collect::<Vec<i32>>(),
+        })
+        .collect();
+
+    for topic in topics {
+        let window = window.clone();
+        let id = id.clone();
+        let consumer_clone = consumer.clone();
+
+        let handle: JoinHandle<Result<(), String>> = tokio::spawn(async move {
+            let mut high_watermark = 0;
+            for partition in topic.partitions {
+                let (_, high) = consumer_clone
+                    .read()
+                    .unwrap()
+                    .fetch_watermarks(&topic.name, partition, Duration::from_secs(30))
+                    .map_err(|err| {
+                        format!("Could not fetch partition watermark: {}", err.to_string())
+                    })?;
+                high_watermark += high;
+            }
+
+            window
+                .lock()
+                .unwrap()
+                .emit(
+                    &format!("onWatermark-{}", id.lock().unwrap()),
+                    TopicWatermarkResponse {
+                        topic: topic.name,
+                        watermark: high_watermark as usize,
+                    },
+                )
+                .unwrap();
+
+            Ok(())
+        });
+
+        handles.push(handle);
+    }
+
+    let keep_fetching = Arc::new(RwLock::new(true));
+    let keep_fetching_clone = keep_fetching.clone();
+    window.lock().unwrap().once("offWatermark", move |_| {
+        *keep_fetching_clone.write().unwrap() = false;
+    });
+
+    for handle in handles {
+        if *keep_fetching.read().unwrap() {
+            handle.await.unwrap()?;
+        } else {
+            handle.abort();
+        }
+    }
+
+    Ok(())
 }

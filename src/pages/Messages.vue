@@ -1,7 +1,6 @@
 <!-- eslint-disable no-empty -->
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
-import { message } from '@tauri-apps/api/dialog';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import SendMessageStepper from '../components/SendMessageStepper.vue';
@@ -14,6 +13,7 @@ import { DateTime } from 'luxon';
 import { stringifyMessage } from '../services/utils';
 import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import Button from '../components/Button.vue';
+import logger from '../services/logger';
 
 type DisplayMessage = Message & {
 	valueVisible: boolean
@@ -29,50 +29,69 @@ const topicName = route.params.topicName as string;
 
 const loader = useLoader();
 
+// Define stop before starting in case the user goes back too quickly
+const stopListeningMessages = async () => {
+	status.value = 'stopping';
+	await kafkaService.offMessage();
+	logger?.debug('Stopping to listen for messages...');
+};
+onBeforeUnmount(() => {
+	stopListeningMessages();
+});
+
 const displayMessages = ref<DisplayMessage[]>([]);
 const status = ref<'starting' | 'started' | 'stopping' | 'stopped'>('stopped');
 const startListenMessages = async () => {
 	status.value = 'starting';
 	displayMessages.value = [];
-	
-	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
-	messagesObservable.subscribe({
-		next: kafkaMessages => {
-			// To avoid going from stopping to started while receiving the last message
-			if (status.value === 'starting') {
-				status.value = 'started';
-			}
 
-			// Cast, sort and get only the number of messages we want
-			const messagesToDisplay = [
-				...displayMessages.value,
-				...kafkaMessages.map(kafkaMessage =>  ({
-					...kafkaMessage,
-					valueVisible: false,
-				}) as DisplayMessage)
-			];
-			messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
-			displayMessages.value = messagesToDisplay.splice(0, numberOfMessages);
+	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
+	logger?.debug('Listening for messages...');
+
+	let windowingTimeout: unknown;
+	const messagesToDisplay: DisplayMessage[] = [];
+	messagesObservable.subscribe({
+		next: kafkaMessage => {
+			logger?.trace('Received message');
+
+			messagesToDisplay.push({
+				...kafkaMessage,
+				valueVisible: false
+			});
+			
+			if (!windowingTimeout) {
+				windowingTimeout = setTimeout(() => {
+					logger?.trace('Displaying messages');
+
+					// To avoid going from stopping to started while receiving the last message
+					if (status.value === 'starting') {
+						status.value = 'started';
+					}
+
+					// Prepend the previous messages
+					messagesToDisplay.unshift(...displayMessages.value);
+					// Sort them with the new ones by timestamp
+					messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
+					// To cut the oldest ones out
+					displayMessages.value = messagesToDisplay.splice(0, numberOfMessages);
+
+					windowingTimeout = undefined;
+				}, 1000);
+			}
 		},
 		error: async error => {
 			status.value = 'stopped';
-			await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
+			logger.error(`Error fetching messages: ${error}`);
+			clearTimeout(windowingTimeout as string);
 		},
 		complete: () => {
 			status.value = 'stopped';
+			logger?.debug('Stopped listening for messages');
+			clearTimeout(windowingTimeout as string);
 		}
 	});
 };
-await startListenMessages();
-
-const stopListeningMessages = async () => {
-	status.value = 'stopping';
-	kafkaService.offMessage();
-};
-
-onBeforeUnmount(() => {
-	stopListeningMessages();
-});
+startListenMessages();
 
 const copyToClipboard = async (event: MouseEvent, text: string) => {
 	event.preventDefault();
@@ -116,7 +135,7 @@ const sendMessage = async (messageContent: MessageContent) => {
 
 		sendMessageStepper.value?.closeDialog();
 	} catch (error) {
-		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error sending the message: ${error}`);
 	}
 	loader?.value?.hide();
 };

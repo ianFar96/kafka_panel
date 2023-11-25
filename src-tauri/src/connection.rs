@@ -27,6 +27,7 @@ pub async fn create_connections(
     let mut common_config = ClientConfig::new();
     common_config.set_log_level(RDKafkaLogLevel::Warning);
     common_config.set("bootstrap.servers", &brokers.join(","));
+    common_config.set("group.id", group_id);
 
     if let Some(sasl) = sasl {
         if sasl.mechanism != "PLAIN" {
@@ -46,7 +47,6 @@ pub async fn create_connections(
 
     let consumer: StreamConsumer = common_config
         .clone()
-        .set("group.id", group_id)
         .set("enable.auto.commit", "false")
         .set("auto.offset.reset", "earliest")
         .create()

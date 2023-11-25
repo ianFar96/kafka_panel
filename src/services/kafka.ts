@@ -1,18 +1,15 @@
 import { faker } from '@faker-js/faker';
-import { clone } from 'ramda';
 import { invoke } from '@tauri-apps/api';
 import { emit, listen, UnlistenFn } from '@tauri-apps/api/event';
+import { clone } from 'ramda';
 import { Subject } from 'rxjs';
 import { SaslConfig } from '../types/connection';
 import { ConsumerGroup, ConsumerGroupState } from '../types/consumerGroup';
 import { Message, MessageContent } from '../types/message';
 import { Topic } from '../types/topic';
+import { v4 as uuidv4 } from 'uuid';
 
 class KafkaService {
-	private unlisten?: UnlistenFn;
-	private batchingInterval?: NodeJS.Timer;
-	private batchMessages: Message[] = [];
-	
 	async setConnection(brokers: string[], groupId: string, sasl?: SaslConfig) {
 		await invoke('set_connection_command', {brokers, groupId, sasl});
 	}
@@ -20,6 +17,33 @@ class KafkaService {
 	async getTopicsState() {
 		const topicsGroups = await invoke<Record<string, ConsumerGroupState>>('get_topics_state_command');
 		return topicsGroups;
+	}
+
+	async getTopicsWatermark() {
+		const watermarksSubject = new Subject<{topic: string, watermark: number}>();
+
+		const id = uuidv4();
+		let unlisten: UnlistenFn | undefined = await listen<{topic: string, watermark: number}>(`onWatermark-${id}`, (event) => {
+			watermarksSubject.next(event.payload);
+		});
+
+		invoke('get_topics_watermark_command', {id})
+			.then(() => {
+				watermarksSubject.complete();
+			})
+			.catch(async error => {
+				watermarksSubject.error(error);
+			})
+			.finally(() => {
+				unlisten?.();
+				unlisten = undefined;
+			});
+
+		return watermarksSubject.asObservable();
+	}
+
+	async offWatermark() {
+		await emit('offWatermark');
 	}
 
 	async listGroupsFromTopic(topicName: string) {
@@ -51,40 +75,24 @@ class KafkaService {
 	}
 
 	async listenMessages(topic: string, messagesNumber: number) {
-		const messagesSubject = new Subject<Message[]>();
+		const messagesSubject = new Subject<Message>();
 
-		if (this.unlisten) {
-			messagesSubject.error('Unexpected error: previous listening for messages is still active');
-		}
+		const id = uuidv4();
+		let unlisten: UnlistenFn | undefined = await listen<Message>(`onMessage-${id}`, (event) => {
+			messagesSubject.next(event.payload);
+		});
 
-		invoke('listen_messages_command', {topic, messagesNumber})
+		invoke('listen_messages_command', {topic, messagesNumber, id})
 			.then(() => {
 				messagesSubject.complete();
-
-				clearInterval(this.batchingInterval);
-
-				this.unlisten?.();
-				delete this.unlisten;
 			})
 			.catch(async error => {
 				messagesSubject.error(error);
+			})
+			.finally(() => {
+				unlisten?.();
+				unlisten = undefined;
 			});
-
-		const unlisten = await listen<Message>('onMessage', (event) => {
-			const kafkaMessage = event.payload;
-			this.batchMessages.push(kafkaMessage);
-		});
-
-		// Debounce batching system so in case of flow spike
-		// VueJS has the time to display elements
-		this.batchingInterval = setInterval(() => {
-			if (this.batchMessages.length > 0) {
-				messagesSubject.next(this.batchMessages);
-				this.batchMessages = [];
-			}
-		}, 1000);
-
-		this.unlisten = unlisten;
 
 		return messagesSubject.asObservable();
 	}

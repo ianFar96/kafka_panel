@@ -14,6 +14,7 @@ import { Connection } from '../types/connection';
 import { ConsumerGroupState } from '../types/consumerGroup';
 import { Topic } from '../types/topic';
 import { KafkaService } from '../services/kafka';
+import { Subscription } from 'rxjs';
 
 await checkSettings('topics');
 
@@ -21,10 +22,6 @@ const loader = useLoader();
 
 const connections = ref<Connection[]>([]);
 const connectionStore = useConnectionStore();
-
-onDeactivated(async () => {
-	await kafkaService.offWatermark();
-});
 
 const fetchTopics = () => {
 	return new Promise((resolve, reject) => {
@@ -61,10 +58,10 @@ const fetchTopicsState = async () => {
 };
 
 const topicsWatermark = ref<Record<string, number>>({});
+let watermarksSubscription: Subscription | undefined;
 const fetchTopicsWatermark = async () => {
 	// Cancel previous watermark fetching
-	logger.debug('Aborting previous requests...', {kafkaService});
-	await kafkaService.offWatermark();
+	watermarksSubscription?.unsubscribe();
 
 	topicsWatermark.value = {};
 
@@ -73,7 +70,7 @@ const fetchTopicsWatermark = async () => {
 
 	let windowingTimeout: unknown;
 	const watermarksAcc: Record<string, number> = {};
-	watermarksObservable.subscribe({
+	watermarksSubscription = watermarksObservable.subscribe({
 		next: async topicWatermark => {
 			logger.trace('Received watermark', {kafkaService});
 			watermarksAcc[topicWatermark.topic] = topicWatermark.watermark;
@@ -93,12 +90,17 @@ const fetchTopicsWatermark = async () => {
 			logger.error(`Error fetching watermarks: ${error}`, {kafkaService});
 		},
 		complete: () => {
-			logger.debug('Stopped listening for watermarks', {kafkaService});
+			logger.debug('Finished listening for watermarks', {kafkaService});
 		}
 	});
 };
 
 onDeactivated(() => {
+	if (!watermarksSubscription?.closed) {
+		logger.debug('Stopping to listen for watermarks...', {kafkaService});
+		watermarksSubscription?.unsubscribe();
+	}
+
 	selectConnectionDialog?.value?.close();
 });
 onActivated(async () => {

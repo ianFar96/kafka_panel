@@ -2,12 +2,21 @@ import { faker } from '@faker-js/faker';
 import { invoke } from '@tauri-apps/api';
 import { emit, listen, UnlistenFn } from '@tauri-apps/api/event';
 import { clone } from 'ramda';
-import { Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { SaslConfig } from '../types/connection';
 import { ConsumerGroup, ConsumerGroupState } from '../types/consumerGroup';
 import { Message, MessageContent } from '../types/message';
 import { Topic } from '../types/topic';
 import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * Rxjs Subject with an `unsubscribe` method that respects the asynchronousness
+ * Unlike the unsubscribe of a normal `Subject`
+ */
+export type AsyncSubject<T> = {
+	subscribe: Subject<T>['subscribe'] 
+	unsubscribe: () => Promise<void>
+}
 
 export class KafkaService {
 	public readonly id = uuidv4();
@@ -22,29 +31,36 @@ export class KafkaService {
 	}
 
 	async getTopicsWatermark() {
-		const watermarksSubject = new Subject<{topic: string, watermark: number}>();
+		let subscribers = 0;
+		return new Observable<{topic: string, watermark: number}>(subscriber => {
+			if (subscribers <= 0) {
+				let unlisten: UnlistenFn | undefined;
+				listen<{topic: string, watermark: number}>(`onWatermark-${this.id}`, (event) => {
+					subscriber.next(event.payload);
+				}).then(unlistenFn => unlisten = unlistenFn);
+			
+				invoke('get_topics_watermark_command', {id: this.id})
+					.then(() => {
+						subscriber.complete();
+					})
+					.catch(async error => {
+						subscriber.error(error);
+					})
+					.finally(() => {
+						unlisten?.();
+					});
+			}
 
-		let unlisten: UnlistenFn | undefined = await listen<{topic: string, watermark: number}>(`onWatermark-${this.id}`, (event) => {
-			watermarksSubject.next(event.payload);
+			subscribers++;
+
+			return () => {
+				subscribers--;
+
+				if (subscribers <= 0) {
+					emit(`offWatermark-${this.id}`);
+				}
+			};
 		});
-
-		invoke('get_topics_watermark_command', {id: this.id})
-			.then(() => {
-				watermarksSubject.complete();
-			})
-			.catch(async error => {
-				watermarksSubject.error(error);
-			})
-			.finally(() => {
-				unlisten?.();
-				unlisten = undefined;
-			});
-
-		return watermarksSubject.asObservable();
-	}
-
-	async offWatermark() {
-		await emit(`offWatermark-${this.id}`);
 	}
 
 	async listGroupsFromTopic(topicName: string) {
@@ -75,14 +91,14 @@ export class KafkaService {
 		});	
 	}
 
-	async listenMessages(topic: string, messagesNumber: number) {
+	async listenMessages(topic: string, messagesNumber: number): Promise<AsyncSubject<Message>> {
 		const messagesSubject = new Subject<Message>();
 
 		let unlisten: UnlistenFn | undefined = await listen<Message>(`onMessage-${this.id}`, (event) => {
 			messagesSubject.next(event.payload);
 		});
 
-		invoke('listen_messages_command', {topic, messagesNumber, id: this.id})
+		const listenMessagesCommand = invoke('listen_messages_command', {topic, messagesNumber, id: this.id})
 			.then(() => {
 				messagesSubject.complete();
 			})
@@ -93,12 +109,15 @@ export class KafkaService {
 				unlisten?.();
 				unlisten = undefined;
 			});
+		const unsubscribe = async () => {
+			await emit(`offMessage-${this.id}`);
+			await listenMessagesCommand;
+		};
 
-		return messagesSubject.asObservable();
-	}
-
-	async offMessage() {
-		await emit(`offMessage-${this.id}`);
+		return {
+			subscribe: messagesSubject.subscribe.bind(messagesSubject),
+			unsubscribe
+		};
 	}
 
 	async sendMessage(topic: string, message: MessageContent) {

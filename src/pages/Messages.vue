@@ -13,7 +13,7 @@ import { stringifyMessage } from '../services/utils';
 import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import Button from '../components/Button.vue';
 import logger from '../services/logger';
-import { KafkaService } from '../services/kafka';
+import { KafkaService, AsyncSubject } from '../services/kafka';
 
 type DisplayMessage = Message & {
 	valueVisible: boolean
@@ -31,28 +31,19 @@ const loader = useLoader();
 
 const kafkaService = new KafkaService();
 
-// Define stop before starting in case the user goes back too quickly
-const stopListeningMessages = async () => {
-	status.value = 'stopping';
-	logger.debug('Stopping to listen for messages...', {kafkaService});
-	await kafkaService.offMessage();
-};
-onBeforeUnmount(() => {
-	stopListeningMessages();
-});
-
 const displayMessages = ref<DisplayMessage[]>([]);
 const status = ref<'starting' | 'started' | 'stopping' | 'stopped'>('stopped');
+let listenMessagesHandler: AsyncSubject<Message> | undefined;
 const startListenMessages = async () => {
 	status.value = 'starting';
 	displayMessages.value = [];
 
 	logger.debug('Listening for messages...', {kafkaService});
-	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
+	listenMessagesHandler = await kafkaService.listenMessages(topicName, numberOfMessages);
 
 	let windowingTimeout: unknown;
 	const messagesToDisplay: DisplayMessage[] = [];
-	messagesObservable.subscribe({
+	listenMessagesHandler.subscribe({
 		next: kafkaMessage => {
 			logger.trace('Received message', {kafkaService});
 
@@ -94,6 +85,18 @@ const startListenMessages = async () => {
 	});
 };
 startListenMessages();
+
+const stop = async () => {
+	status.value = 'stopping';
+	logger.debug('Stopping to listen for messages...', {kafkaService});
+	await listenMessagesHandler?.unsubscribe();
+};
+
+onBeforeUnmount(async () => {
+	loader?.value?.show();
+	await stop();
+	loader?.value?.hide();
+});
 
 const copyToClipboard = async (event: MouseEvent, text: string) => {
 	event.preventDefault();
@@ -191,7 +194,7 @@ const getDisplayDate = (dateMilis: number) => {
 				</button>
 				<i v-if="status === 'starting' || status === 'stopping'" class="bi-arrow-clockwise text-2xl animate-spin"
 					:title="status === 'starting' ? 'Starting' : 'Stopping'"></i>
-				<button v-if="status === 'started'" type="button" @click="stopListeningMessages()"
+				<button v-if="status === 'started'" type="button" @click="stop()"
 					class="text-2xl bi-stop-circle animate-pulse text-red-500" title="Stop fetching" >
 				</button>
 			</div>

@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.3.0
+
 ### Added
 
 - Added logging system and logs over all major operations throughout the app

@@ -24,6 +24,7 @@ const kafkaService = new KafkaService();
 const fetchGroupsFromTopic = async () => {
 	loader?.value?.show();
 	try {
+		logger.info(`Fetching groups from topic ${topicName}...`);
 		groups.value = await kafkaService.listGroupsFromTopic(topicName);
 	} catch (error) {
 		logger.error(`Error getting groups: ${error}`, {kafkaService});
@@ -64,6 +65,7 @@ You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`;
 
 	loader?.value?.show();
 	try {
+		logger.info(`Resetting offsets for topic ${topicName} and group ${group.name}...`);
 		await kafkaService.resetOffsets(group.name, topicName);
 	} catch (error) {
 		logger.error(`Error sending the message: ${error}`, {kafkaService});

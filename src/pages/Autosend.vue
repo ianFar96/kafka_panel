@@ -11,6 +11,7 @@ import { ActiveAutosend, Autosend } from '../types/autosend';
 import { Connection } from '../types/connection';
 import { StorageMessage } from '../types/message';
 import Button from '../components/Button.vue';
+import logger from '../services/logger';
 
 type DisplayAutosend = ActiveAutosend & {
 	valueVisible: Ref<boolean>
@@ -46,12 +47,18 @@ const filteredAutosends = computed(() => {
 const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | null>(null); // Template ref
 const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStepper> | null>(null); // Template ref
 
+const startAutosend = async (autosend: Autosend) => {
+	logger.info('Starting autosend...');
+	await autosendStore.startAutosend(autosend);
+};
+	
 const editMessageStorage = (autosend: Autosend) => {
 	const storageMessage = autosendToStorageMessage(autosend, ['autosend template']);
 	editMessageStorageStepper.value?.openDialog(storageMessage);
 };
 
 const saveMessageInStorage = async (message: StorageMessage) => {
+	logger.info('Saving autosend message template in storage...');
 	await storageService.messages.save(message);
 	editMessageStorageStepper.value?.closeDialog();
 };
@@ -128,6 +135,6 @@ const saveMessageInStorage = async (message: StorageMessage) => {
 		</ul>
 	</div>
 
-	<StartAutosendStepper ref="startAutosendStepper" @submit="autosendStore.startAutosend" />
+	<StartAutosendStepper ref="startAutosendStepper" @submit="startAutosend" />
 	<EditMessageStorageStepper ref="editMessageStorageStepper" @submit="saveMessageInStorage" />
 </template>

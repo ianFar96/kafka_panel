@@ -46,6 +46,7 @@ const messages = ref<DisplayMessage[]>([]);
 const fetchMessages = async () => {
 	loader?.value?.show();
 	try {
+		logger.info('Fetching storage messages...');
 		const storageMessages = await storageService.messages.getAll();
 
 		messages.value = Object.entries(storageMessages).map(([id, message]) => storeMessageToDisplayMessage({id, ...message}));
@@ -58,6 +59,7 @@ await fetchMessages();
 
 const deleteMessage = async (storageMessage: DisplayMessage) => {
 	try {
+		logger.info('Deleting storage message...');
 		await storageService.messages.delete(storageMessage.id);
 		await fetchMessages();
 	} catch (error) {
@@ -66,6 +68,7 @@ const deleteMessage = async (storageMessage: DisplayMessage) => {
 };
 
 const saveMessage = async (message: StorageMessage) => {
+	logger.info('Saving storage message...');
 	const messageWithoutId = omit(['id'], message);
 	await storageService.messages.save(messageWithoutId, message.id);
 	await fetchMessages();

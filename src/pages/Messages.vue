@@ -38,7 +38,7 @@ const startListenMessages = async () => {
 	status.value = 'starting';
 	displayMessages.value = [];
 
-	logger.debug('Listening for messages...', {kafkaService});
+	logger.info('Listening for messages...', {kafkaService});
 	listenMessagesHandler = await kafkaService.listenMessages(topicName, numberOfMessages);
 
 	let windowingTimeout: unknown;
@@ -136,7 +136,7 @@ const sendMessageStepper = ref<InstanceType<typeof SendMessageStepper> | null>(n
 const sendMessage = async (messageContent: MessageContent) => {
 	loader?.value?.show();
 	try {
-		logger.debug(`Seding message to ${topicName}...`, {kafkaService});
+		logger.info(`Seding message to ${topicName}...`, {kafkaService});
 		await kafkaService.sendMessage(topicName, messageContent);
 		sendMessageStepper.value?.closeDialog();
 	} catch (error) {

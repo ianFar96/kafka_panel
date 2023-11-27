@@ -38,7 +38,7 @@ const fetchTopicsList = async () => {
 	topics.value = [];
 	loader?.value?.show();
 	try {
-		logger.debug('Fetching topics...', {kafkaService});
+		logger.info('Fetching topics...', {kafkaService});
 		topics.value = await kafkaService.listTopics();
 	} catch (error) {
 		logger.error(`Error fetching topics: ${error}`, {kafkaService});
@@ -120,7 +120,7 @@ const createTopic = async (name: string, partitions?: number, replicationFactor?
 
 	loader?.value?.show();
 	try {
-		logger.debug(`Creating topic ${name}...`, {kafkaService});
+		logger.info(`Creating topic ${name}...`, {kafkaService});
 		await kafkaService.createTopic(name, partitions, replicationFactor);
 	} catch (error) {
 		logger.error(`Error creating topic: ${error}`, {kafkaService});
@@ -137,7 +137,7 @@ const removeTopic = async (topic: Topic) => {
 
 	loader?.value?.show();
 	try {
-		logger.debug(`Deleting topic ${topic.name}...`, {kafkaService});
+		logger.info(`Deleting topic ${topic.name}...`, {kafkaService});
 		await kafkaService.deleteTopic(topic.name);
 	} catch (error) {
 		logger.error(`Error removing topic: ${error}`, {kafkaService});
@@ -152,7 +152,7 @@ const selectConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); //
 const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
 	try {		
-		logger.debug(`Setting connection ${newConnection.name}...`, {kafkaService});
+		logger.info(`Setting connection ${newConnection.name}...`, {kafkaService});
 		await connectionStore.setConnection(newConnection);
 		selectConnectionDialog.value?.close();
 		await fetchTopics();

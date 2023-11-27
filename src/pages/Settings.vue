@@ -3,10 +3,12 @@ import { ref } from 'vue';
 import CodeEditor from '../components/CodeEditor.vue';
 import storageService from '../services/storage';
 import { SettingKey } from '../types/settings';
+import logger from '../services/logger';
 
 const storageConnections = ref(await storageService.settings.get('CONNECTIONS'));
 
 const onConnectionsChange = async (value: unknown, key: SettingKey) => {
+	logger.info('Changing Connections setting...');
 	storageConnections.value = value;
 	await storageService.settings.save(value, key);
 };
@@ -14,6 +16,7 @@ const onConnectionsChange = async (value: unknown, key: SettingKey) => {
 const storageNumberOfMessages = ref(await storageService.settings.get('MESSAGES'));
 
 const onMessagesChange = async (event: Event, key: SettingKey) => {
+	logger.info('Changing Messages setting...');
 	const value = (event.target as HTMLInputElement).value;
 	await storageService.settings.save(value, key);
 };

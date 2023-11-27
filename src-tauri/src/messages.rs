@@ -25,6 +25,7 @@ pub async fn listen_messages(
     consumer: &StreamConsumer,
     topic: String,
     messages_number: i64,
+    id: String
 ) -> Result<(), String> {
     // Manually fecth metadata and assign partition so we don't fetch using our consumer group
     let metadata = consumer
@@ -50,7 +51,7 @@ pub async fn listen_messages(
 
     // Seek the latest watermark minus messages number to get only the last messages
     for partition in metadata.topics().get(0).unwrap().partitions() {
-        let (_, hight) = consumer
+        let (_, high) = consumer
             .fetch_watermarks(&topic, partition.id(), Duration::from_secs(30))
             .map_err(|err| {
                 format!(
@@ -61,7 +62,7 @@ pub async fn listen_messages(
                 )
             })?;
 
-        let seek_start = hight - messages_number;
+        let seek_start = high - messages_number;
         let offset_start = if seek_start > 0 {
             Offset::Offset(seek_start)
         } else {
@@ -70,8 +71,8 @@ pub async fn listen_messages(
         consumer.seek(&topic, partition.id(), offset_start, Duration::from_secs(30)).map_err(|err| {
             format!(
                 "Could not seek partition offset in topic:{}, partition: {}, offset: {}\n\nError: {}",
-                partition.id(),
                 topic,
+                partition.id(),
                 seek_start,
                 err.to_string()
             )
@@ -80,7 +81,7 @@ pub async fn listen_messages(
 
     let keep_listening = Arc::new(RwLock::new(true));
     let keep_listening_clone = keep_listening.clone();
-    window.once("offMessage", move |_| {
+    window.once(format!("offMessage-{}", id), move |_| {
         *keep_listening_clone.write().unwrap() = false;
     });
 
@@ -104,7 +105,7 @@ pub async fn listen_messages(
                     )
                 })?;
 
-                window.emit("onMessage", message_result).unwrap();
+                window.emit(&format!("onMessage-{}", id), message_result).unwrap();
             }
             None => {}
         }

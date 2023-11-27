@@ -1,19 +1,19 @@
 <!-- eslint-disable no-empty -->
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
-import { message } from '@tauri-apps/api/dialog';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import SendMessageStepper from '../components/SendMessageStepper.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
-import kafkaService from '../services/kafka';
 import storageService from '../services/storage';
 import { Message, MessageContent, StorageMessage } from '../types/message';
 import { DateTime } from 'luxon';
 import { stringifyMessage } from '../services/utils';
 import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import Button from '../components/Button.vue';
+import logger from '../services/logger';
+import { KafkaService, AsyncSubject } from '../services/kafka';
 
 type DisplayMessage = Message & {
 	valueVisible: boolean
@@ -29,49 +29,73 @@ const topicName = route.params.topicName as string;
 
 const loader = useLoader();
 
+const kafkaService = new KafkaService();
+
 const displayMessages = ref<DisplayMessage[]>([]);
 const status = ref<'starting' | 'started' | 'stopping' | 'stopped'>('stopped');
+let listenMessagesHandler: AsyncSubject<Message> | undefined;
 const startListenMessages = async () => {
 	status.value = 'starting';
 	displayMessages.value = [];
-	
-	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
-	messagesObservable.subscribe({
-		next: kafkaMessages => {
-			// To avoid going from stopping to started while receiving the last message
-			if (status.value === 'starting') {
-				status.value = 'started';
-			}
 
-			// Cast, sort and get only the number of messages we want
-			const messagesToDisplay = [
-				...displayMessages.value,
-				...kafkaMessages.map(kafkaMessage =>  ({
-					...kafkaMessage,
-					valueVisible: false,
-				}) as DisplayMessage)
-			];
-			messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
-			displayMessages.value = messagesToDisplay.splice(0, numberOfMessages);
+	logger.info('Listening for messages...', {kafkaService});
+	listenMessagesHandler = await kafkaService.listenMessages(topicName, numberOfMessages);
+
+	let windowingTimeout: unknown;
+	const messagesToDisplay: DisplayMessage[] = [];
+	listenMessagesHandler.subscribe({
+		next: kafkaMessage => {
+			logger.trace('Received message', {kafkaService});
+
+			messagesToDisplay.push({
+				...kafkaMessage,
+				valueVisible: false
+			});
+			
+			if (!windowingTimeout) {
+				windowingTimeout = setTimeout(() => {
+					logger.trace('Displaying messages', {kafkaService});
+
+					// To avoid going from stopping to started while receiving the last message
+					if (status.value === 'starting') {
+						status.value = 'started';
+					}
+
+					// Prepend the previous messages
+					messagesToDisplay.unshift(...displayMessages.value);
+					// Sort them with the new ones by timestamp
+					messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
+					// To cut the oldest ones out
+					displayMessages.value = messagesToDisplay.splice(0, numberOfMessages);
+
+					windowingTimeout = undefined;
+				}, 1000);
+			}
 		},
 		error: async error => {
 			status.value = 'stopped';
-			await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
+			logger.error(`Error fetching messages: ${error}`, {kafkaService});
+			clearTimeout(windowingTimeout as string);
 		},
 		complete: () => {
 			status.value = 'stopped';
+			logger.debug('Stopped listening for messages', {kafkaService});
+			clearTimeout(windowingTimeout as string);
 		}
 	});
 };
-await startListenMessages();
+startListenMessages();
 
-const stopListeningMessages = async () => {
+const stop = async () => {
 	status.value = 'stopping';
-	kafkaService.offMessage();
+	logger.debug('Stopping to listen for messages...', {kafkaService});
+	await listenMessagesHandler?.unsubscribe();
 };
 
-onBeforeUnmount(() => {
-	stopListeningMessages();
+onBeforeUnmount(async () => {
+	loader?.value?.show();
+	await stop();
+	loader?.value?.hide();
 });
 
 const copyToClipboard = async (event: MouseEvent, text: string) => {
@@ -112,11 +136,11 @@ const sendMessageStepper = ref<InstanceType<typeof SendMessageStepper> | null>(n
 const sendMessage = async (messageContent: MessageContent) => {
 	loader?.value?.show();
 	try {
+		logger.info(`Seding message to ${topicName}...`, {kafkaService});
 		await kafkaService.sendMessage(topicName, messageContent);
-
 		sendMessageStepper.value?.closeDialog();
 	} catch (error) {
-		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error sending the message: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };
@@ -170,7 +194,7 @@ const getDisplayDate = (dateMilis: number) => {
 				</button>
 				<i v-if="status === 'starting' || status === 'stopping'" class="bi-arrow-clockwise text-2xl animate-spin"
 					:title="status === 'starting' ? 'Starting' : 'Stopping'"></i>
-				<button v-if="status === 'started'" type="button" @click="stopListeningMessages()"
+				<button v-if="status === 'started'" type="button" @click="stop()"
 					class="text-2xl bi-stop-circle animate-pulse text-red-500" title="Stop fetching" >
 				</button>
 			</div>

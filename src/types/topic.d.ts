@@ -1,4 +1,4 @@
 export type Topic = {
-  name: string,
+  name: string
   partitions: number
 }

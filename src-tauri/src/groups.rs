@@ -167,7 +167,7 @@ pub async fn reset_offsets(
     let mut tpl = TopicPartitionList::new();
 
     let metadata = consumer
-        .fetch_metadata(Some(&topic_name), Duration::from_secs(5))
+        .fetch_metadata(Some(&topic_name), Duration::from_secs(30))
         .map_err(|err| format!("Could not get metadata from cluster: {}", err.to_string()))?;
 
     for partition in metadata.topics().get(0).unwrap().partitions() {
@@ -290,7 +290,7 @@ fn read_str_from_assignment(rdr: &mut Cursor<&[u8]>) -> Result<String, String> {
 
 pub fn get_group_offsets(consumer: &StreamConsumer) -> Result<TopicPartitionList, String> {
     let metadata = consumer
-        .fetch_metadata(None, Duration::from_secs(5))
+        .fetch_metadata(None, Duration::from_secs(30))
         .map_err(|err| format!("Could not get metadata from cluster: {}", err.to_string()))?;
 
     let mut tpl = TopicPartitionList::new();
@@ -301,7 +301,7 @@ pub fn get_group_offsets(consumer: &StreamConsumer) -> Result<TopicPartitionList
     }
 
     let offsets = consumer
-        .committed_offsets(tpl, Duration::from_secs(5))
+        .committed_offsets(tpl, Duration::from_secs(30))
         .map_err(|err| {
             format!(
                 "Could not get committed offsets from cluster: {}",

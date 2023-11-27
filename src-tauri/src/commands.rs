@@ -4,13 +4,16 @@
 use jfs::Store;
 use kafka_panel::{
     create_connections, create_topic, delete_from_store, delete_topic, get_all_from_store,
-    get_from_store, get_groups_from_topic, get_topics, get_topics_state, listen_messages,
-    reset_offsets, save_in_store, send_message, GroupState, KafkaGroupResponse, KafkaTopicResponse,
-    SaslConfig,
+    get_from_store, get_groups_from_topic, get_topics, get_topics_state, get_topics_watermark,
+    listen_messages, logs, reset_offsets, save_in_store, send_message, GroupState,
+    KafkaGroupResponse, SaslConfig, TopicResponse, Extras,
 };
-use rdkafka::consumer::Consumer;
+use rdkafka::consumer::{Consumer, StreamConsumer};
 use serde_json::Value;
-use std::{collections::{BTreeMap, HashMap}, time::Duration};
+use std::{
+    collections::{BTreeMap, HashMap},
+    time::Duration,
+};
 use tauri::{State, Window};
 
 use crate::state::{KafkaState, StorageState};
@@ -76,7 +79,7 @@ pub async fn reset_offsets_command<'a>(
 #[tauri::command]
 pub async fn get_topics_command<'a>(
     state: State<'a, KafkaState>,
-) -> Result<Vec<KafkaTopicResponse>, String> {
+) -> Result<Vec<TopicResponse>, String> {
     let binding = state.consumer.read().await;
     let consumer = match *binding {
         None => return Err("Connection not set".into()),
@@ -99,10 +102,33 @@ pub async fn get_topics_state_command<'a>(
     let binding = state.common_config.read().await;
     let common_config = match *binding {
         None => return Err("Connection not set".into()),
-        Some(ref x) => x.clone(),
+        Some(ref x) => x,
     };
 
     get_topics_state(consumer, common_config).await
+}
+
+#[tauri::command]
+pub async fn get_topics_watermark_command<'a>(
+    window: Window,
+    state: State<'a, KafkaState>,
+    id: String,
+) -> Result<(), String> {
+    let binding = state.common_config.read().await.clone();
+    let common_config = match binding {
+        None => return Err("Connection not set".into()),
+        Some(ref x) => x,
+    };
+
+    // We create a new consumer since SharedConsumer cannot be cloned
+    let consumer: StreamConsumer = common_config.create().map_err(|err| {
+        format!(
+            "Could not create consumer to fetch watermarks: {}",
+            err.to_string()
+        )
+    })?;
+
+    get_topics_watermark(window, consumer, id).await
 }
 
 #[tauri::command]
@@ -141,6 +167,7 @@ pub async fn listen_messages_command<'a>(
     state: State<'a, KafkaState>,
     topic: String,
     messages_number: i64,
+    id: String,
 ) -> Result<(), String> {
     let binding = state.consumer.read().await;
     let consumer = match *binding {
@@ -148,7 +175,7 @@ pub async fn listen_messages_command<'a>(
         Some(ref x) => x,
     };
 
-    listen_messages(window, consumer, topic, messages_number).await
+    listen_messages(window, consumer, topic, messages_number, id).await
 }
 
 #[tauri::command]
@@ -219,4 +246,19 @@ pub fn delete_from_store_command<'a>(
 ) -> Result<(), String> {
     let store = get_store(&state, store_name)?;
     delete_from_store(store, key)
+}
+
+#[tauri::command]
+pub fn append_log_command(message: &str, level: &str, extras: Option<Extras>) {
+    logs::append_log(message, level, extras)
+}
+
+#[tauri::command]
+pub fn is_dev() -> bool {
+    #[cfg(dev)]
+    {
+        return true;
+    }
+
+    return false;
 }

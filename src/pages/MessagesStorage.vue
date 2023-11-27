@@ -1,7 +1,6 @@
 <!-- eslint-disable no-empty -->
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
-import { message } from '@tauri-apps/api/dialog';
 import { omit } from 'ramda';
 import { computed, ref } from 'vue';
 import Chip, { Tag } from '../components/Chip.vue';
@@ -16,6 +15,7 @@ import storageService from '../services/storage';
 import { Connection } from '../types/connection';
 import { StorageMessage, StorageMessageWithId } from '../types/message';
 import { stringifyMessage } from '../services/utils';
+import logger from '../services/logger';
 
 type DisplayMessage = Omit<StorageMessageWithId, 'tags'> & {
 	tags: Tag[]
@@ -46,11 +46,12 @@ const messages = ref<DisplayMessage[]>([]);
 const fetchMessages = async () => {
 	loader?.value?.show();
 	try {
+		logger.info('Fetching storage messages...');
 		const storageMessages = await storageService.messages.getAll();
 
 		messages.value = Object.entries(storageMessages).map(([id, message]) => storeMessageToDisplayMessage({id, ...message}));
 	} catch (error) {
-		await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error fetching messages: ${error}`);
 	}
 	loader?.value?.hide();
 };
@@ -58,14 +59,16 @@ await fetchMessages();
 
 const deleteMessage = async (storageMessage: DisplayMessage) => {
 	try {
+		logger.info('Deleting storage message...');
 		await storageService.messages.delete(storageMessage.id);
 		await fetchMessages();
 	} catch (error) {
-		await message(`Could not delete message from storage: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Could not delete message from storage: ${error}`);
 	}
 };
 
 const saveMessage = async (message: StorageMessage) => {
+	logger.info('Saving storage message...');
 	const messageWithoutId = omit(['id'], message);
 	await storageService.messages.save(messageWithoutId, message.id);
 	await fetchMessages();

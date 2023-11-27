@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { confirm, message } from '@tauri-apps/api/dialog';
+import { confirm } from '@tauri-apps/api/dialog';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
-import kafkaService from '../services/kafka';
 import { ConsumerGroup } from '../types/consumerGroup';
+import logger from '../services/logger';
+import { KafkaService } from '../services/kafka';
 
 await checkSettings('groups');
 
@@ -17,13 +18,16 @@ const loader = useLoader();
 
 const groups = ref<ConsumerGroup[]>([]);
 
+const kafkaService = new KafkaService();
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fetchGroupsFromTopic = async () => {
 	loader?.value?.show();
 	try {
+		logger.info(`Fetching groups from topic ${topicName}...`);
 		groups.value = await kafkaService.listGroupsFromTopic(topicName);
 	} catch (error) {
-		await message(`Error getting groups: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error getting groups: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };
@@ -61,9 +65,10 @@ You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`;
 
 	loader?.value?.show();
 	try {
+		logger.info(`Resetting offsets for topic ${topicName} and group ${group.name}...`);
 		await kafkaService.resetOffsets(group.name, topicName);
 	} catch (error) {
-		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error sending the message: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 

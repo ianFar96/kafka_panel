@@ -1,11 +1,12 @@
 import { Duration } from 'luxon';
 import { BehaviorSubject } from 'rxjs';
 import { ActiveAutosend, AutosendTime } from '../types/autosend';
-import kafkaService from './kafka';
+import { KafkaService } from './kafka';
 import { Timer } from './Timer';
 
-class AutosendsService {
+export class AutosendsService {
 	private intervals: Record<string, NodeJS.Timer> = {};
+	public readonly kafkaService = new KafkaService();
 
 	startAutosend(autosend: ActiveAutosend) {
 		const messagesCounter = new BehaviorSubject<number>(0);
@@ -22,7 +23,7 @@ class AutosendsService {
 		const interval = this.castAutosendTimeToDuration(autosend.options.interval);
 		this.intervals[autosend.id] = setInterval((autosend: ActiveAutosend) => {
 			try {
-				kafkaService.sendMessage(autosend.topic, {
+				this.kafkaService.sendMessage(autosend.topic, {
 					headers: autosend.headers,
 					key: autosend.key,
 					value: autosend.value
@@ -68,7 +69,3 @@ class AutosendsService {
 		return duration;
 	}
 }
-
-const autosendsService = new AutosendsService();
-
-export default autosendsService;

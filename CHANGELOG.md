@@ -1,5 +1,15 @@
 # Changelog
 
+### Added
+
+- Added logging system and logs over all major operations throughout the app
+- Added high watermarks for topics to guess the number of messages
+
+### Fixed
+
+- Fixed problem with duplicated messages on Messages page
+- Fixed problem with dangling messages listeners on Messages page
+
 ## 1.2.1
 
 ### Fixed

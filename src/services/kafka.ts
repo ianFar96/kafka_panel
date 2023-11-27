@@ -1,18 +1,26 @@
 import { faker } from '@faker-js/faker';
-import { clone } from 'ramda';
 import { invoke } from '@tauri-apps/api';
 import { emit, listen, UnlistenFn } from '@tauri-apps/api/event';
-import { Subject } from 'rxjs';
+import { clone } from 'ramda';
+import { Observable, Subject } from 'rxjs';
 import { SaslConfig } from '../types/connection';
 import { ConsumerGroup, ConsumerGroupState } from '../types/consumerGroup';
 import { Message, MessageContent } from '../types/message';
 import { Topic } from '../types/topic';
+import { v4 as uuidv4 } from 'uuid';
 
-class KafkaService {
-	private unlisten?: UnlistenFn;
-	private batchingInterval?: NodeJS.Timer;
-	private batchMessages: Message[] = [];
-	
+/**
+ * Rxjs Subject with an `unsubscribe` method that respects the asynchronousness
+ * Unlike the unsubscribe of a normal `Subject`
+ */
+export type AsyncSubject<T> = {
+	subscribe: Subject<T>['subscribe'] 
+	unsubscribe: () => Promise<void>
+}
+
+export class KafkaService {
+	public readonly id = uuidv4();
+
 	async setConnection(brokers: string[], groupId: string, sasl?: SaslConfig) {
 		await invoke('set_connection_command', {brokers, groupId, sasl});
 	}
@@ -20,6 +28,39 @@ class KafkaService {
 	async getTopicsState() {
 		const topicsGroups = await invoke<Record<string, ConsumerGroupState>>('get_topics_state_command');
 		return topicsGroups;
+	}
+
+	async getTopicsWatermark() {
+		let subscribers = 0;
+		return new Observable<{topic: string, watermark: number}>(subscriber => {
+			if (subscribers <= 0) {
+				let unlisten: UnlistenFn | undefined;
+				listen<{topic: string, watermark: number}>(`onWatermark-${this.id}`, (event) => {
+					subscriber.next(event.payload);
+				}).then(unlistenFn => unlisten = unlistenFn);
+			
+				invoke('get_topics_watermark_command', {id: this.id})
+					.then(() => {
+						subscriber.complete();
+					})
+					.catch(async error => {
+						subscriber.error(error);
+					})
+					.finally(() => {
+						unlisten?.();
+					});
+			}
+
+			subscribers++;
+
+			return () => {
+				subscribers--;
+
+				if (subscribers <= 0) {
+					emit(`offWatermark-${this.id}`);
+				}
+			};
+		});
 	}
 
 	async listGroupsFromTopic(topicName: string) {
@@ -50,47 +91,33 @@ class KafkaService {
 		});	
 	}
 
-	async listenMessages(topic: string, messagesNumber: number) {
-		const messagesSubject = new Subject<Message[]>();
+	async listenMessages(topic: string, messagesNumber: number): Promise<AsyncSubject<Message>> {
+		const messagesSubject = new Subject<Message>();
 
-		if (this.unlisten) {
-			messagesSubject.error('Unexpected error: previous listening for messages is still active');
-		}
+		let unlisten: UnlistenFn | undefined = await listen<Message>(`onMessage-${this.id}`, (event) => {
+			messagesSubject.next(event.payload);
+		});
 
-		invoke('listen_messages_command', {topic, messagesNumber})
+		const listenMessagesCommand = invoke('listen_messages_command', {topic, messagesNumber, id: this.id})
 			.then(() => {
 				messagesSubject.complete();
-
-				clearInterval(this.batchingInterval);
-
-				this.unlisten?.();
-				delete this.unlisten;
 			})
 			.catch(async error => {
 				messagesSubject.error(error);
+			})
+			.finally(() => {
+				unlisten?.();
+				unlisten = undefined;
 			});
+		const unsubscribe = async () => {
+			await emit(`offMessage-${this.id}`);
+			await listenMessagesCommand;
+		};
 
-		const unlisten = await listen<Message>('onMessage', (event) => {
-			const kafkaMessage = event.payload;
-			this.batchMessages.push(kafkaMessage);
-		});
-
-		// Debounce batching system so in case of flow spike
-		// VueJS has the time to display elements
-		this.batchingInterval = setInterval(() => {
-			if (this.batchMessages.length > 0) {
-				messagesSubject.next(this.batchMessages);
-				this.batchMessages = [];
-			}
-		}, 1000);
-
-		this.unlisten = unlisten;
-
-		return messagesSubject.asObservable();
-	}
-
-	async offMessage() {
-		await emit('offMessage');
+		return {
+			subscribe: messagesSubject.subscribe.bind(messagesSubject),
+			unsubscribe
+		};
 	}
 
 	async sendMessage(topic: string, message: MessageContent) {
@@ -135,7 +162,3 @@ class KafkaService {
 		return Function('"use strict";return (' + script + ')').bind(scope)();
 	}
 }
-
-const kafkaService = new KafkaService();
-
-export default kafkaService;

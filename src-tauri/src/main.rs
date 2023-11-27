@@ -3,6 +3,7 @@
     windows_subsystem = "windows"
 )]
 
+use kafka_panel::logs;
 use tauri::Manager;
 
 mod commands;
@@ -13,13 +14,18 @@ fn main() {
         .setup(|app| {
             let storage = state::init_storage()?;
             app.manage(storage);
-            
+
             let kafka = state::init_kafka();
             app.manage(kafka);
+
+            logs::init_log()?;
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // Generic commands
+            commands::is_dev,
+            commands::append_log_command,
             // Generic kafka commands
             commands::set_connection_command,
             // Consumer Group commands
@@ -28,6 +34,7 @@ fn main() {
             // Topic commands
             commands::get_topics_command,
             commands::get_topics_state_command,
+            commands::get_topics_watermark_command,
             commands::create_topic_command,
             commands::delete_topic_command,
             // Message commands

@@ -217,7 +217,7 @@ pub async fn send_message(
         record = record.headers(headers_to_send);
     }
 
-    // FIXME: it sends messages to random partitions
+    // FIXME: messages with same key sent by another system (kafkaJs, akhq) end up in different partitions
     producer
         .send(record, Timeout::Never)
         .await

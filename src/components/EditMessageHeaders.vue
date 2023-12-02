@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import { ParsedHeaders } from '../types/message';
 import CodeEditor from './CodeEditor.vue';
 import Button from './Button.vue';
+import { faker } from '@faker-js/faker';
 
 type EditHeaders = {
 	key: string,
@@ -98,7 +99,7 @@ const codeWrapperRefs = ref<HTMLElement[] | null>([]);
 				</div>
 				<div class="h-[250px] min-w-[500px] w-full rounded-xl overflow-hidden" ref="codeWrapperRefs">
 					<CodeEditor v-if="codeWrapperRefs" :wrapper-ref="codeWrapperRefs[index]"
-						:code="header.value" @code-change="onHeaderValueChange($event, index)">
+						:suggestions="{faker}" :code="header.value" @code-change="onHeaderValueChange($event, index)">
 					</CodeEditor>
 				</div>
 			</div>

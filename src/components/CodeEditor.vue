@@ -1,13 +1,14 @@
 <script lang="ts" setup>
 import * as monaco from 'monaco-editor';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { tryJsonParse } from '../services/utils';
+import { getMonacoEditorCompletionItems, tryJsonParse } from '../services/utils';
 
 const props = defineProps<{
 	code?: unknown,
 
 	// Used to calculate the height and width to fit the wrapper's dimensions
-	wrapperRef: HTMLElement
+	wrapperRef: HTMLElement,
+	suggestions?: Record<string, unknown>
 }>();
 
 const emit = defineEmits<{
@@ -23,7 +24,7 @@ if (typeof props.code !== 'string') {
 	code = props.code as string;
 }
 let sizes: monaco.editor.IDimension;
-const setMonacoEditorSizes = () => {
+const initMonacoEditor = () => {
 	if (editor) {
 		code = editor.getValue();
 		editor.dispose();
@@ -62,6 +63,7 @@ const setMonacoEditorSizes = () => {
 		});
 
 		// Debounce system
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		let debounce: any;
 		editor.onDidChangeModelContent(() => {
 			clearTimeout(debounce);
@@ -78,13 +80,52 @@ onBeforeUnmount(() => {
 });
 
 onMounted(() => {
-	setMonacoEditorSizes();
+	initMonacoEditor();
 });
 
-window.addEventListener('resize', setMonacoEditorSizes);
+window.addEventListener('resize', initMonacoEditor);
 onBeforeUnmount(() => {
-	window.removeEventListener('resize', setMonacoEditorSizes);
+	window.removeEventListener('resize', initMonacoEditor);
 });
+
+if (Object.keys(props.suggestions ?? {}).length > 0) {
+	const disposable = monaco.languages.registerCompletionItemProvider('json', {
+		provideCompletionItems: function (model, position) {
+			if (model.id !== editor?.getModel()?.id) {
+				return;
+			}
+
+			const lineTextUntilPosition = model.getValueInRange({
+				startLineNumber: position.lineNumber,
+				endLineNumber: position.lineNumber,
+				startColumn: 1,
+				endColumn: position.column
+			});
+			const numberOfOpenBrackets = lineTextUntilPosition.match(/{{/gm)?.length ?? 0;
+			const numberOfClosedBrackets = lineTextUntilPosition.match(/}}/gm)?.length ?? 0;
+			if (numberOfOpenBrackets <= numberOfClosedBrackets) {
+				return { suggestions: [] };
+			}
+
+			const word = model.getWordUntilPosition(position);
+			const range: monaco.IRange = {
+				startLineNumber: position.lineNumber,
+				endLineNumber: position.lineNumber,
+				startColumn: word.startColumn,
+				endColumn: word.endColumn
+			};
+
+			return {
+				suggestions: getMonacoEditorCompletionItems(props.suggestions ?? {}, range)
+			};
+		},
+	});
+	
+	// TS bug in type definiton
+	(editor as unknown as monaco.editor.IStandaloneCodeEditor)?.onDidDispose(() => {
+		disposable.dispose();
+	});
+}
 
 const monacoEditorWrapperRef = ref<InstanceType<typeof HTMLDivElement> | null>(null); // Template ref
 </script>

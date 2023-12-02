@@ -121,6 +121,7 @@ export class KafkaService {
 	}
 
 	async sendMessage(topic: string, message: MessageContent) {
+		// TODO: replace with https://json-e.js.org/simple.html
 		const interpolatedHeaders = this.interpolateFakeValues(clone(message.headers), {faker});
 		const interpolatedKey = this.interpolateFakeValues(clone(message.key), {faker});
 		const interpolatedValue = this.interpolateFakeValues(clone(message.value), {faker, key: interpolatedKey});

@@ -25,7 +25,7 @@ pub async fn listen_messages(
     consumer: &StreamConsumer,
     topic: String,
     messages_number: i64,
-    id: String
+    id: String,
 ) -> Result<(), String> {
     // Manually fecth metadata and assign partition so we don't fetch using our consumer group
     let metadata = consumer
@@ -105,7 +105,9 @@ pub async fn listen_messages(
                     )
                 })?;
 
-                window.emit(&format!("onMessage-{}", id), message_result).unwrap();
+                window
+                    .emit(&format!("onMessage-{}", id), message_result)
+                    .unwrap();
             }
             None => {}
         }
@@ -215,6 +217,7 @@ pub async fn send_message(
         record = record.headers(headers_to_send);
     }
 
+    // FIXME: it sends messages to random partitions
     producer
         .send(record, Timeout::Never)
         .await

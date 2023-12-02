@@ -1,5 +1,6 @@
 /* eslint-disable no-empty */
 
+import * as monaco from 'monaco-editor';
 import { Autosend, AutosendOptions } from '../types/autosend';
 import { MessageContent, ParsedHeaders, StorageMessage } from '../types/message';
 
@@ -71,3 +72,53 @@ export const getDefaultAutosendConfiguration = (): AutosendOptions => ({
 		value: 1
 	}
 });
+
+export const getMonacoEditorCompletionItems = (
+	suggestions: object, 
+	range: monaco.IRange
+): monaco.languages.CompletionItem[] => {
+	// This is used to ignore circular dependencies when looping throught the suggestions object
+	const ancestors: unknown[] = [];
+
+	const accumulator: monaco.languages.CompletionItem[] = [];
+	const recursion = (suggestions: object, previousKey?: string) =>  {
+		for (const [key, value] of Object.entries(suggestions ?? {})) {			
+			// Avoid circular dependencies
+			if (typeof value === 'object' && value !== null) {
+				if (ancestors.includes(value)) {
+					continue;
+				}
+				ancestors.push(value);
+			}
+
+			const newKey = previousKey ? `${previousKey}.${key}` : key;
+			if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
+				recursion(value, newKey);
+			} else {
+				let suggestionKind: monaco.languages.CompletionItemKind;
+				let insertText = '';
+				switch (typeof value) {
+				case 'function':
+					suggestionKind = monaco.languages.CompletionItemKind.Function;
+					insertText = `${newKey}()`;
+					break;
+				
+				default:
+					suggestionKind = monaco.languages.CompletionItemKind.Field;
+					insertText = newKey;
+					break;
+				}
+				accumulator.push({
+					label: newKey,
+					kind: suggestionKind,
+					documentation: value.toString(),
+					insertText,
+					range,
+				});
+			}
+		}
+	};
+	recursion(suggestions);
+
+	return accumulator;
+};

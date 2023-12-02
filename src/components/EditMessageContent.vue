@@ -4,9 +4,10 @@ import { ref } from 'vue';
 import { MessageContent } from '../types/message';
 import CodeEditor from './CodeEditor.vue';
 import { clone } from 'ramda';
+import { faker } from '@faker-js/faker';
 
 const props = defineProps<{
-	message?: Omit<MessageContent, 'headers'>,
+	message?: Omit<MessageContent, 'headers'>
 }>();
 
 // eslint-disable-next-line vue/no-setup-props-destructure
@@ -44,7 +45,7 @@ const keySlotRef = ref<HTMLElement | null>(null);
 			<label class="mb-4">Key</label>
 			<div class="h-full rounded-xl overflow-hidden" ref="keySlotRef">
 				<CodeEditor v-if="keySlotRef" :wrapper-ref="keySlotRef"
-					:code="props.message?.key" @code-change="onKeyChange">
+					:suggestions="{faker}" :code="props.message?.key" @code-change="onKeyChange">
 				</CodeEditor>
 			</div>
 		</div>
@@ -53,7 +54,7 @@ const keySlotRef = ref<HTMLElement | null>(null);
 			<label class="mb-4">Value</label>
 			<div class="h-full rounded-xl overflow-hidden">
 				<CodeEditor v-if="keySlotRef" :wrapper-ref="keySlotRef"
-					:code="props.message?.value" @code-change="onValueChange">
+					:suggestions="{faker, key: message.key}" :code="props.message?.value" @code-change="onValueChange">
 				</CodeEditor>
 			</div>
 		</div>

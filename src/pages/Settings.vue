@@ -1,97 +1,42 @@
 <script setup lang="ts">
-import { appWindow } from '@tauri-apps/api/window';
-import MonacoEditor from 'monaco-editor-vue3';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { ref } from 'vue';
+import CodeEditor from '../components/CodeEditor.vue';
 import storageService from '../services/storage';
 import { SettingKey } from '../types/settings';
+import logger from '../services/logger';
 
 const storageConnections = ref(await storageService.settings.get('CONNECTIONS'));
-const storageConnectionsStringified = computed(() => {	
-	if (typeof storageConnections.value === 'object' ) {
-		return JSON.stringify(storageConnections.value, null ,2);
-	}
-	return storageConnections.value;
-});
 
-const onConnectionsChange = async (value: string, key: SettingKey) => {
-	let json: unknown = value;
-	// eslint-disable-next-line no-empty
-	try { json = JSON.parse(value); } catch (error) {}
-
-	storageConnections.value = json;
-	await storageService.settings.save(json, key);
+const onConnectionsChange = async (value: unknown, key: SettingKey) => {
+	logger.info('Changing Connections setting...');
+	storageConnections.value = value;
+	await storageService.settings.save(value, key);
 };
 
 const storageNumberOfMessages = ref(await storageService.settings.get('MESSAGES'));
 
 const onMessagesChange = async (event: Event, key: SettingKey) => {
+	logger.info('Changing Messages setting...');
 	const value = (event.target as HTMLInputElement).value;
 	await storageService.settings.save(value, key);
 };
 
-const editorOptions = {
-	colorDecorators: true,
-	lineHeight: 24,
-	tabSize: 2,
-	fontSize: 16,
-	lineNumbers: 'off',
-	lineDecorationsWidth: 5,
-	minimap: {
-		enabled: false
-	},
-	overviewRulerLanes: 0,
-	scrollbar: {
-		vertical: 'hidden',
-		horizontal: 'hidden',
-	},
-	folding: false
-};
-
-type Sizes = {
-	width: number
-  height: number
-}
-let monacoEditorSizes = ref<Sizes | undefined>();
-
-const page = ref<HTMLDivElement | null>(null); // Template ref
-const setMonacoEditorSizes = () => {
-	monacoEditorSizes.value = undefined;
-	nextTick(() => {
-		monacoEditorSizes.value = {
-			height: 300,
-			width: (page.value?.clientWidth || 300),
-		};
-	});
-};
-onMounted(() =>  {
-	setMonacoEditorSizes();
-});
-
-const unlisten = await appWindow.onResized(() => {
-	setMonacoEditorSizes();
-});
-
-onBeforeUnmount(() => {
-	unlisten();
-});
+const connectionsRef = ref<HTMLDivElement | null>(null); // Template ref
 </script>
 
 <template>
-	<div ref="page">
+	<div>
 
 		<!-- CONNECTIONS -->
 		<div class="mb-4">
 			<label class="mb-2 block text-lg">Connections</label>
-			<div class="rounded-xl overflow-hidden">
-				<template v-if="monacoEditorSizes">
-					<MonacoEditor class="border-b border-gray-400 mb-1" theme="vs-dark" :options="editorOptions" language="json"
-						:width="monacoEditorSizes.width" :height="monacoEditorSizes.height" 
-						@change="onConnectionsChange($event, 'CONNECTIONS')" :value="storageConnectionsStringified">
-					</MonacoEditor>
-				</template>
+			<div class="rounded-xl overflow-hidden h-[calc(100vh/2)]" ref="connectionsRef">
+				<CodeEditor v-if="connectionsRef" :wrapper-ref="connectionsRef"
+					@code-change="onConnectionsChange($event, 'CONNECTIONS')" :code="storageConnections">
+				</CodeEditor>
 			</div>
-			<small class="text-xs text-gray-500">
-				Check out the example <a href="https://github.com/ianFar96/kafka_panel#settings">here</a>
+			<small class="text-xs text-gray-500 border-t border-gray-400 mt-1 pt-1 block">
+				Check out the example <a class="text-orange-400" href="https://github.com/ianFar96/kafka_panel#settings">here</a>
 			</small>
 		</div>
 

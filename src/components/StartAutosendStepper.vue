@@ -1,59 +1,74 @@
 <!-- eslint-disable no-case-declarations -->
 
 <script setup lang="ts">
-import { message } from '@tauri-apps/api/dialog';
+import { clone } from 'ramda';
 import { ref } from 'vue';
-import { useConnection } from '../composables/connection';
+import { useConnectionStore } from '../composables/connection';
 import { useLoader } from '../composables/loader';
-import kafkaService from '../services/kafka';
+import { getDefaultAutosendConfiguration, getDefaultMessage, isSendValid, isValidHeaders } from '../services/utils';
+import { Autosend, AutosendOptions } from '../types/autosend';
 import { Connection } from '../types/connection';
+import { MessageContent, ParsedHeaders } from '../types/message';
 import { Topic } from '../types/topic';
 import Dialog from './Dialog.vue';
-import EditMessage from './EditMessage.vue';
+import EditAutosendConfiguration from './EditAutosendConfiguration.vue';
+import EditMessageContent from './EditMessageContent.vue';
+import EditMessageHeaders from './EditMessageHeaders.vue';
 import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
-import { Autosend, AutosendOptions } from '../types/autosend';
-import EditAutosendConfiguration from './EditAutosendConfiguration.vue';
-import { SendMessage } from '../types/message';
+import logger from '../services/logger';
+import { KafkaService } from '../services/kafka';
 
-const props = defineProps<{
-	submit: (autosend: Autosend) => Promise<void>,
+const emit = defineEmits<{
+	(emit: 'submit', autosend: Autosend): Promise<void> | void,
 }>();
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
-const configuration = ref<AutosendOptions>({
-	duration:{
-		time_unit: 'Minutes',
-		value: 10
-	},
-	interval:{
-		time_unit: 'Seconds',
-		value: 1
-	}
-});
+const configuration = ref<AutosendOptions>(getDefaultAutosendConfiguration());
 const selectedTopic = ref<Topic>();
+const selectedMessage = ref<MessageContent>();
 
-const steps: Step[] = [
-	{name: 'configuration', label: 'Configuration'},
-	{name: 'connection', label: 'Select connection'},
-	{name: 'topic', label: 'Select topic'},
-	{name: 'message', label: 'Start autosend'},
-];
-const activeStep = ref<Step>(steps[0]);
+const kafkaService = new KafkaService();
 
-const initialMessage = ref<SendMessage>();
+const steps: Step[] = [{
+	name: 'configuration',
+	label: 'Configuration',
+	isValid: () => {
+		const hasDuration = configuration.value?.duration.time_unit && configuration.value?.duration.value;
+		const hasInterval = configuration.value?.interval.time_unit && configuration.value?.interval.value;
+		return !!hasDuration && !!hasInterval;
+	}
+},
+{
+	name: 'connection',
+	label: 'Select connection',
+	isValid: () => !!connectionStore.connection
+},
+{
+	name: 'topic',
+	label: 'Select topic',
+	onBeforeLoad: async () => {
+		topics.value = await kafkaService.listTopics();
+	},
+	isValid: () => !!selectedTopic.value
+},
+{
+	name: 'message',
+	label: 'Edit Message',
+	isValid: () => isSendValid(selectedMessage.value?.value) && isSendValid(selectedMessage.value?.key)
+},
+{
+	name: 'headers',
+	label: 'Edit Headers',
+	isValid: () => isValidHeaders(selectedMessage.value?.headers ?? {})
+}];
 
 defineExpose({
-	openDialog: (settingsConnections: Connection[], message?: SendMessage) => {
+	openDialog: (settingsConnections: Connection[], messageContent?: MessageContent) => {
 		connections.value = settingsConnections;
-		activeStep.value = steps[0];
-
-		if (message) {
-			initialMessage.value = message;
-		}
-
+		selectedMessage.value = messageContent ? clone(messageContent) : getDefaultMessage();
 		stepperDialog.value?.open();
 	},
 	closeDialog: () => {
@@ -63,158 +78,80 @@ defineExpose({
 
 const loader = useLoader();
 
-const { connection, setConnection } = useConnection();
+const connectionStore = useConnectionStore();
 
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const onStepClick = (step: Step) => {
-	switch (step.name) {
-	case 'connection':
-		const hasDuration = configuration.value?.duration.time_unit && configuration.value?.duration.value;
-		const hasInterval = configuration.value?.interval.time_unit && configuration.value?.interval.value;
-		if ( hasDuration && hasInterval ) {
-			activeStep.value = step;
-		}
-		break;
-	case 'topic':
-		if (connection.value) {
-			activeStep.value = step;
-		}
-		break;
-	case 'message':
-		if (connection.value && selectedTopic.value) {
-			activeStep.value = step;
-		}
-		break;
-	
-	default:
-		activeStep.value = step;
-		break;
-	}
-};
+const stepper = ref<InstanceType<typeof Stepper> | null>(null); // Template ref
 
+const onConfigurationChange = (newConfiguration: AutosendOptions) => {
+	configuration.value = newConfiguration;
+};
+	
 const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
 	try {
-		await setConnection(newConnection);
-
-		topics.value = await kafkaService.listTopics();
-
-		// Next step
-		activeStep.value = steps[2];
+		await connectionStore.setConnection(newConnection);
+		stepper.value?.next();
 	} catch (error) {
-		await message(`Error setting the connection: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error setting the connection: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };
 
 const selectTopic = async (topic: Topic) => {
 	selectedTopic.value = topic;
-
-	// Next step
-	activeStep.value = steps[3];
+	stepper.value?.next();
 };
 
-const startAutosend = async (key: string, value: string) => {
+const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
+	selectedMessage.value!.key = message.key;
+	selectedMessage.value!.value = message.value;
+};
+
+const onHeadersChange = (headers: ParsedHeaders) => {
+	selectedMessage.value!.headers = headers;
+};
+
+const startAutosend = async () => {
 	loader?.value?.show();
 	try {
 		const autosend: Autosend = {
-			key: JSON.parse(key),
-			value: JSON.parse(value),
+			headers: selectedMessage.value!.headers,
+			key: selectedMessage.value!.key,
+			value: selectedMessage.value!.value,
 			options: configuration.value!,
 			topic: selectedTopic.value!.name
 		};
 
-		await props.submit(autosend);
+		await emit('submit', autosend);
 
 		stepperDialog.value?.close();
 	} catch (error) {
-		await message(`Error starting the autosend: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error starting the autosend: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
-};
-
-const exampleMessage = {
-	key: {
-		name: '{{faker.person.firstName(\'female\')}}'
-	},
-	value: {
-		lastName: '{{faker.person.lastName()}}',
-		phone: '{{faker.phone.imei()}}',
-		address: '{{faker.location.streetAddress()}}, {{faker.location.county()}}, {{faker.location.country()}}'
-	},
-};
-
-const exampleInterpolated = {
-	key: {
-		name: 'Anna'
-	},
-	value: {
-		lastName: 'Grady',
-		phone: '13-850489-913761-5',
-		address: '34830 Erdman Hollow, Monroe County, U.S.A'
-	},
-};
-
-const exampleKeyReuse = {
-	key: {
-		name: '{{faker.person.firstName(\'female\')}}',
-		streetName: '{{faker.location.streetAddress()}}'
-	},
-	value: {
-		lastName: '{{faker.person.lastName()}}',
-		phone: '{{faker.phone.imei()}}',
-		fullAddress: '{{key.streetName}}, {{faker.location.county()}}, {{faker.location.country()}}'
-	},
 };
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Start autosend" :modal-class="activeStep.name === 'message' ? 'w-full h-full' : ''">
-		<Stepper class="mb-8" :steps="steps" :active-step="activeStep" :onStepClick="onStepClick">
+	<Dialog ref="stepperDialog" title="Start autosend">
+		<Stepper ref="stepper" class="mb-8" :steps="steps" submit-button-text="Start" @submit="startAutosend">
 			<!-- Steps -->
 			<template #configuration>
-				<EditAutosendConfiguration :configuration="configuration" />
-				<div class="flex justify-end">
-					<button class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400"
-						@click="onStepClick(steps[1])">
-						Next
-					</button>
-				</div>
+				<EditAutosendConfiguration :configuration="configuration" @change="onConfigurationChange" />
 			</template>
 			<template #connection>
-				<SelectConnection :connections="connections" :submit="setNewConnection" />
+				<SelectConnection :selected-connection="connectionStore.connection?.name"
+					:connections="connections" @submit="setNewConnection" />
 			</template>
 			<template #topic>
-				<SelectTopic :submit="selectTopic" :topics="topics" />
+				<SelectTopic :selected-topic="selectedTopic?.name" @submit="selectTopic" :topics="topics" />
 			</template>
 			<template #message>
-				<div class="flex h-full">
-					<div class="w-[75%] mr-6">
-						<EditMessage :submit="startAutosend" :message="initialMessage" :submit-button-text="'Start'" />
-					</div>
-					<div class="w-[25%] relative">
-						<div class="absolute right-0 top-0 overflow-auto h-full w-full">
-							<p class="mb-2">
-								A very cool feature of autosends is <a class="underline hover:text-orange-400 transition-colors" target="_blank" href="https://fakerjs.dev/">faker.js</a> value interpolation. 
-								You can replace any string content with a faker.js object or function as if you were calling the function from the faker object itself.
-							</p>
-							<highlightjs :language="'json'" :code="JSON.stringify(exampleMessage, null, 2)" />
-							<p class="my-2">
-								Will result in
-							</p>
-							<highlightjs :language="'json'" :code="JSON.stringify(exampleInterpolated, null, 2)" />
-							<p class="my-2">
-								The template provided is re-interpolated for each message sent, so every message will have a distinct and unique touch with realistic data!
-							</p>
-							<hr class="my-4">
-							<p class="my-2">
-								Need to re-use some autogenerated content from the key to the value? 
-								Autosends got you covered, you only need to describe the path to the property you want to use.
-							</p>
-							<highlightjs :language="'json'" :code="JSON.stringify(exampleKeyReuse, null, 2)" />
-						</div>
-					</div>
-				</div>
+				<EditMessageContent :message="selectedMessage" @change="onContentChange"/>
+			</template>
+			<template #headers>
+				<EditMessageHeaders :headers="selectedMessage?.headers" @change="onHeadersChange" />
 			</template>
 		</Stepper>
   </Dialog>

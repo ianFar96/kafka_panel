@@ -1,18 +1,20 @@
-use std::sync::{RwLock, Arc};
-
 use rdkafka::consumer::{Consumer, StreamConsumer};
-use rdkafka::message::BorrowedMessage;
+use rdkafka::message::{BorrowedMessage, Header, Headers, OwnedHeaders};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use rdkafka::{Message, Offset, TopicPartitionList};
 use serde::Serialize;
+use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use tauri::Window;
 use tokio::time::Duration;
 
 #[derive(Serialize, Clone)]
 pub struct KafkaMessageResponse {
-    value: String,
-    key: String,
+    headers: Option<HashMap<String, Option<Value>>>,
+    value: Option<Value>,
+    key: Option<Value>,
     offset: i64,
     partition: i32,
     timestamp: i64,
@@ -23,6 +25,7 @@ pub async fn listen_messages(
     consumer: &StreamConsumer,
     topic: String,
     messages_number: i64,
+    id: String,
 ) -> Result<(), String> {
     // Manually fecth metadata and assign partition so we don't fetch using our consumer group
     let metadata = consumer
@@ -48,7 +51,7 @@ pub async fn listen_messages(
 
     // Seek the latest watermark minus messages number to get only the last messages
     for partition in metadata.topics().get(0).unwrap().partitions() {
-        let (_, hight) = consumer
+        let (_, high) = consumer
             .fetch_watermarks(&topic, partition.id(), Duration::from_secs(30))
             .map_err(|err| {
                 format!(
@@ -59,7 +62,7 @@ pub async fn listen_messages(
                 )
             })?;
 
-        let seek_start = hight - messages_number;
+        let seek_start = high - messages_number;
         let offset_start = if seek_start > 0 {
             Offset::Offset(seek_start)
         } else {
@@ -68,8 +71,8 @@ pub async fn listen_messages(
         consumer.seek(&topic, partition.id(), offset_start, Duration::from_secs(30)).map_err(|err| {
             format!(
                 "Could not seek partition offset in topic:{}, partition: {}, offset: {}\n\nError: {}",
-                partition.id(),
                 topic,
+                partition.id(),
                 seek_start,
                 err.to_string()
             )
@@ -78,7 +81,7 @@ pub async fn listen_messages(
 
     let keep_listening = Arc::new(RwLock::new(true));
     let keep_listening_clone = keep_listening.clone();
-    window.once("offMessage", move |_| {
+    window.once(format!("offMessage-{}", id), move |_| {
         *keep_listening_clone.write().unwrap() = false;
     });
 
@@ -102,7 +105,9 @@ pub async fn listen_messages(
                     )
                 })?;
 
-                window.emit("onMessage", message_result).unwrap();
+                window
+                    .emit(&format!("onMessage-{}", id), message_result)
+                    .unwrap();
             }
             None => {}
         }
@@ -114,17 +119,46 @@ pub async fn listen_messages(
 }
 
 fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, String> {
+    let headers = match message.headers() {
+        Some(headers) => {
+            let mut headers_map = HashMap::new();
+            for header in headers.iter() {
+                let value = match header.value {
+                    Some(value) => {
+                        let stringified_value =
+                            std::str::from_utf8(value).map_err(|err| err.to_string())?;
+                        let parsed_value = serde_json::from_str::<Value>(stringified_value)
+                            .unwrap_or(stringified_value.into());
+                        Some(parsed_value)
+                    }
+                    None => None,
+                };
+                headers_map.insert(header.key.to_string(), value);
+            }
+            Some(headers_map)
+        }
+        None => None,
+    };
+
     let key = match message.key() {
-        Some(key) => std::str::from_utf8(key).map_err(|err| err.to_string())?,
-        None => "null",
-    }
-    .to_string();
+        Some(key) => {
+            let stringified_key = std::str::from_utf8(key).map_err(|err| err.to_string())?;
+            let parsed_key =
+                serde_json::from_str::<Value>(stringified_key).unwrap_or(stringified_key.into());
+            Some(parsed_key)
+        }
+        None => None,
+    };
 
     let value = match message.payload() {
-        Some(value) => std::str::from_utf8(value).map_err(|err| err.to_string())?,
-        None => "null",
-    }
-    .to_string();
+        Some(value) => {
+            let stringified_value = std::str::from_utf8(value).map_err(|err| err.to_string())?;
+            let parsed_value = serde_json::from_str::<Value>(stringified_value)
+                .unwrap_or(stringified_value.into());
+            Some(parsed_value)
+        }
+        None => None,
+    };
 
     let timestamp_millis = message
         .timestamp()
@@ -132,6 +166,7 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
         .ok_or("Couldn't convert timestamp to millis")?;
 
     Ok(KafkaMessageResponse {
+        headers,
         key,
         value,
         offset: message.offset(),
@@ -143,10 +178,46 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
 pub async fn send_message(
     producer: &FutureProducer,
     topic: String,
-    key: String,
-    value: String,
+    headers: Option<HashMap<String, Value>>,
+    key: Value,
+    value: Value,
 ) -> Result<(), String> {
-    let record = FutureRecord::to(&topic).key(&key).payload(&value);
+    let stringified_key = serde_json::to_string(&key)
+        .map_err(|err| format!("Error while stringifying message key: {}", err.to_string()))?;
+    let stringified_value = serde_json::to_string(&value).map_err(|err| {
+        format!(
+            "Error while stringifying message value: {}",
+            err.to_string()
+        )
+    })?;
+
+    let mut record = FutureRecord::to(&topic)
+        .key(&stringified_key)
+        .payload(&stringified_value);
+
+    if let Some(headers) = headers {
+        let mut headers_to_send = OwnedHeaders::new();
+        for (header_key, header_value) in headers {
+            let stringified_header_value = match header_value {
+                Value::String(string_header_value) => string_header_value,
+                _ => serde_json::to_string(&header_value).map_err(|err| {
+                    format!(
+                        "Error while stringifying header's value: {}",
+                        err.to_string()
+                    )
+                })?,
+            };
+
+            headers_to_send = headers_to_send.insert(Header {
+                key: &header_key,
+                value: Some(&stringified_header_value),
+            });
+        }
+
+        record = record.headers(headers_to_send);
+    }
+
+    // FIXME: messages with same key sent by another system (kafkaJs, akhq) end up in different partitions
     producer
         .send(record, Timeout::Never)
         .await

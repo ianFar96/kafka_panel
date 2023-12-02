@@ -1,24 +1,21 @@
 <!-- eslint-disable no-empty -->
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
-import { message } from '@tauri-apps/api/dialog';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import Dialog from '../components/Dialog.vue';
-import EditMessage from '../components/EditMessage.vue';
-import EditTags from '../components/EditTags.vue';
+import SendMessageStepper from '../components/SendMessageStepper.vue';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
-import kafkaService from '../services/kafka';
-import { KafkaMessage, SendMessage } from '../types/message';
 import storageService from '../services/storage';
+import { Message, MessageContent, StorageMessage } from '../types/message';
+import { DateTime } from 'luxon';
+import { stringifyMessage } from '../services/utils';
+import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
+import Button from '../components/Button.vue';
+import logger from '../services/logger';
+import { KafkaService, AsyncSubject } from '../services/kafka';
 
-type Message = {
-	key: Record<string, unknown> | string
-  value: Record<string, unknown> | string
-  timestamp: number
-  offset: number
-  partition: number
+type DisplayMessage = Message & {
 	valueVisible: boolean
 }
 
@@ -32,74 +29,73 @@ const topicName = route.params.topicName as string;
 
 const loader = useLoader();
 
-const selectedMessage = ref<Message>();
+const kafkaService = new KafkaService();
 
-const kafkaMessageToMessage = (kafkaMessage: KafkaMessage): Message => {
-	let key = kafkaMessage.key;
-	try {
-		key = JSON.parse(kafkaMessage.key);
-	} catch (error) { }
-
-	let value = kafkaMessage.value;
-	try {
-		value = JSON.parse(kafkaMessage.value);
-	} catch (error) { }
-	
-	return {
-		...kafkaMessage,
-		key,
-		value,
-		valueVisible: false,
-	};
-};
-
-const messageToSendMessage = (message: Message): SendMessage => {
-	return {
-		key: typeof message.key === 'object' ? JSON.stringify(message.key, null, 2) : message.key,
-		value: typeof message.value === 'object' ? JSON.stringify(message.value, null, 2) : message.value,
-	};
-};
-
-const messages = ref<Message[]>([]);
+const displayMessages = ref<DisplayMessage[]>([]);
 const status = ref<'starting' | 'started' | 'stopping' | 'stopped'>('stopped');
+let listenMessagesHandler: AsyncSubject<Message> | undefined;
 const startListenMessages = async () => {
 	status.value = 'starting';
-	messages.value = [];
-	
-	const messagesObservable = await kafkaService.listenMessages(topicName, numberOfMessages);
-	messagesObservable.subscribe({
-		next: kafkaMessages => {
-			// To avoid going from stopping to started while receiving the last message
-			if (status.value === 'starting') {
-				status.value = 'started';
-			}
+	displayMessages.value = [];
 
-			// Cast, sort and get only the number of messages we want
-			const messagesToDisplay = [
-				...messages.value,
-				...kafkaMessages.map(kafkaMessage => kafkaMessageToMessage(kafkaMessage))
-			];
-			messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
-			messages.value = messagesToDisplay.splice(0, numberOfMessages);
+	logger.info('Listening for messages...', {kafkaService});
+	listenMessagesHandler = await kafkaService.listenMessages(topicName, numberOfMessages);
+
+	let windowingTimeout: unknown;
+	const messagesToDisplay: DisplayMessage[] = [];
+	listenMessagesHandler.subscribe({
+		next: kafkaMessage => {
+			logger.trace('Received message', {kafkaService});
+
+			messagesToDisplay.push({
+				...kafkaMessage,
+				valueVisible: false
+			});
+			
+			if (!windowingTimeout) {
+				windowingTimeout = setTimeout(() => {
+					logger.trace('Displaying messages', {kafkaService});
+
+					// To avoid going from stopping to started while receiving the last message
+					if (status.value === 'starting') {
+						status.value = 'started';
+					}
+
+					// Prepend the previous messages
+					messagesToDisplay.unshift(...displayMessages.value);
+					// Sort them with the new ones by timestamp
+					messagesToDisplay.sort((a,b) => a.timestamp < b.timestamp ? 1 : -1);
+					// To cut the oldest ones out
+					displayMessages.value = messagesToDisplay.splice(0, numberOfMessages);
+
+					windowingTimeout = undefined;
+				}, 1000);
+			}
 		},
 		error: async error => {
 			status.value = 'stopped';
-			await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
+			logger.error(`Error fetching messages: ${error}`, {kafkaService});
+			clearTimeout(windowingTimeout as string);
 		},
 		complete: () => {
 			status.value = 'stopped';
+			logger.debug('Stopped listening for messages', {kafkaService});
+			clearTimeout(windowingTimeout as string);
 		}
 	});
 };
-await startListenMessages();
+startListenMessages();
 
-const stopListeningMessages = async () => {
+const stop = async () => {
 	status.value = 'stopping';
-	kafkaService.offMessage();
+	logger.debug('Stopping to listen for messages...', {kafkaService});
+	await listenMessagesHandler?.unsubscribe();
 };
 
-onBeforeUnmount(() => {
-	stopListeningMessages();
+onBeforeUnmount(async () => {
+	loader?.value?.show();
+	await stop();
+	loader?.value?.hide();
 });
 
 const copyToClipboard = async (event: MouseEvent, text: string) => {
@@ -119,8 +115,8 @@ const copyToClipboard = async (event: MouseEvent, text: string) => {
 const searchQuery = ref('');
 
 const filteredMessages = computed(() => {
-	if (!searchQuery.value) return messages.value;
-	return messages.value
+	if (!searchQuery.value) return displayMessages.value;
+	return displayMessages.value
 		.filter(message => {
 			const query = searchQuery.value.toLowerCase();
 
@@ -136,54 +132,32 @@ const filteredMessages = computed(() => {
 		});
 });
 
-const editTagsDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const chooseTags = (message: Message) => {
-	selectedMessage.value = message;
-	editTagsDialog.value?.open();
-};
-
-const saveMessageInStorage = async (tags: string[]) => {
-	await storageService.messages.save({
-		key: typeof selectedMessage.value!.key === 'object' ?
-			JSON.stringify(selectedMessage.value!.key) :
-			selectedMessage.value!.key,
-		value: typeof selectedMessage.value!.value === 'object' ?
-			JSON.stringify(selectedMessage.value!.value) :
-			selectedMessage.value!.value,
-		tags
-	});
-
-	editTagsDialog.value?.close();
-};
-
-const defineMessageToSend = (message?: Message) => {
-	selectedMessage.value = message;
-	sendMessageDialog?.value?.open();
-};
-
-const sendMessageDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
-const sendMessage = async (key: string, value: string) => {
+const sendMessageStepper = ref<InstanceType<typeof SendMessageStepper> | null>(null); // Template ref
+const sendMessage = async (messageContent: MessageContent) => {
 	loader?.value?.show();
 	try {
-		await kafkaService.sendMessage(topicName, key, value);
-
-		sendMessageDialog.value?.close();
+		logger.info(`Seding message to ${topicName}...`, {kafkaService});
+		await kafkaService.sendMessage(topicName, messageContent);
+		sendMessageStepper.value?.closeDialog();
 	} catch (error) {
-		await message(`Error sending the message: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error sending the message: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
+};
 
+const editMessageStorageStepper = ref<InstanceType<typeof EditMessageStorageStepper> | null>(null); // Template ref
+const editStorageMessage = (message: MessageContent) => {
+	const storageMessage: StorageMessage = { ...message, tags: [] };
+	editMessageStorageStepper.value?.openDialog(storageMessage);
+};
+const saveMessageInStorage = async (message: StorageMessage) => {
+	await storageService.messages.save(message);
+	editMessageStorageStepper.value?.closeDialog();
 };
 
 const getDisplayDate = (dateMilis: number) => {
-	const date = new Date(dateMilis);	
-	const day = date.getDate().toString().padStart(2, '0');
-	const month = date.getMonth().toString().padStart(2, '0');
-	const fullyear = date.getFullYear();
-	const hours = date.getHours().toString().padStart(2, '0');
-	const minutes = date.getMinutes().toString().padStart(2, '0');
-	const seconds = date.getSeconds().toString().padStart(2, '0');
-	return `${day}/${month}/${fullyear} ${hours}:${minutes}:${seconds}`;
+	const dateTime = DateTime.fromMillis(dateMilis);
+	return dateTime.toFormat('dd/LL/yyyy HH:mm:ss');
 };
 </script>
 
@@ -200,11 +174,10 @@ const getDisplayDate = (dateMilis: number) => {
 					<i class="mr-2 bi-people cursor-pointer"></i>
 					Groups
 				</router-link>
-				<button @click="defineMessageToSend()"
-					class="whitespace-nowrap border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 flex items-center">
+				<Button @click="sendMessageStepper?.openDialog()" color="green">
 					<i class="mr-2 bi-send cursor-pointer"></i>
 					Send message
-				</button>
+				</Button>
 			</div>
 		</div>
 
@@ -221,7 +194,7 @@ const getDisplayDate = (dateMilis: number) => {
 				</button>
 				<i v-if="status === 'starting' || status === 'stopping'" class="bi-arrow-clockwise text-2xl animate-spin"
 					:title="status === 'starting' ? 'Starting' : 'Stopping'"></i>
-				<button v-if="status === 'started'" type="button" @click="stopListeningMessages()"
+				<button v-if="status === 'started'" type="button" @click="stop()"
 					class="text-2xl bi-stop-circle animate-pulse text-red-500" title="Stop fetching" >
 				</button>
 			</div>
@@ -252,32 +225,27 @@ const getDisplayDate = (dateMilis: number) => {
 
 				<div v-if="message.valueVisible" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<button @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
+						<button @click="copyToClipboard($event, stringifyMessage(message))"
 							title="Copy JSON"
 							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="chooseTags(message)"
+						<button @click="editStorageMessage(message)"
 							title="Save in storage"
 							class="text-xl leading-none bi-database-add transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="defineMessageToSend(message)"
+						<button @click="sendMessageStepper?.openDialog(message)"
 							title="Send again"
 							class="text-xl leading-none bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
-						<highlightjs :language="'json'" :code="JSON.stringify({key: message.key, value: message.value}, null, 2)" />
+						<highlightjs :language="'json'" :code="stringifyMessage(message)" />
 					</div>
 				</div>
 			</li>
 		</ul>
   </div>
 
-	<Dialog ref="sendMessageDialog" title="Send message" modal-class="w-full h-full">
-		<EditMessage :submit="sendMessage" :message="selectedMessage && messageToSendMessage(selectedMessage)" :submit-button-text="'Send'"/>
-	</Dialog>
-
-	<Dialog ref="editTagsDialog" title="Select tags">
-		<EditTags :submit="saveMessageInStorage" :submit-button-text="'Save'"/>
-	</Dialog>
+	<SendMessageStepper ref="sendMessageStepper" @submit="sendMessage"/>
+	<EditMessageStorageStepper ref="editMessageStorageStepper" @submit="saveMessageInStorage" />
 </template>

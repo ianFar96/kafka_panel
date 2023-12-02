@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api';
-import { SettingKey } from '../types/settings';
 import { StorageMessage } from '../types/message';
+import { SettingKey } from '../types/settings';
 
 class Store<T = unknown, K = string> {
 	constructor(
@@ -26,7 +26,7 @@ class Store<T = unknown, K = string> {
 
 const storageService = {
 	settings: new Store<unknown, SettingKey>('settings'),
-	messages: new Store<Omit<StorageMessage, 'id'>>('messages')
+	messages: new Store<StorageMessage>('messages')
 };
 
 export default storageService;

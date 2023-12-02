@@ -1,9 +1,11 @@
 import { readonly, ref } from 'vue';
 import { Connection } from '../types/connection';
-import kafkaService from '../services/kafka';
+import { defineStore } from 'pinia';
+import { KafkaService } from '../services/kafka';
 
-export function useConnection() {
-	const connection = ref<Connection | undefined>();
+export const useConnectionStore = defineStore('connection', () => {
+	const connection = ref<Connection>();
+	const kafkaService = new KafkaService();
 
 	async function setConnection(newConnection: Connection) {
 		const groupId = `${newConnection.groupPrefix ? `${newConnection.groupPrefix}.` : ''}kafka-panel`;
@@ -16,4 +18,4 @@ export function useConnection() {
 		// Override setConnection function so we can update our connection
 		setConnection,
 	};
-}
+});

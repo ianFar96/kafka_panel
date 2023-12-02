@@ -1,68 +1,113 @@
 <script setup lang="ts">
-import { confirm, message } from '@tauri-apps/api/dialog';
-import { computed, onActivated, onBeforeUnmount, onDeactivated, ref } from 'vue';
+import { confirm } from '@tauri-apps/api/dialog';
+import { computed, onActivated, onDeactivated, ref } from 'vue';
+import Button from '../components/Button.vue';
 import CreateTopic from '../components/CreateTopic.vue';
 import Dialog from '../components/Dialog.vue';
 import SelectConnection from '../components/SelectConnection.vue';
-import { useConnection } from '../composables/connection';
+import { useConnectionStore } from '../composables/connection';
 import { useLoader } from '../composables/loader';
 import checkSettings from '../services/checkSettings';
-import kafkaService from '../services/kafka';
+import logger from '../services/logger';
 import storageService from '../services/storage';
 import { Connection } from '../types/connection';
 import { ConsumerGroupState } from '../types/consumerGroup';
 import { Topic } from '../types/topic';
+import { KafkaService } from '../services/kafka';
+import { Subscription } from 'rxjs';
 
 await checkSettings('topics');
 
-const connections = (await storageService.settings.get('CONNECTIONS') ?? []) as Connection[];
-
 const loader = useLoader();
 
-const { connection, setConnection } = useConnection();
+const connections = ref<Connection[]>([]);
+const connectionStore = useConnectionStore();
+
+const fetchTopics = () => {
+	return new Promise((resolve, reject) => {
+		fetchTopicsList().then(resolve).catch(reject);
+		fetchTopicsState();
+		fetchTopicsWatermark();
+	});
+};
+
+const kafkaService = new KafkaService();
 
 const topics = ref<Topic[]>([]);
-const topicsState = ref<Record<string, ConsumerGroupState>>({});
-const fetchTopics = async () => {
+const fetchTopicsList = async () => {
 	topics.value = [];
-	
 	loader?.value?.show();
 	try {
+		logger.info('Fetching topics...', {kafkaService});
 		topics.value = await kafkaService.listTopics();
-		await startFetchTopicsState();
 	} catch (error) {
-		await message(`Error fetching topics: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error fetching topics: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let fetchTopicStateInterval: any;
-const startFetchTopicsState = async () => {
-	stopFetchTopicState();
-	fetchTopicStateInterval = setInterval(async () => {
-		fetchTopicsState();
-	}, 5000);
-	await fetchTopicsState();
-};
-const stopFetchTopicState = () => {
-	clearInterval(fetchTopicStateInterval);
-};
+const topicsState = ref<Record<string, ConsumerGroupState>>({});
 const fetchTopicsState = async () => {
+	topicsState.value = {};
 	try {
+		logger.debug('Fetching topics state...', {kafkaService});
 		topicsState.value = await kafkaService.getTopicsState();
 	} catch (error) {
-		console.error(`Error fetching topics state: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error fetching topics state: ${error}`, {kafkaService});
 	}
 };
 
+const topicsWatermark = ref<Record<string, number>>({});
+let watermarksSubscription: Subscription | undefined;
+const fetchTopicsWatermark = async () => {
+	// Cancel previous watermark fetching
+	watermarksSubscription?.unsubscribe();
+
+	topicsWatermark.value = {};
+
+	const watermarksObservable = await kafkaService.getTopicsWatermark();
+	logger.debug('Listening for watermarks...', {kafkaService});
+
+	let windowingTimeout: unknown;
+	const watermarksAcc: Record<string, number> = {};
+	watermarksSubscription = watermarksObservable.subscribe({
+		next: async topicWatermark => {
+			logger.trace('Received watermark', {kafkaService});
+			watermarksAcc[topicWatermark.topic] = topicWatermark.watermark;
+
+			if (!windowingTimeout) {
+				windowingTimeout = setTimeout(() => {
+					logger.trace('Displaying watermarks', {kafkaService});
+
+					const newWatermarksState = Object.assign(topicsWatermark.value, watermarksAcc);
+					topicsWatermark.value = {...newWatermarksState};
+
+					windowingTimeout = undefined;
+				}, 1000);
+			}
+		},
+		error: async error => {
+			logger.error(`Error fetching watermarks: ${error}`, {kafkaService});
+		},
+		complete: () => {
+			logger.debug('Finished listening for watermarks', {kafkaService});
+		}
+	});
+};
+
 onDeactivated(() => {
-	stopFetchTopicState();
+	if (!watermarksSubscription?.closed) {
+		logger.debug('Stopping to listen for watermarks...', {kafkaService});
+		watermarksSubscription?.unsubscribe();
+	}
+
 	selectConnectionDialog?.value?.close();
 });
 onActivated(async () => {
-	if (connection.value) {
-		await startFetchTopicsState();
+	connections.value = (await storageService.settings.get('CONNECTIONS') ?? []) as Connection[];
+
+	if (connectionStore.connection) {
+		await fetchTopics();
 	} else {
 		selectConnectionDialog?.value?.open();
 	}
@@ -75,9 +120,10 @@ const createTopic = async (name: string, partitions?: number, replicationFactor?
 
 	loader?.value?.show();
 	try {
+		logger.info(`Creating topic ${name}...`, {kafkaService});
 		await kafkaService.createTopic(name, partitions, replicationFactor);
 	} catch (error) {
-		await message(`Error creating topic: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error creating topic: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 
@@ -91,9 +137,10 @@ const removeTopic = async (topic: Topic) => {
 
 	loader?.value?.show();
 	try {
+		logger.info(`Deleting topic ${topic.name}...`, {kafkaService});
 		await kafkaService.deleteTopic(topic.name);
 	} catch (error) {
-		await message(`Error removing topic: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error removing topic: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 
@@ -103,23 +150,16 @@ const removeTopic = async (topic: Topic) => {
 const selectConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 
 const setNewConnection = async (newConnection: Connection) => {
-	// Clean slate
-	topics.value = [];
-	stopFetchTopicState();
-
 	loader?.value?.show();
-	try {
-		// Set connection and make sure it works
-		await setConnection(newConnection);
-		topics.value = await kafkaService.listTopics();
-
-		await startFetchTopicsState();
+	try {		
+		logger.info(`Setting connection ${newConnection.name}...`, {kafkaService});
+		await connectionStore.setConnection(newConnection);
+		selectConnectionDialog.value?.close();
+		await fetchTopics();
 	} catch (error) {
-		await message(`Error setting connection: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error setting connection: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
-
-	selectConnectionDialog.value?.close();
 };
 
 const searchQuery = ref('');
@@ -138,31 +178,29 @@ const refreshEvent = (event: KeyboardEvent) => {
 		fetchTopics();
 	}
 };
-window.addEventListener('keydown', refreshEvent);
-onBeforeUnmount(() => {
+onActivated(() => {
+	window.addEventListener('keydown', refreshEvent);
+});
+onDeactivated(() => {
 	window.removeEventListener('keydown', refreshEvent);
 });
 </script>
 
 <template>
-	<div class="flex flex-col h-full relative" v-if="connection">
+	<div class="flex flex-col h-full relative" v-if="connectionStore.connection">
 		<div class="flex items-center justify-between mb-6">
-			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="connection.name">
-				{{ connection.name }} topics
+			<h2 class="text-2xl mr-4 overflow-hidden text-ellipsis whitespace-nowrap" :title="connectionStore.connection.name">
+				{{ connectionStore.connection.name }} topics
 			</h2>
 			<div class="flex">
-				<button
-					class="mr-4 border border-white rounded py-1 px-4 hover:border-green-500 transition-colors hover:text-green-500 whitespace-nowrap flex items-center"
-					@click="createTopicDialog?.open()">
+				<Button class="mr-4" color="green" @click="createTopicDialog?.open()">
 					<i class="bi bi-plus-lg mr-2 -ml-1"></i>
 					New topic
-				</button>
-				<button
-					class="border border-white rounded py-1 px-4 hover:border-orange-400 transition-colors hover:text-orange-400 whitespace-nowrap flex items-center"
-					@click="selectConnectionDialog?.open()">
+				</Button>
+				<Button color="orange" @click="selectConnectionDialog?.open()">
 					<i class="bi bi-wifi mr-2"></i>
 					Change connection
-				</button>
+				</Button>
 			</div>
 		</div>
 		<div class="flex mb-6 justify-between items-center">
@@ -177,6 +215,7 @@ onBeforeUnmount(() => {
 				<thead class="sticky top-0 bg-gray-800 z-10">
 					<tr>
 						<th class="border-l border-y border-white text-left px-4 py-2">NAME</th>
+						<th class="border-y border-white px-4 py-2 whitespace-nowrap">HIGH WATERMARK</th>
 						<th class="border-y border-white px-4 py-2">PARTITIONS</th>
 						<th class="border-r border-y border-white text-right px-4 py-2">ACTIONS</th>
 					</tr>
@@ -186,16 +225,26 @@ onBeforeUnmount(() => {
 						<td :class="key !== filteredTopics.length - 1 ? 'border-b' : ''"
 							class="border-white py-3 px-4 w-full relative">
 							<div class="flex items-center">
-								<div :title="topicsState[topic.name]" class="rounded-full h-4 w-4 mr-2" :class="{
+								<div v-if="topic.name in topicsState" :title="topicsState[topic.name]" class="rounded-full h-4 w-4 mr-2" :class="{
 									'bg-green-600': topicsState[topic.name] === 'Consuming',
 									'bg-yellow-500': topicsState[topic.name] === 'Disconnected',
 									'bg-gray-500': topicsState[topic.name] === 'Unconnected',
 								}"></div>
+								<img v-else class="h-4 w-4 mr-2" src="../assets/loader.svg" />
 								<span
 									class="w-[calc(100%-theme(spacing.8))] overflow-hidden text-ellipsis whitespace-nowrap"
 									:title="topic.name">
 									{{ topic.name }}
 								</span>
+							</div>
+
+						</td>
+						<td :class="key !== filteredTopics.length - 1 ? 'border-b' : ''" class="border-white py-3 px-4">
+							<div class="flex justify-center w-full">
+								<span v-if="topic.name in topicsWatermark">
+									{{ topicsWatermark[topic.name] }}
+								</span>
+								<img v-else class="h-4 w-4 mr-2" src="../assets/loader.svg" />
 							</div>
 						</td>
 						<td :class="key !== filteredTopics.length - 1 ? 'border-b' : ''" class="border-white py-3 px-4 text-center">
@@ -217,11 +266,12 @@ onBeforeUnmount(() => {
 			</table>
 		</div>
 	</div>
-  <Dialog ref="createTopicDialog" :title="'Create topic'">
+  <Dialog ref="createTopicDialog" size="s" :title="'Create topic'">
 		<CreateTopic :createTopic="createTopic" />
 	</Dialog>
 
-  <Dialog ref="selectConnectionDialog" :title="'Choose Connection'">
-		<SelectConnection :connections="connections" :submit="setNewConnection" />
+  <Dialog ref="selectConnectionDialog" size="s" :title="'Choose Connection'" :closable="!!connectionStore.connection">
+		<SelectConnection :selected-connection="connectionStore.connection?.name"
+			:connections="connections" @submit="setNewConnection" />
   </Dialog>
 </template>

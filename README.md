@@ -38,6 +38,46 @@ You might also notice the small dot besides every topic, this is the "topic stat
 
 Messages page is where you can see the **latest** messages your topic has. A maximum of messages can be configured and by default is `20`. Of course you can also send messages by starting from blank or selecting one of the already existing messages as starting point.
 
+Message templates have at their disposal the full power of [faker.js](https://fakerjs.dev/). To use it you just need to declare a string with double brackets and write any faker.js function you want, for example `"{{faker.person.firstName('female')}}"`. You also can use the values generated in the key object to populate the value object.
+
+Example:
+
+```json
+{
+  "headers": {
+    "version": "v1.0.0",
+    "type": "{{faker.helpers.arrayElement(['locked', 'unlocked'])}}"
+  },
+  "key": {
+    "id": "{{faker.string.uuid()}}"
+  },
+  "value": {
+    "id": "{{key.id}}",
+    "name": "{{faker.person.fullName()}}",
+    "country": "Italy"
+  }
+}
+```
+
+This will result in:
+
+```json
+{
+  "headers": {
+    "version": "v1.0.0",
+    "type": "unlocked"
+  },
+  "key": {
+    "id": "4de3d8b0-d680-4b4b-b1de-a4825ff51c50"
+  },
+  "value": {
+    "id": "4de3d8b0-d680-4b4b-b1de-a4825ff51c50",
+    "name": "Ernestine Connelly",
+    "country": "Italy"
+  }
+}
+```
+
 #### Groups
 
 In Groups page you see the consumer groups connected to your topic with the status indicator that we saw in the [Topics page](#topics) and the **lag**.
@@ -52,9 +92,9 @@ Messages can be saved in storage with the little "DB" icon you'll find on each m
 
 #### Autosends
 
-Autosends page lets you configure multiple auto message sending processes where you can specify duration, interval, connection/topic and the message template to send. 
+Autosends page lets you configure multiple auto message sending processes where you can specify duration, interval, connection/topic and the message template to send.
 
-Message templates have at their disposition the full power of [faker.js](https://fakerjs.dev/), to use it you just need to declare a string with double brackets and write any faker js function you want, for example `"{{faker.person.firstName('female')}}"`. You also can use the values generated in the key object to populate the value object.
+Of course, with autosends you can also use the faker.js and key interpolation mechanism and for each message sent by the autosend process the message content will be re-interpolated with new different values.
 
 #### Settings
 

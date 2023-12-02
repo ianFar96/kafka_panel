@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.4.0
+
+### Added
+
+- Added suggestions on code editor when editing a message after using the `{{` characters
+- Added seek earliest offsets button to the consumer groups list
+- Added delete consumer group button to the consumer groups list
+
+## 1.3.0
+
+### Added
+
+- Added logging system and logs over all major operations throughout the app
+- Added high watermarks for topics to guess the number of messages
+
+### Fixed
+
+- Fixed problem with duplicated messages on Messages page
+- Fixed problem with dangling messages listeners on Messages page
+
+## 1.2.1
+
+### Fixed
+
+- Value headers are stringified only when they are not a string already
+
+## 1.2.0
+
+### Changed
+
+- Various major style changes
+
+### Fixed
+
+- Fix code editor crashing on various edge cases
+- Values are kept while moving between steps in the different steppers
+
+### Added
+
+- Support headers in messages throughout the entire application
+- Selection components like "Select connection" show current selection
+
+## 1.1.1
+
 ### Changed
 
 - Migrate from dexie DB to file storage for settings and stored messages

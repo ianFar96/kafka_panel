@@ -1,4 +1,6 @@
 use byteorder::{BigEndian, ReadBytesExt};
+use rdkafka::admin::{AdminClient, AdminOptions};
+use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use rdkafka::{ClientConfig, Offset, TopicPartitionList};
 use serde::Serialize;
@@ -151,7 +153,7 @@ pub async fn get_groups_from_topic(
     Ok(groups_list)
 }
 
-pub async fn reset_offsets(
+pub async fn commit_latest_offsets(
     mut common_config: ClientConfig,
     group_name: String,
     topic_name: String,
@@ -167,7 +169,7 @@ pub async fn reset_offsets(
     let mut tpl = TopicPartitionList::new();
 
     let metadata = consumer
-        .fetch_metadata(Some(&topic_name), Duration::from_secs(5))
+        .fetch_metadata(Some(&topic_name), Duration::from_secs(30))
         .map_err(|err| format!("Could not get metadata from cluster: {}", err.to_string()))?;
 
     for partition in metadata.topics().get(0).unwrap().partitions() {
@@ -190,6 +192,49 @@ pub async fn reset_offsets(
         .commit(&tpl, CommitMode::Sync)
         .map_err(|err| format!("Could not commit offsets: {}", err.to_string()))?;
 
+    Ok(())
+}
+
+pub async fn seek_earliest_offsets(
+    mut common_config: ClientConfig,
+    group_name: String,
+    topic_name: String,
+) -> Result<(), String> {
+    common_config.set("group.id", group_name);
+    let consumer: StreamConsumer = common_config.create().map_err(|err| {
+        format!(
+            "Could not create consumer to fetch offsets: {}",
+            err.to_string()
+        )
+    })?;
+
+    let mut tpl = TopicPartitionList::new();
+
+    let metadata = consumer
+        .fetch_metadata(Some(&topic_name), Duration::from_secs(30))
+        .map_err(|err| format!("Could not get metadata from cluster: {}", err.to_string()))?;
+
+    for partition in metadata.topics().get(0).unwrap().partitions() {
+        tpl.add_partition_offset(&topic_name, partition.id(), Offset::Offset(0))
+            .unwrap();
+    }
+
+    consumer
+        .commit(&tpl, CommitMode::Sync)
+        .map_err(|err| format!("Could not commit offsets: {}", err.to_string()))?;
+
+    Ok(())
+}
+
+pub async fn delete_group(
+    admin: &AdminClient<DefaultClientContext>,
+    group_name: String,
+) -> Result<(), String> {
+    let opts = AdminOptions::new().request_timeout(Some(Duration::from_secs(10)));
+    admin
+        .delete_groups(&[&group_name], &opts)
+        .await
+        .map_err(|err| format!("Error deleting consumer group: {}", err.to_string()))?;
     Ok(())
 }
 
@@ -290,7 +335,7 @@ fn read_str_from_assignment(rdr: &mut Cursor<&[u8]>) -> Result<String, String> {
 
 pub fn get_group_offsets(consumer: &StreamConsumer) -> Result<TopicPartitionList, String> {
     let metadata = consumer
-        .fetch_metadata(None, Duration::from_secs(5))
+        .fetch_metadata(None, Duration::from_secs(30))
         .map_err(|err| format!("Could not get metadata from cluster: {}", err.to_string()))?;
 
     let mut tpl = TopicPartitionList::new();
@@ -301,7 +346,7 @@ pub fn get_group_offsets(consumer: &StreamConsumer) -> Result<TopicPartitionList
     }
 
     let offsets = consumer
-        .committed_offsets(tpl, Duration::from_secs(5))
+        .committed_offsets(tpl, Duration::from_secs(30))
         .map_err(|err| {
             format!(
                 "Could not get committed offsets from cluster: {}",

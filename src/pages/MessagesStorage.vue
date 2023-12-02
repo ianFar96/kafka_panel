@@ -1,7 +1,7 @@
 <!-- eslint-disable no-empty -->
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/api/clipboard';
-import { message } from '@tauri-apps/api/dialog';
+import { omit } from 'ramda';
 import { computed, ref } from 'vue';
 import Chip, { Tag } from '../components/Chip.vue';
 import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
@@ -13,12 +13,11 @@ import checkSettings from '../services/checkSettings';
 import { getRandomColor } from '../services/chipColors';
 import storageService from '../services/storage';
 import { Connection } from '../types/connection';
-import { StorageMessage } from '../types/message';
+import { StorageMessage, StorageMessageWithId } from '../types/message';
+import { stringifyMessage } from '../services/utils';
+import logger from '../services/logger';
 
-type Message = {
-	id: string
-	key: Record<string, unknown> | string
-  value: Record<string, unknown> | string
+type DisplayMessage = Omit<StorageMessageWithId, 'tags'> & {
 	tags: Tag[]
 	valueVisible: boolean
 }
@@ -29,67 +28,49 @@ const connections = await storageService.settings.get('CONNECTIONS') as Connecti
 
 const loader = useLoader();
 
-const storeMessageToMessage = (storageMessage: StorageMessage): Message => {
-	let key = storageMessage.key;
-	try {
-		key = JSON.parse(storageMessage.key);
-	} catch (error) { }
+const storeMessageToDisplayMessage = (message: StorageMessageWithId): DisplayMessage => ({
+	...message,
+	tags: message.tags.map(name => ({
+		name,
+		color: getRandomColor()
+	}) as Tag),
+	valueVisible: false
+});
 
-	let value = storageMessage.value;
-	try {
-		value = JSON.parse(storageMessage.value);
-	} catch (error) { }
-	
-	return {
-		id: storageMessage.id!,
-		key,
-		value,
-		tags: storageMessage.tags.map(tag => ({
-			name: tag,
-			color: getRandomColor()
-		})),
-		valueVisible: false,
-	};
-};
+const displayMessageToStoreMessage = (message: DisplayMessage): StorageMessageWithId => ({
+	...omit(['valueVisible'], message),
+	tags: message.tags.map(tag => tag.name)
+});
 
-const messageToStorageMessage = (message: Message): StorageMessage => {
-	return {
-		id: message.id,
-		key: typeof message.key === 'object' ? JSON.stringify(message.key, null, 2) : message.key,
-		value: typeof message.value === 'object' ? JSON.stringify(message.value, null, 2) : message.value,
-		tags: message.tags.map(tag => tag.name),
-	};
-};
-
-const messages = ref<Message[]>([]);
+const messages = ref<DisplayMessage[]>([]);
 const fetchMessages = async () => {
 	loader?.value?.show();
 	try {
+		logger.info('Fetching storage messages...');
 		const storageMessages = await storageService.messages.getAll();
-		messages.value = Object.entries(storageMessages).map(([id, message]) => storeMessageToMessage({id, ...message}));
+
+		messages.value = Object.entries(storageMessages).map(([id, message]) => storeMessageToDisplayMessage({id, ...message}));
 	} catch (error) {
-		await message(`Error fetching messages: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Error fetching messages: ${error}`);
 	}
 	loader?.value?.hide();
 };
 await fetchMessages();
 
-const deleteMessage = async (storageMessage: Message) => {
+const deleteMessage = async (storageMessage: DisplayMessage) => {
 	try {
+		logger.info('Deleting storage message...');
 		await storageService.messages.delete(storageMessage.id);
 		await fetchMessages();
 	} catch (error) {
-		await message(`Could not delete message from storage: ${error}`, { title: 'Error', type: 'error' });
+		logger.error(`Could not delete message from storage: ${error}`);
 	}
 };
 
 const saveMessage = async (message: StorageMessage) => {
-	await storageService.messages.save({
-		key: message.key,
-		value: message.value,
-		tags: message.tags.slice(),
-	}, message.id);
-
+	logger.info('Saving storage message...');
+	const messageWithoutId = omit(['id'], message);
+	await storageService.messages.save(messageWithoutId, message.id);
 	await fetchMessages();
 };
 
@@ -157,7 +138,7 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 
 				<div v-if="message.valueVisible" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<button @click="editMessageStorageStepper?.openDialog(messageToStorageMessage(message))"
+						<button @click="editMessageStorageStepper?.openDialog(displayMessageToStoreMessage(message))"
 							title="Edit tags and message"
 							class="text-xl translate-y-px bi-pencil-square transition-colors duration-300 cursor-pointer mr-3 hover:text-orange-400">
 						</button>
@@ -165,28 +146,28 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 							title="Delete message"
 							class="text-2xl translate-y-[3px] bi-trash transition-colors duration-300 cursor-pointer mr-3 hover:text-red-500">
 						</button>
-						<button @click="copyToClipboard($event, JSON.stringify({key: message.key, value: message.value}, null, 2))"
+						<button @click="copyToClipboard($event, stringifyMessage(message))"
 							title="Copy JSON"
 							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
-						<button @click="startAutosendStepper?.openDialog(connections, messageToStorageMessage(message))"
+						<button @click="startAutosendStepper?.openDialog(connections, message)"
 							title="Start autosend"
 							class="text-xl bi-repeat transition-colors duration-300 cursor-pointer hover:text-orange-400 mr-3">
 						</button>
-						<button @click="sendStorageMessageStepper?.openDialog(connections, messageToStorageMessage(message))"
+						<button @click="sendStorageMessageStepper?.openDialog(connections, message)"
 							title="Send again"
 							class="text-xl bi-send transition-colors duration-300 cursor-pointer hover:text-green-500">
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
-						<highlightjs :language="'json'" :code="JSON.stringify({key: message.key, value: message.value}, null, 2)" />
+						<highlightjs :language="'json'" :code="stringifyMessage(message)" />
 					</div>
 				</div>
 			</li>
 		</ul>
   </div>
 
-	<EditMessageStorageStepper ref="editMessageStorageStepper" :submit="saveMessage" />
+	<EditMessageStorageStepper ref="editMessageStorageStepper" @submit="saveMessage" />
 	<SendStorageMessageStepper ref="sendStorageMessageStepper" />
-	<StartAutosendStepper ref="startAutosendStepper" :submit="autosendStore.startAutosend" />
+	<StartAutosendStepper ref="startAutosendStepper" @submit="autosendStore.startAutosend" />
 </template>

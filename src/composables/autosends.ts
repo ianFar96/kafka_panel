@@ -1,13 +1,14 @@
-import { message } from '@tauri-apps/api/dialog';
 import { defineStore } from 'pinia';
 import { map } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 import { ref } from 'vue';
-import autosendsService from '../services/autosends';
+import { AutosendsService } from '../services/autosends';
+import logger from '../services/logger';
 import { ActiveAutosend, Autosend } from '../types/autosend';
 
 export const useAutosendsStore = defineStore('autosends', () => {
 	const autosends = ref<ActiveAutosend[]>([]);
+	const autosendsService = new AutosendsService();
 
 	async function startAutosend(autosend: Autosend) {
 		const id = uuidv4();
@@ -27,7 +28,7 @@ export const useAutosendsStore = defineStore('autosends', () => {
 
 		messagesSentObservable.subscribe({
 			error: async error => {
-				await message(error as string, { title: 'Error', type: 'error' });
+				logger.error(error, {autosendsService});
 				await stopAutosend(activeAutosend);
 			}
 		});

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
-let isShown = ref(false);
+const showRequests = ref(0);
+const isShown = computed(() => showRequests.value > 0);
 
 defineExpose({
-	show: () => {isShown.value = true;},
-	hide: () => {isShown.value = false;}
+	show: () => {showRequests.value++;},
+	hide: () => {showRequests.value--;}
 });
 </script>
 

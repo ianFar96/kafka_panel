@@ -63,7 +63,17 @@
 - Click "Commit latest offsets" to the consumer group
 - **should see low and high to the same number and lag to 0**
 
-<!-- TODO: add delete consumer group and set to first -->
+### Seek earliest offsets
+- Create a topic with a message and have a consumer group consume it and commit the message
+- Create another topic with a message and have it consumed and commited by the same group name
+- Click "Seek earliest offsets" to the consumer group on the first topic
+- **should not see the consumer group in the list anymore**
+- **should see the consumer group in the groups of the second topic**
+
+### Delete consumer group
+- Create the conditions to have consumer group in the groups list of a topic
+- Click "Delete group" on the consumer group
+- **should not see the consumer group in the list anymore**
 
 ## Messages storage
 

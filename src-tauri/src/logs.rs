@@ -57,8 +57,6 @@ pub fn init_log() -> Result<(), String> {
     Ok(())
 }
 
-// TODO: add a page to visualize the logs, with search and all
-
 #[tauri::command]
 pub fn append_log(message: &str, level: &str, extras: Option<Extras>) {
     match level {

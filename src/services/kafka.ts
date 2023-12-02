@@ -72,6 +72,10 @@ export class KafkaService {
 		await invoke('reset_offsets_command', {groupName, topicName});
 	}
 
+	async deleteGroup(groupName: string) {
+		await invoke('delete_group_command', {groupName});
+	}
+
 	async listTopics() {
 		const topics = await invoke<Topic[]>('get_topics_command');
 		return topics;

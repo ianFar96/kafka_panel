@@ -31,6 +31,7 @@ fn main() {
             // Consumer Group commands
             commands::get_groups_from_topic_command,
             commands::reset_offsets_command,
+            commands::delete_group_command,
             // Topic commands
             commands::get_topics_command,
             commands::get_topics_state_command,

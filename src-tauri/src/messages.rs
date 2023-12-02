@@ -184,7 +184,7 @@ pub async fn send_message(
 ) -> Result<(), String> {
     let stringified_key = serde_json::to_string(&key)
         .map_err(|err| format!("Error while stringifying message key: {}", err.to_string()))?;
-    let stringified_value: String = serde_json::to_string(&value).map_err(|err| {
+    let stringified_value = serde_json::to_string(&value).map_err(|err| {
         format!(
             "Error while stringifying message value: {}",
             err.to_string()

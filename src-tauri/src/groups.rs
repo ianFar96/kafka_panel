@@ -1,4 +1,6 @@
 use byteorder::{BigEndian, ReadBytesExt};
+use rdkafka::admin::{AdminClient, AdminOptions};
+use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use rdkafka::{ClientConfig, Offset, TopicPartitionList};
 use serde::Serialize;
@@ -190,6 +192,18 @@ pub async fn reset_offsets(
         .commit(&tpl, CommitMode::Sync)
         .map_err(|err| format!("Could not commit offsets: {}", err.to_string()))?;
 
+    Ok(())
+}
+
+pub async fn delete_group(
+    admin: &AdminClient<DefaultClientContext>,
+    group_name: String,
+) -> Result<(), String> {
+    let opts = AdminOptions::new().request_timeout(Some(Duration::from_secs(10)));
+    admin
+        .delete_groups(&[&group_name], &opts)
+        .await
+        .map_err(|err| format!("Error deleting consumer group: {}", err.to_string()))?;
     Ok(())
 }
 

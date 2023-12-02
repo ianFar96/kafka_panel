@@ -68,7 +68,24 @@ You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`;
 		logger.info(`Resetting offsets for topic ${topicName} and group ${group.name}...`);
 		await kafkaService.resetOffsets(group.name, topicName);
 	} catch (error) {
-		logger.error(`Error sending the message: ${error}`, {kafkaService});
+		logger.error(`Error resetting offsets: ${error}`, {kafkaService});
+	}
+	loader?.value?.hide();
+
+	await fetchGroupsFromTopic();
+};
+
+const deleteGroup = async (group: ConsumerGroup) => {
+	const confirmMessage = 'Are you sure you want to delete the consumer group?';
+	const areYouSure = await confirm(confirmMessage, {title: 'Delete consumer group'});
+	if (!areYouSure) { return; }
+
+	loader?.value?.show();
+	try {
+		logger.info(`Deleting consumer group ${group.name}...`);
+		await kafkaService.deleteGroup(group.name);
+	} catch (error) {
+		logger.error(`Error deleting consumer group: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 
@@ -149,12 +166,14 @@ onBeforeUnmount(() => {
 									{{ group.watermarks[1] - group.watermarks[0] }}
 							</span>
 						</td>
-						<td :class="{
-								'border-b': key !== filteredGroups.length - 1, 
-								'text-gray-500': !canResetOffset(group)
-							}" class="border-white py-3 px-4 text-right flex justify-center">
+						<td :class="{'border-b': key !== filteredGroups.length - 1}"
+							class="border-white py-3 px-4 text-right flex justify-center">
 							<button title="Reset offset to latest"
-								@click="resetOffset(group)" class="text-2xl bi-skip-forward">
+								@click="resetOffset(group)" class="text-2xl bi-skip-forward mr-3" 
+								:class="{'text-gray-500': !canResetOffset(group)}">
+							</button>
+							<button title="Delete consumer group"
+								@click="deleteGroup(group)" class="text-2xl bi-trash transition-colors duration-300 hover:text-red-500">
 							</button>
 						</td>
 					</tr>

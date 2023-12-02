@@ -6,7 +6,7 @@ use kafka_panel::{
     create_connections, create_topic, delete_from_store, delete_topic, get_all_from_store,
     get_from_store, get_groups_from_topic, get_topics, get_topics_state, get_topics_watermark,
     listen_messages, logs, reset_offsets, save_in_store, send_message, GroupState,
-    KafkaGroupResponse, SaslConfig, TopicResponse, Extras,
+    KafkaGroupResponse, SaslConfig, TopicResponse, Extras, delete_group,
 };
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use serde_json::Value;
@@ -74,6 +74,20 @@ pub async fn reset_offsets_command<'a>(
     };
 
     reset_offsets(common_config, group_name, topic_name).await
+}
+
+#[tauri::command]
+pub async fn delete_group_command<'a>(
+    state: State<'a, KafkaState>,
+    group_name: String,
+) -> Result<(), String> {
+    let binding = state.admin.read().await;
+    let admin = match *binding {
+        None => return Err("Connection not set".into()),
+        Some(ref x) => x.clone(),
+    };
+
+    delete_group(admin, group_name).await
 }
 
 #[tauri::command]

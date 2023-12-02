@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.4.0
+
 ### Added
 
 - Added suggestions on code editor when editing a message after using the `{{` characters

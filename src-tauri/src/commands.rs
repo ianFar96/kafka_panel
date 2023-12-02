@@ -6,7 +6,7 @@ use kafka_panel::{
     create_connections, create_topic, delete_from_store, delete_topic, get_all_from_store,
     get_from_store, get_groups_from_topic, get_topics, get_topics_state, get_topics_watermark,
     listen_messages, logs, commit_latest_offsets, save_in_store, send_message, GroupState,
-    KafkaGroupResponse, SaslConfig, TopicResponse, Extras, delete_group,
+    KafkaGroupResponse, SaslConfig, TopicResponse, Extras, delete_group, seek_earliest_offsets,
 };
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use serde_json::Value;
@@ -74,6 +74,21 @@ pub async fn commit_latest_offsets_command<'a>(
     };
 
     commit_latest_offsets(common_config, group_name, topic_name).await
+}
+
+#[tauri::command]
+pub async fn seek_earliest_offsets_command<'a>(
+    state: State<'a, KafkaState>,
+    group_name: String,
+    topic_name: String,
+) -> Result<(), String> {
+    let binding = state.common_config.read().await;
+    let common_config = match *binding {
+        None => return Err("Connection not set".into()),
+        Some(ref x) => x.clone(),
+    };
+
+    seek_earliest_offsets(common_config, group_name, topic_name).await
 }
 
 #[tauri::command]

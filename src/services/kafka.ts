@@ -72,6 +72,10 @@ export class KafkaService {
 		await invoke('commit_latest_offsets_command', {groupName, topicName});
 	}
 
+	async seekEarliestOffsets(groupName: string, topicName: string) {
+		await invoke('seek_earliest_offsets_command', {groupName, topicName});
+	}
+
 	async deleteGroup(groupName: string) {
 		await invoke('delete_group_command', {groupName});
 	}

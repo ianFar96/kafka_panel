@@ -45,6 +45,35 @@ const filteredGroups = computed(() => {
 		});
 });
 
+const canSeekEarliestOffsets = (group: ConsumerGroup) => {
+	return group.state !== 'Consuming' && group.watermarks[0] > 0;
+};
+
+
+const seekEarliestOffsets = async (group: ConsumerGroup) => {
+	if (!canSeekEarliestOffsets(group)) {
+		return;
+	}
+
+	const confirmMessage = `Are you sure you want to seek the earliest offsets?
+Group: ${group.name}
+Topic: ${topicName}
+Partitions: All`;
+	const areYouSure = await confirm(confirmMessage, {title: 'Seek earliest offsets'});
+	if (!areYouSure) { return; }
+
+	loader?.value?.show();
+	try {
+		logger.info(`Seeking earliest offsets for topic ${topicName} and group ${group.name}...`);
+		await kafkaService.seekEarliestOffsets(group.name, topicName);
+	} catch (error) {
+		logger.error(`Error Seeking earliest offsets: ${error}`, {kafkaService});
+	}
+	loader?.value?.hide();
+
+	await fetchGroupsFromTopic();
+};
+
 const canCommitLatestOffsets = (group: ConsumerGroup) => {
 	return group.state !== 'Consuming' && group.watermarks[0] < group.watermarks[1];
 };
@@ -131,7 +160,7 @@ onBeforeUnmount(() => {
 						<th class="border-y border-white px-4 py-2">LOW</th>
 						<th class="border-y border-white px-4 py-2">HIGH</th>
 						<th class="border-y border-white px-4 py-2">LAG</th>
-						<th class="border-r border-y border-white text-right px-4 py-2">ACTIONS</th>
+						<th class="border-r border-y border-white px-4 py-2">ACTIONS</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -167,7 +196,11 @@ onBeforeUnmount(() => {
 							</span>
 						</td>
 						<td :class="{'border-b': key !== filteredGroups.length - 1}"
-							class="border-white py-3 px-4 text-right flex justify-center">
+							class="border-white py-3 px-4 flex justify-center">
+							<button title="Seek earliest offsets"
+								@click="seekEarliestOffsets(group)" class="text-2xl bi-skip-backward mr-3" 
+								:class="{'text-gray-500': !canSeekEarliestOffsets(group)}">
+							</button>
 							<button title="Commit latest offsets"
 								@click="commitLatestOffsets(group)" class="text-2xl bi-skip-forward mr-3" 
 								:class="{'text-gray-500': !canCommitLatestOffsets(group)}">

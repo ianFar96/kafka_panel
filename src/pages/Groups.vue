@@ -45,12 +45,41 @@ const filteredGroups = computed(() => {
 		});
 });
 
-const canResetOffset = (group: ConsumerGroup) => {
+const canSeekEarliestOffsets = (group: ConsumerGroup) => {
+	return group.state !== 'Consuming' && group.watermarks[0] > 0;
+};
+
+
+const seekEarliestOffsets = async (group: ConsumerGroup) => {
+	if (!canSeekEarliestOffsets(group)) {
+		return;
+	}
+
+	const confirmMessage = `Are you sure you want to seek the earliest offsets?
+Group: ${group.name}
+Topic: ${topicName}
+Partitions: All`;
+	const areYouSure = await confirm(confirmMessage, {title: 'Seek earliest offsets'});
+	if (!areYouSure) { return; }
+
+	loader?.value?.show();
+	try {
+		logger.info(`Seeking earliest offsets for topic ${topicName} and group ${group.name}...`);
+		await kafkaService.seekEarliestOffsets(group.name, topicName);
+	} catch (error) {
+		logger.error(`Error Seeking earliest offsets: ${error}`, {kafkaService});
+	}
+	loader?.value?.hide();
+
+	await fetchGroupsFromTopic();
+};
+
+const canCommitLatestOffsets = (group: ConsumerGroup) => {
 	return group.state !== 'Consuming' && group.watermarks[0] < group.watermarks[1];
 };
 
-const resetOffset = async (group: ConsumerGroup) => {
-	if (!canResetOffset(group)) {
+const commitLatestOffsets = async (group: ConsumerGroup) => {
+	if (!canCommitLatestOffsets(group)) {
 		return;
 	}
 
@@ -60,15 +89,32 @@ Topic: ${topicName}
 Partitions: All
 
 You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`;
-	const areYouSure = await confirm(confirmMessage, {title: 'Reset offsets'});
+	const areYouSure = await confirm(confirmMessage, {title: 'Commit latest offsets'});
 	if (!areYouSure) { return; }
 
 	loader?.value?.show();
 	try {
-		logger.info(`Resetting offsets for topic ${topicName} and group ${group.name}...`);
-		await kafkaService.resetOffsets(group.name, topicName);
+		logger.info(`Committing latests offsets for topic ${topicName} and group ${group.name}...`);
+		await kafkaService.commitLatestOffsets(group.name, topicName);
 	} catch (error) {
-		logger.error(`Error sending the message: ${error}`, {kafkaService});
+		logger.error(`Error Committing latests offsets: ${error}`, {kafkaService});
+	}
+	loader?.value?.hide();
+
+	await fetchGroupsFromTopic();
+};
+
+const deleteGroup = async (group: ConsumerGroup) => {
+	const confirmMessage = 'Are you sure you want to delete the consumer group?';
+	const areYouSure = await confirm(confirmMessage, {title: 'Delete consumer group'});
+	if (!areYouSure) { return; }
+
+	loader?.value?.show();
+	try {
+		logger.info(`Deleting consumer group ${group.name}...`);
+		await kafkaService.deleteGroup(group.name);
+	} catch (error) {
+		logger.error(`Error deleting consumer group: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 
@@ -114,7 +160,7 @@ onBeforeUnmount(() => {
 						<th class="border-y border-white px-4 py-2">LOW</th>
 						<th class="border-y border-white px-4 py-2">HIGH</th>
 						<th class="border-y border-white px-4 py-2">LAG</th>
-						<th class="border-r border-y border-white text-right px-4 py-2">ACTIONS</th>
+						<th class="border-r border-y border-white px-4 py-2">ACTIONS</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -149,12 +195,18 @@ onBeforeUnmount(() => {
 									{{ group.watermarks[1] - group.watermarks[0] }}
 							</span>
 						</td>
-						<td :class="{
-								'border-b': key !== filteredGroups.length - 1, 
-								'text-gray-500': !canResetOffset(group)
-							}" class="border-white py-3 px-4 text-right flex justify-center">
-							<button title="Reset offset to latest"
-								@click="resetOffset(group)" class="text-2xl bi-skip-forward">
+						<td :class="{'border-b': key !== filteredGroups.length - 1}"
+							class="border-white py-3 px-4 flex justify-center">
+							<button title="Seek earliest offsets"
+								@click="seekEarliestOffsets(group)" class="text-2xl bi-skip-backward mr-3" 
+								:class="{'text-gray-500': !canSeekEarliestOffsets(group)}">
+							</button>
+							<button title="Commit latest offsets"
+								@click="commitLatestOffsets(group)" class="text-2xl bi-skip-forward mr-3" 
+								:class="{'text-gray-500': !canCommitLatestOffsets(group)}">
+							</button>
+							<button title="Delete consumer group"
+								@click="deleteGroup(group)" class="text-2xl bi-trash transition-colors duration-300 hover:text-red-500">
 							</button>
 						</td>
 					</tr>

@@ -1,5 +1,11 @@
 # Changelog
 
+### Added
+
+- Added suggestions on code editor when editing a message after using the `{{` characters
+- Added seek earliest offsets button to the consumer groups list
+- Added delete consumer group button to the consumer groups list
+
 ## 1.3.0
 
 ### Added

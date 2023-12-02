@@ -30,7 +30,9 @@ fn main() {
             commands::set_connection_command,
             // Consumer Group commands
             commands::get_groups_from_topic_command,
-            commands::reset_offsets_command,
+            commands::commit_latest_offsets_command,
+            commands::seek_earliest_offsets_command,
+            commands::delete_group_command,
             // Topic commands
             commands::get_topics_command,
             commands::get_topics_state_command,

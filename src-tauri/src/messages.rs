@@ -25,7 +25,7 @@ pub async fn listen_messages(
     consumer: &StreamConsumer,
     topic: String,
     messages_number: i64,
-    id: String
+    id: String,
 ) -> Result<(), String> {
     // Manually fecth metadata and assign partition so we don't fetch using our consumer group
     let metadata = consumer
@@ -105,7 +105,9 @@ pub async fn listen_messages(
                     )
                 })?;
 
-                window.emit(&format!("onMessage-{}", id), message_result).unwrap();
+                window
+                    .emit(&format!("onMessage-{}", id), message_result)
+                    .unwrap();
             }
             None => {}
         }
@@ -182,7 +184,7 @@ pub async fn send_message(
 ) -> Result<(), String> {
     let stringified_key = serde_json::to_string(&key)
         .map_err(|err| format!("Error while stringifying message key: {}", err.to_string()))?;
-    let stringified_value: String = serde_json::to_string(&value).map_err(|err| {
+    let stringified_value = serde_json::to_string(&value).map_err(|err| {
         format!(
             "Error while stringifying message value: {}",
             err.to_string()
@@ -215,6 +217,7 @@ pub async fn send_message(
         record = record.headers(headers_to_send);
     }
 
+    // FIXME: messages with same key sent by another system (kafkaJs, akhq) end up in different partitions
     producer
         .send(record, Timeout::Never)
         .await

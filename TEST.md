@@ -58,10 +58,12 @@
 
 ## Groups
 
-### Offset reset
+### Commit latest offsets
 - Create the conditions for a topic to have lag on a consumer group
-- Click "Reset offsets" to the consumer group
+- Click "Commit latest offsets" to the consumer group
 - **should see low and high to the same number and lag to 0**
+
+<!-- TODO: add delete consumer group and set to first -->
 
 ## Messages storage
 

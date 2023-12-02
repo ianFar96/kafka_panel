@@ -153,7 +153,7 @@ pub async fn get_groups_from_topic(
     Ok(groups_list)
 }
 
-pub async fn reset_offsets(
+pub async fn commit_latest_offsets(
     mut common_config: ClientConfig,
     group_name: String,
     topic_name: String,

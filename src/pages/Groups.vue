@@ -45,12 +45,12 @@ const filteredGroups = computed(() => {
 		});
 });
 
-const canResetOffset = (group: ConsumerGroup) => {
+const canCommitLatestOffsets = (group: ConsumerGroup) => {
 	return group.state !== 'Consuming' && group.watermarks[0] < group.watermarks[1];
 };
 
-const resetOffset = async (group: ConsumerGroup) => {
-	if (!canResetOffset(group)) {
+const commitLatestOffsets = async (group: ConsumerGroup) => {
+	if (!canCommitLatestOffsets(group)) {
 		return;
 	}
 
@@ -60,15 +60,15 @@ Topic: ${topicName}
 Partitions: All
 
 You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`;
-	const areYouSure = await confirm(confirmMessage, {title: 'Reset offsets'});
+	const areYouSure = await confirm(confirmMessage, {title: 'Commit latest offsets'});
 	if (!areYouSure) { return; }
 
 	loader?.value?.show();
 	try {
-		logger.info(`Resetting offsets for topic ${topicName} and group ${group.name}...`);
-		await kafkaService.resetOffsets(group.name, topicName);
+		logger.info(`Committing latests offsets for topic ${topicName} and group ${group.name}...`);
+		await kafkaService.commitLatestOffsets(group.name, topicName);
 	} catch (error) {
-		logger.error(`Error resetting offsets: ${error}`, {kafkaService});
+		logger.error(`Error Committing latests offsets: ${error}`, {kafkaService});
 	}
 	loader?.value?.hide();
 
@@ -168,9 +168,9 @@ onBeforeUnmount(() => {
 						</td>
 						<td :class="{'border-b': key !== filteredGroups.length - 1}"
 							class="border-white py-3 px-4 text-right flex justify-center">
-							<button title="Reset offset to latest"
-								@click="resetOffset(group)" class="text-2xl bi-skip-forward mr-3" 
-								:class="{'text-gray-500': !canResetOffset(group)}">
+							<button title="Commit latest offsets"
+								@click="commitLatestOffsets(group)" class="text-2xl bi-skip-forward mr-3" 
+								:class="{'text-gray-500': !canCommitLatestOffsets(group)}">
 							</button>
 							<button title="Delete consumer group"
 								@click="deleteGroup(group)" class="text-2xl bi-trash transition-colors duration-300 hover:text-red-500">

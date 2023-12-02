@@ -68,8 +68,8 @@ export class KafkaService {
 		return groups;
 	}
 
-	async resetOffsets(groupName: string, topicName: string) {
-		await invoke('reset_offsets_command', {groupName, topicName});
+	async commitLatestOffsets(groupName: string, topicName: string) {
+		await invoke('commit_latest_offsets_command', {groupName, topicName});
 	}
 
 	async deleteGroup(groupName: string) {

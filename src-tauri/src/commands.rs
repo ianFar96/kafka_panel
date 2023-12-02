@@ -5,7 +5,7 @@ use jfs::Store;
 use kafka_panel::{
     create_connections, create_topic, delete_from_store, delete_topic, get_all_from_store,
     get_from_store, get_groups_from_topic, get_topics, get_topics_state, get_topics_watermark,
-    listen_messages, logs, reset_offsets, save_in_store, send_message, GroupState,
+    listen_messages, logs, commit_latest_offsets, save_in_store, send_message, GroupState,
     KafkaGroupResponse, SaslConfig, TopicResponse, Extras, delete_group,
 };
 use rdkafka::consumer::{Consumer, StreamConsumer};
@@ -62,7 +62,7 @@ pub async fn get_groups_from_topic_command<'a>(
 }
 
 #[tauri::command]
-pub async fn reset_offsets_command<'a>(
+pub async fn commit_latest_offsets_command<'a>(
     state: State<'a, KafkaState>,
     group_name: String,
     topic_name: String,
@@ -73,7 +73,7 @@ pub async fn reset_offsets_command<'a>(
         Some(ref x) => x.clone(),
     };
 
-    reset_offsets(common_config, group_name, topic_name).await
+    commit_latest_offsets(common_config, group_name, topic_name).await
 }
 
 #[tauri::command]

@@ -99,7 +99,7 @@ pub async fn delete_group_command<'a>(
     let binding = state.admin.read().await;
     let admin = match *binding {
         None => return Err("Connection not set".into()),
-        Some(ref x) => x.clone(),
+        Some(ref x) => x,
     };
 
     delete_group(admin, group_name).await

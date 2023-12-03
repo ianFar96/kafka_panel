@@ -70,6 +70,7 @@ export const config: Options.Testrunner = {
 		maxInstances: 1,
 		hostname: 'localhost',
 		port: 4444,
+		browserName: 'wry',
 		'tauri:options': {
 			application: './src-tauri/target/release/kafka-panel',
 		},

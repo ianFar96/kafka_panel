@@ -14,13 +14,23 @@
       "ESNext",
       "DOM"
     ],
-    "skipLibCheck": true
+    "types": [
+      "node",
+      "@wdio/globals/types",
+      "@wdio/mocha-framework"
+    ],
+    "composite": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
   },
   "include": [
+    "tests/e2e/specs/*.spec.ts",
+    "tests/e2e/pages/*.page.ts",
+    "tests/e2e/**/*.ts",
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
+    "vite.config.ts"
   ],
-  "references": [{ "path": "./tsconfig.node.json" }]
 }

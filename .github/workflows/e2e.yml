@@ -50,7 +50,7 @@ jobs:
 
       # install our Node.js dependencies with Npm
       - name: Npm install
-        run: npm install
+        run: npm ci
 
       # install the latest version of `tauri-driver`.
       # note: the tauri-driver version is independent of any other Tauri versions

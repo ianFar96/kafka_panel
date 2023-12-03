@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vue-tsc --noEmit -p build.tsconfig.json && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "wdio run ./wdio.conf.ts"
@@ -37,10 +37,10 @@
     "@typescript-eslint/eslint-plugin": "^5.36.2",
     "@typescript-eslint/parser": "^5.36.2",
     "@vitejs/plugin-vue": "^3.0.1",
-    "@wdio/cli": "^8.15.5",
-    "@wdio/local-runner": "^8.15.4",
-    "@wdio/mocha-framework": "^8.15.4",
-    "@wdio/spec-reporter": "^8.15.0",
+    "@wdio/cli": "^8.24.6",
+    "@wdio/local-runner": "^8.24.6",
+    "@wdio/mocha-framework": "^8.24.6",
+    "@wdio/spec-reporter": "^8.24.2",
     "autoprefixer": "^10.4.8",
     "eslint": "^8.23.0",
     "eslint-plugin-vue": "^9.4.0",
@@ -50,6 +50,6 @@
     "typescript": "^4.9.5",
     "vite": "^3.0.2",
     "vue-tsc": "^1.0.0",
-    "wdio-wait-for": "^3.0.6"
+    "wdio-wait-for": "^3.0.9"
   }
 }

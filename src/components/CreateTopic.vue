@@ -31,13 +31,14 @@ const handleSubmit = async () => {
 <template>
   <form @submit="handleSubmit()">
     <input v-model="name" type="text"
-      class="block mb-6 bg-transparent outline-none border-b border-gray-400 py-1 w-full" placeholder="Name*">
+      class="block mb-6 bg-transparent outline-none border-b border-gray-400 py-1 w-full"
+      name="name" placeholder="Name*">
     <input v-model="partitions" type="number"
       class="appearance-none block mb-6 bg-transparent outline-none border-b border-gray-400 py-1 w-full"
-      placeholder="Partitions">
+      name="partitions" placeholder="Partitions">
     <input v-model="replicationFactor" type="number"
       class="appearance-none block mb-6 bg-transparent outline-none border-b border-gray-400 py-1 w-full"
-      placeholder="Replications factor">
+      name="replicationFactor" placeholder="Replications factor">
     <div class="mt-8 flex justify-end">
       <Button type="submit" :color="'green'">
         Create

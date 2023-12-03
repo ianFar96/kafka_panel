@@ -1,17 +1,23 @@
-import { expect } from '@wdio/globals';
+import TopicsPage from '../pages/Topics.page.js';
+import { sleep } from '../utils.js';
 
-// FIXME: cannot import from other files
+const connectionName = 'Localhost';
 
 describe('Topics', () => {
 	it('should see topics list', async () => {
-		const title = await $('#page-content h2');
-		expect(await title.getText()).toBe('Choose Connection');
+		await expect(TopicsPage.chooseConnectionTitle).toBeDisplayed();
+		await TopicsPage.selectConnection(connectionName);
 
-		// FIXME: UnsupportedOperationError
-		const connection = await $('li=Localhost');
-		await connection.click();
+		await expect(TopicsPage.getTitle(connectionName)).toBeDisplayed();
+	});
 
-		const loader = await $('#loader');
-		expect(loader).toBeDisplayed();
+	it('should create a new topic', async () => {
+		const topicName = 'topic.e2e.test';
+		await TopicsPage.createTopic(topicName);
+
+		const createdTopic = await $('table').$(`td=${topicName}`);
+		expect(createdTopic).toBeDisabled();
+
+		sleep();
 	});
 });

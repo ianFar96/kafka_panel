@@ -13,11 +13,12 @@ describe('Topics', () => {
 
 	it('should create a new topic', async () => {
 		const topicName = 'topic.e2e.test';
-		await TopicsPage.createTopic(topicName);
+		const topicPartitions = 5;
+		await TopicsPage.createTopic(topicName, topicPartitions);
 
-		const createdTopic = await $('table').$(`td=${topicName}`);
-		expect(createdTopic).toBeDisabled();
-
-		sleep();
+		const createdTopicNameCell = await $('table').$(`td=${topicName}`);
+		expect(createdTopicNameCell).toBeDisplayed();
+		const createdTopicPartitionsCell = await createdTopicNameCell.$('../td[2]');
+		expect(createdTopicPartitionsCell).toHaveValue(topicPartitions.toString());
 	});
 });

@@ -1,10 +1,14 @@
 import type { Options } from '@wdio/types';
-import { ChildProcessByStdio, spawn, spawnSync } from 'child_process';
+import { ChildProcessByStdio, spawn } from 'child_process';
 import path from 'path';
 import os from 'os';
 import { Writable } from 'stream';
+import { KafkaContainer, StartedKafkaContainer } from '@testcontainers/kafka';
+import { createTestConnection } from './utils.js';
 
 let tauriDriver: ChildProcessByStdio<Writable, null, null>;
+
+let kafkaContainer: StartedKafkaContainer;
 
 export const config: Options.Testrunner = {
 	//
@@ -38,7 +42,7 @@ export const config: Options.Testrunner = {
 	// will be called from there.
 	//
 	specs: [
-		'./tests/e2e/specs/**/*.spec.ts'
+		'./specs/**/*.spec.ts'
 	],
 	// Patterns to exclude.
 	exclude: [
@@ -168,7 +172,9 @@ export const config: Options.Testrunner = {
      * @param {object} config wdio configuration object
      * @param {Array.<Object>} capabilities list of capabilities details
      */
-	onPrepare: () => spawnSync('cargo', ['build', '--release']),
+	onPrepare: () => {
+		// spawnSync('cargo', ['build', '--release'], {cwd: 'src-tauri'});
+	},
 	/**
      * Gets executed before a worker process is spawned and can be used to initialise specific service
      * for that worker as well as modify runtime environments in an async fashion.
@@ -197,12 +203,19 @@ export const config: Options.Testrunner = {
      * @param {Array.<String>} specs List of spec file paths that are to be run
      * @param {string} cid worker id (e.g. 0-0)
      */
-	beforeSession: () =>
-		(tauriDriver = spawn(
+	beforeSession: async () => {
+		tauriDriver = spawn(
 			path.resolve(os.homedir(), '.cargo', 'bin', 'tauri-driver'),
 			[],
 			{ stdio: [null, process.stdout, process.stderr] }
-		)),
+		);
+
+		kafkaContainer = await new KafkaContainer()
+			.withExposedPorts(9093)
+			.start();
+
+		await createTestConnection(kafkaContainer.getMappedPort(9093));
+	},
 	/**
      * Gets executed before test execution begins. At this point you can access to all global
      * variables like `browser`. It is the perfect place to define custom commands.
@@ -286,7 +299,10 @@ export const config: Options.Testrunner = {
      * @param {Array.<Object>} capabilities list of capabilities details
      * @param {Array.<String>} specs List of spec file paths that ran
      */
-	afterSession: () => tauriDriver.kill(),
+	afterSession: async () => {
+		tauriDriver.kill();
+		await kafkaContainer.stop();
+	},
 	/**
      * Gets executed after all workers got shut down and the process is about to exit. An error
      * thrown in the onComplete hook will result in the test run failing.

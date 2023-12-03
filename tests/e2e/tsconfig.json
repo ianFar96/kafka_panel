@@ -16,16 +16,16 @@
     ],
     "types": [
       "node",
+      "@wdio/globals/types",
+      "@wdio/mocha-framework"
     ],
     "composite": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "src/**/*.tsx",
-    "src/**/*.vue",
-    "vite.config.ts"
+    "specs/*.spec.ts",
+    "pages/*.page.ts",
+    "**/*.ts",
   ],
 }

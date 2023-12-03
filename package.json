@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit -p build.tsconfig.json && vite build",
+    "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "wdio run ./wdio.conf.ts"
+    "test": "wdio run ./tests/e2e/wdio.conf.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^8.0.2",
@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.5.7",
+    "@testcontainers/kafka": "^10.3.2",
     "@types/luxon": "^3.3.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.7.10",
@@ -46,6 +47,7 @@
     "eslint-plugin-vue": "^9.4.0",
     "postcss": "^8.4.16",
     "tailwindcss": "^3.1.8",
+    "testcontainers": "^10.3.2",
     "ts-node": "^10.9.1",
     "typescript": "^4.9.5",
     "vite": "^3.0.2",

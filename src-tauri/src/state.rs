@@ -1,4 +1,4 @@
-use std::{fs::create_dir_all, io::ErrorKind, path::Path};
+use std::{env, fs::create_dir_all, io::ErrorKind, path::Path};
 
 use jfs::{Config, Store};
 use rdkafka::{
@@ -58,6 +58,17 @@ pub fn init_storage() -> Result<StorageState, String> {
     #[cfg(dev)]
     {
         config_folder = format!("{}/dev", config_folder);
+    }
+
+    // Get settings from /test folder in case of running in test e2e
+    // https://webdriver.io/docs/api/environment
+    match env::var("NODE_ENV") {
+        Ok(env_var) => {
+            if env_var == "test" {
+                config_folder = format!("{}/e2e", config_folder);
+            }
+        }
+        Err(_) => {}
     }
 
     if !Path::new(&config_folder).is_dir() {

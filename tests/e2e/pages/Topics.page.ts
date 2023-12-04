@@ -2,6 +2,7 @@ import { click, setValue } from '../utils.js';
 
 class TopicsPage {
 	get chooseConnectionTitle () { return $('aria/Choose Connection'); }
+	get topicsTable () { return $('table'); }
 
 	async selectConnection (connectionName: string) {
 		const connection = await $(`li=${connectionName}`);
@@ -27,6 +28,25 @@ class TopicsPage {
 
 		const createButton = await $('button=Create');
 		await click(createButton);
+	}
+
+	async deleteTopic(topicName: string) {
+		const topicRow = await this.getRow(topicName);
+		const deleteButton = await topicRow.$('button[title="Delete topic"]');
+		await click(deleteButton);
+	}
+
+	getRow(topicName: string) {
+		return this.topicsTable.$(`td=${topicName}`).$('..');
+	}
+
+	getCell(row: WebdriverIO.Element, columName: 'name' | 'partitions') {
+		switch (columName) {
+		case 'name':
+			return row.$('td[0]');
+		case 'partitions':
+			return row.$('td[2]');
+		}
 	}
 }
 

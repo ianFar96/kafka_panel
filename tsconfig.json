@@ -17,7 +17,6 @@
     "types": [
       "node",
     ],
-    "composite": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
   },

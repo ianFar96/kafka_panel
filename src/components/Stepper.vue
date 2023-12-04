@@ -72,7 +72,7 @@ const isActive = (step?: Step) => {
   <ul v-bind.sync="$attrs" class="flex w-full justify-center">
     <template v-for="step, index in steps" :key="step.name">
       <li class="flex">
-        <button @click="onChangeStep(step)" class="whitespace-nowrap flex items-center text-white" :class="{'text-orange-400': isActive(step)}">
+        <button @click="onChangeStep(step)" class="whitespace-nowrap flex items-center" :class="isActive(step) ? 'text-orange-400' : 'text-white'">
           <div class="relative rounded-full border p-4 block mr-2" :class="isActive(step) ? 'border-orange-400' : 'border-white'">
             <span class="text-lg absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">{{ index + 1 }}</span>
           </div>

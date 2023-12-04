@@ -60,7 +60,7 @@ const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Send message">
+	<Dialog size="fullpage" ref="stepperDialog" title="Send message">
 		<Stepper class="mb-8" :steps="steps" @submit="sendMessage" submit-button-text="Send">
 			<template #message>
 				<EditMessageContent :message="selectedMessage" 

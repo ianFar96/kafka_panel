@@ -70,7 +70,7 @@ const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Edit storage message">
+	<Dialog size="fullpage" ref="stepperDialog" title="Edit storage message">
 		<Stepper class="mb-8" :steps="steps" @submit="saveMessage" submit-button-text="Save">
 			<template #tags>
 				<EditTags class="mt-8" :tags="selectedMessage!.tags" @change="onTagsChange" />

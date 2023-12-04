@@ -17,16 +17,16 @@ const emit = defineEmits<{
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 
-let code = '';
+let editorCode = '';
 if (typeof props.code !== 'string') {
-	code = JSON.stringify(props.code, null, 2);
+	editorCode = JSON.stringify(props.code, null, 2);
 } else {
-	code = props.code as string;
+	editorCode = props.code as string;
 }
 let sizes: monaco.editor.IDimension;
 const initMonacoEditor = () => {
 	if (editor) {
-		code = editor.getValue();
+		editorCode = editor.getValue();
 		editor.dispose();
 	}
 
@@ -39,7 +39,7 @@ const initMonacoEditor = () => {
 		};
 
 		editor = monaco.editor.create(monacoEditorWrapperRef.value!, {
-			value: code,
+			value: editorCode,
 			language: 'json',
 			theme: 'vs-dark',
 			colorDecorators: true,

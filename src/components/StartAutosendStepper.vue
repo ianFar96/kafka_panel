@@ -19,6 +19,7 @@ import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
 import logger from '../services/logger';
 import { KafkaService } from '../services/kafka';
+import { useAlertDialog } from '../composables/alertDialog';
 
 const emit = defineEmits<{
 	(emit: 'submit', autosend: Autosend): Promise<void> | void,
@@ -83,6 +84,8 @@ const connectionStore = useConnectionStore();
 const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template ref
 const stepper = ref<InstanceType<typeof Stepper> | null>(null); // Template ref
 
+const alert = useAlertDialog();
+
 const onConfigurationChange = (newConfiguration: AutosendOptions) => {
 	configuration.value = newConfiguration;
 };
@@ -93,7 +96,13 @@ const setNewConnection = async (newConnection: Connection) => {
 		await connectionStore.setConnection(newConnection);
 		stepper.value?.next();
 	} catch (error) {
-		logger.error(`Error setting the connection: ${error}`, {kafkaService});
+		const errorMessage = `Error setting the connection: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
@@ -127,14 +136,20 @@ const startAutosend = async () => {
 
 		stepperDialog.value?.close();
 	} catch (error) {
-		logger.error(`Error starting the autosend: ${error}`, {kafkaService});
+		const errorMessage = `Error starting the autosend: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Start autosend">
+	<Dialog size="fullpage" ref="stepperDialog" title="Start autosend">
 		<Stepper ref="stepper" class="mb-8" :steps="steps" submit-button-text="Start" @submit="startAutosend">
 			<!-- Steps -->
 			<template #configuration>

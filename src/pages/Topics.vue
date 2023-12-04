@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { confirm } from '@tauri-apps/api/dialog';
 import { computed, onActivated, onDeactivated, ref } from 'vue';
 import Button from '../components/Button.vue';
 import CreateTopic from '../components/CreateTopic.vue';
@@ -15,6 +14,8 @@ import { ConsumerGroupState } from '../types/consumerGroup';
 import { Topic } from '../types/topic';
 import { KafkaService } from '../services/kafka';
 import { Subscription } from 'rxjs';
+import { useConfirmDialog } from '../composables/confirmDialog';
+import { useAlertDialog } from '../composables/alertDialog';
 
 await checkSettings('topics');
 
@@ -22,6 +23,8 @@ const loader = useLoader();
 
 const connections = ref<Connection[]>([]);
 const connectionStore = useConnectionStore();
+
+const alert = useAlertDialog();
 
 const fetchTopics = () => {
 	return new Promise((resolve, reject) => {
@@ -41,7 +44,13 @@ const fetchTopicsList = async () => {
 		logger.info('Fetching topics...', {kafkaService});
 		topics.value = await kafkaService.listTopics();
 	} catch (error) {
-		logger.error(`Error fetching topics: ${error}`, {kafkaService});
+		const errorMessage = `Error fetching topics: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
@@ -53,7 +62,13 @@ const fetchTopicsState = async () => {
 		logger.debug('Fetching topics state...', {kafkaService});
 		topicsState.value = await kafkaService.getTopicsState();
 	} catch (error) {
-		logger.error(`Error fetching topics state: ${error}`, {kafkaService});
+		const errorMessage = `Error fetching topics state: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 };
 
@@ -87,7 +102,13 @@ const fetchTopicsWatermark = async () => {
 			}
 		},
 		error: async error => {
-			logger.error(`Error fetching watermarks: ${error}`, {kafkaService});
+			const errorMessage = `Error fetching watermarks: ${error}`;
+			logger.error(errorMessage, {kafkaService});
+			alert?.value?.show({ 
+				title: 'Error', 
+				type: 'error',
+				description: errorMessage
+			});
 		},
 		complete: () => {
 			logger.debug('Finished listening for watermarks', {kafkaService});
@@ -108,8 +129,6 @@ onActivated(async () => {
 
 	if (connectionStore.connection) {
 		await fetchTopics();
-	} else {
-		selectConnectionDialog?.value?.open();
 	}
 });
 
@@ -123,7 +142,13 @@ const createTopic = async (name: string, partitions?: number, replicationFactor?
 		logger.info(`Creating topic ${name}...`, {kafkaService});
 		await kafkaService.createTopic(name, partitions, replicationFactor);
 	} catch (error) {
-		logger.error(`Error creating topic: ${error}`, {kafkaService});
+		const errorMessage = `Error creating topic: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 
@@ -132,15 +157,26 @@ const createTopic = async (name: string, partitions?: number, replicationFactor?
 	await fetchTopics();
 };
 
+const confirmDialog = useConfirmDialog();
 const removeTopic = async (topic: Topic) => {
-	if (!await confirm('Are you sure you want to delete this topic? All messages will be lost', { title: 'Warning', type: 'warning' })) return;
+	const isConfirmed = await confirmDialog?.value?.ask({
+		description: 'Are you sure you want to delete this topic? All messages will be lost',
+		title: 'Warning'
+	});
+	if (!isConfirmed) return;
 
 	loader?.value?.show();
 	try {
 		logger.info(`Deleting topic ${topic.name}...`, {kafkaService});
 		await kafkaService.deleteTopic(topic.name);
 	} catch (error) {
-		logger.error(`Error removing topic: ${error}`, {kafkaService});
+		const errorMessage = `Error removing topic: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 
@@ -157,7 +193,13 @@ const setNewConnection = async (newConnection: Connection) => {
 		selectConnectionDialog.value?.close();
 		await fetchTopics();
 	} catch (error) {
-		logger.error(`Error setting connection: ${error}`, {kafkaService});
+		const errorMessage = `Error setting connection: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
@@ -266,6 +308,12 @@ onDeactivated(() => {
 			</table>
 		</div>
 	</div>
+	<div class="flex justify-center items-center h-full" v-else>
+		<div class="rounded bg-gray-800 p-6 w-[500px]">
+			<SelectConnection :connections="connections" @submit="setNewConnection" />
+		</div>
+	</div>
+
   <Dialog ref="createTopicDialog" size="s" :title="'Create topic'">
 		<CreateTopic :createTopic="createTopic" />
 	</Dialog>

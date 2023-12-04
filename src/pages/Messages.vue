@@ -14,6 +14,7 @@ import EditMessageStorageStepper from '../components/EditMessageStorageStepper.v
 import Button from '../components/Button.vue';
 import logger from '../services/logger';
 import { KafkaService, AsyncSubject } from '../services/kafka';
+import { useAlertDialog } from '../composables/alertDialog';
 
 type DisplayMessage = Message & {
 	valueVisible: boolean
@@ -30,6 +31,8 @@ const topicName = route.params.topicName as string;
 const loader = useLoader();
 
 const kafkaService = new KafkaService();
+
+const alert = useAlertDialog();
 
 const displayMessages = ref<DisplayMessage[]>([]);
 const status = ref<'starting' | 'started' | 'stopping' | 'stopped'>('stopped');
@@ -74,7 +77,13 @@ const startListenMessages = async () => {
 		},
 		error: async error => {
 			status.value = 'stopped';
-			logger.error(`Error fetching messages: ${error}`, {kafkaService});
+			const errorMessage = `Error fetching messages: ${error}`;
+			logger.error(errorMessage, {kafkaService});
+			alert?.value?.show({ 
+				title: 'Error', 
+				type: 'error',
+				description: errorMessage
+			});
 			clearTimeout(windowingTimeout as string);
 		},
 		complete: () => {
@@ -140,7 +149,13 @@ const sendMessage = async (messageContent: MessageContent) => {
 		await kafkaService.sendMessage(topicName, messageContent);
 		sendMessageStepper.value?.closeDialog();
 	} catch (error) {
-		logger.error(`Error sending the message: ${error}`, {kafkaService});
+		const errorMessage = `Error sending the message: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };

@@ -5,6 +5,7 @@ import logger from './logger';
 
 type Page = 'topics' | 'groups' | 'messages' | 'messages-storage' | 'autosend'
 
+// TODO: add alert on error logs
 async function checkSettings(page: Page) {
 	// Settings must be seeded for this to work
 	const settingsDependencies: { [key: string]: SettingKey[] } = {

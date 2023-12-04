@@ -2,6 +2,8 @@
 import { appWindow } from '@tauri-apps/api/window';
 import { provide, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import AlertDialog from './components/AlertDialog.vue';
+import ConfirmDialog from './components/ConfirmDialog.vue';
 import Loader from './components/Loader.vue';
 import { useAutosendsStore } from './composables/autosends';
 
@@ -13,6 +15,12 @@ router.afterEach(to => {
 
 const loader = ref<InstanceType<typeof Loader> | null>(null); // Template ref
 provide('loader', loader);
+
+const confirmDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null); // Template ref
+provide('confirmDialog', confirmDialog);
+
+const alertDialog = ref<InstanceType<typeof AlertDialog> | null>(null); // Template ref
+provide('alertDialog', alertDialog);
 
 const autosendStore = useAutosendsStore();
 
@@ -30,7 +38,7 @@ const route = useRoute();
           class="bi-chevron-right cursor-pointer hover:bg-gray-600 text-sm px-3.5 py-2.5">
         </button>
       </div>
-      <span class="text-sm absolute left-1/2 -translate-x-1/2">Kafka Panel - {{ title }}</span>
+      <span class="text-sm absolute left-1/2 -translate-x-1/2 select-none">Kafka Panel - {{ title }}</span>
       <div class="flex items-center">
         <button @click="appWindow.minimize()"
           class="bi-dash-lg cursor-pointer hover:bg-gray-600 text-xs px-4 py-3" alt="minimize">
@@ -74,8 +82,6 @@ const route = useRoute();
         </div>
       </aside>
       <main id="page-content" class="w-full overflow-auto p-10 relative">
-        <Loader ref="loader" />
-
         <!-- FIXME: when removing KeepAlive component routes stop working -->
         <!-- Unhandled Promise Rejection: NotFoundError: The object can not be found here. -->
         <RouterView v-slot="{ Component }">
@@ -90,4 +96,8 @@ const route = useRoute();
       </main>
     </section>
   </div>
+
+  <AlertDialog ref="alertDialog" />
+  <ConfirmDialog ref="confirmDialog" />
+  <Loader ref="loader" />
 </template>

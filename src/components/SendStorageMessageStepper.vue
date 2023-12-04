@@ -16,6 +16,7 @@ import { isSendValid, isValidHeaders } from '../services/utils';
 import { clone } from 'ramda';
 import logger from '../services/logger';
 import { KafkaService } from '../services/kafka';
+import { useAlertDialog } from '../composables/alertDialog';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
@@ -25,12 +26,20 @@ const selectedTopic = ref<Topic>();
 
 const kafkaService = new KafkaService();
 
+const alert = useAlertDialog();
+
 const fetchTopics = async () => {
 	loader?.value?.show();
 	try {
 		topics.value = await kafkaService.listTopics();
 	} catch (error) {
-		logger.error(`Error setting the connection: ${error}`, {kafkaService});
+		const errorMessage = `Error fetching topics: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
@@ -81,7 +90,13 @@ const setNewConnection = async (newConnection: Connection) => {
 		await connectionStore.setConnection(newConnection);
 		await stepper.value?.next();
 	} catch (error) {
-		logger.error(`Error setting the connection: ${error}`, {kafkaService});
+		const errorMessage = `Error setting the connection: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
@@ -107,14 +122,20 @@ const saveMessage = async () => {
 
 		stepperDialog.value?.close();
 	} catch (error) {
-		logger.error(`Error sending the message: ${error}`, {kafkaService});
+		const errorMessage = `Error sending the message: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({ 
+			title: 'Error', 
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Send storage message">
+	<Dialog size="fullpage" ref="stepperDialog" title="Send storage message">
 		<Stepper class="mb-8" ref="stepper" :steps="steps" submit-button-text="Send" @submit="saveMessage">
 			<!-- Steps -->
 			<template #connection>

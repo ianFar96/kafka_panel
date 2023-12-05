@@ -310,6 +310,7 @@ onDeactivated(() => {
 	</div>
 	<div class="flex justify-center items-center h-full" v-else>
 		<div class="rounded bg-gray-800 p-6 w-[500px]">
+			<h3 class="mb-4 text-xl">Choose Connection</h3>
 			<SelectConnection :connections="connections" @submit="setNewConnection" />
 		</div>
 	</div>

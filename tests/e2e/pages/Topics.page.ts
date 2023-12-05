@@ -1,4 +1,4 @@
-import { click, setValue } from '../utils.js';
+import { click, setValue, sleep } from '../utils.js';
 
 class TopicsPage {
 	get chooseConnectionTitle () { return $('aria/Choose Connection'); }
@@ -34,6 +34,9 @@ class TopicsPage {
 		const topicRow = await this.getRow(topicName);
 		const deleteButton = await topicRow.$('button[title="Delete topic"]');
 		await click(deleteButton);
+
+		const acceptButton = await $('button=Accept');
+		await click(acceptButton);
 	}
 
 	getRow(topicName: string) {
@@ -43,9 +46,9 @@ class TopicsPage {
 	getCell(row: WebdriverIO.Element, columName: 'name' | 'partitions') {
 		switch (columName) {
 		case 'name':
-			return row.$('td[0]');
+			return row.$('/td[0]');
 		case 'partitions':
-			return row.$('td[2]');
+			return row.$('/td[2]');
 		}
 	}
 }

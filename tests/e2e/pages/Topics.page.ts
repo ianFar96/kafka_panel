@@ -1,4 +1,4 @@
-import { click, setValue } from '../utils.js';
+import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class TopicsPage {
 	get chooseConnectionTitle () { return $('aria/Choose Connection'); }
@@ -7,6 +7,8 @@ class TopicsPage {
 	async selectConnection (connectionName: string) {
 		const connection = await $(`li=${connectionName}`);
 		await click(connection);
+
+		await waitForLoaderToHide();
 	}
 
 	async getTitle (connectionName: string) { 
@@ -28,6 +30,8 @@ class TopicsPage {
 
 		const createButton = await $('button=Create');
 		await click(createButton);
+
+		await waitForLoaderToHide();
 	}
 
 	async deleteTopic(topicName: string) {
@@ -37,6 +41,8 @@ class TopicsPage {
 
 		const acceptButton = await $('button=Accept');
 		await click(acceptButton);
+
+		await waitForLoaderToHide();
 	}
 
 	getRow(topicName: string) {

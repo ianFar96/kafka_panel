@@ -152,7 +152,6 @@ export const config: Options.Testrunner = {
 	// see also: https://webdriver.io/docs/dot-reporter
 	reporters: ['spec'],
 
-    
 	//
 	// Options to be passed to Mocha.
 	// See the full list at http://mochajs.org/

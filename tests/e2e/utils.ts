@@ -53,3 +53,12 @@ export async function createTestConnection(port: number) {
 export async function deleteSettings() {
 	await rm(e2eSettingsFolderPath, { recursive: true, force: true });
 }
+
+export async function waitForLoaderToHide() {
+	const loader = await $('#loader');
+	await loader.waitForDisplayed({
+		reverse: true,
+		timeout: 5000,
+		timeoutMsg: 'expected loader to be hidden after 5s'
+	});
+}

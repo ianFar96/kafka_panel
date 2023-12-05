@@ -174,7 +174,10 @@ export const config: Options.Testrunner = {
      */
 	onPrepare: async () => {
 		// spawnSync('cargo', ['build', '--release'], {cwd: 'src-tauri'});
+		console.log('Starting e2e kafka testcontainer...');
 		kafkaContainer = await new KafkaContainer().withExposedPorts(9093).start();
+
+		console.log('Creating setting connection for the testcontainer...');
 		await createTestConnection(kafkaContainer.getMappedPort(9093));
 	},
 	/**
@@ -206,6 +209,7 @@ export const config: Options.Testrunner = {
      * @param {string} cid worker id (e.g. 0-0)
      */
 	beforeSession: async () => {
+		console.log('Starting tauri-driver...');
 		tauriDriver = spawn(
 			path.resolve(os.homedir(), '.cargo', 'bin', 'tauri-driver'),
 			[],
@@ -296,6 +300,7 @@ export const config: Options.Testrunner = {
      * @param {Array.<String>} specs List of spec file paths that ran
      */
 	afterSession: async () => {
+		console.log('Shutting down tauri-driver...');
 		tauriDriver.kill();
 	},
 	/**
@@ -307,7 +312,10 @@ export const config: Options.Testrunner = {
      * @param {<Object>} results object containing test results
      */
 	onComplete: async () => {
+		console.log('Stopping kafka testcontainer...');
 		await kafkaContainer.stop();
+
+		console.log('Deleting e2e config directory...');
 		await deleteSettings();
 	},
 	/**

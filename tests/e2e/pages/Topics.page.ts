@@ -43,12 +43,10 @@ class TopicsPage {
 		return this.topicsTable.$(`td=${topicName}`).$('..');
 	}
 
-	getCell(row: WebdriverIO.Element, columName: 'name' | 'partitions') {
+	async getCell(row: WebdriverIO.Element, columName: 'name' | 'partitions') {
 		switch (columName) {
-		case 'name':
-			return row.$('/td[0]');
 		case 'partitions':
-			return row.$('/td[2]');
+			return row.$('//td[3]');
 		}
 	}
 }

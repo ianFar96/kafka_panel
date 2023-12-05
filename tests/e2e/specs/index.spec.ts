@@ -16,17 +16,14 @@ describe('Topics', () => {
 		await TopicsPage.createTopic(topicName, topicPartitions);
 
 		const topicRow = await TopicsPage.getRow(topicName);
-		const topicNameCell = await TopicsPage.getCell(topicRow, 'name');
-		expect(topicNameCell).toBeDisplayed();
 		const topicPartitionsCell = await TopicsPage.getCell(topicRow, 'partitions');
-		expect(topicPartitionsCell).toHaveValue(topicPartitions.toString());
+		await expect(topicPartitionsCell).toHaveText(topicPartitions.toString());
 	});
 
 	it('should delete the topic', async () => {
 		await TopicsPage.deleteTopic(topicName);
-		await sleep(100);
 
 		const topicsTableRows = await TopicsPage.topicsTable.$$('tbody tr');
-		expect(topicsTableRows.length).toBe(0);
+		await expect(topicsTableRows.length).toBe(0);
 	});
 });

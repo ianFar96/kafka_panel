@@ -1,5 +1,5 @@
 import TopicsPage from '../pages/Topics.page.js';
-import { e2eConnectionName } from '../utils.js';
+import { e2eConnectionName, sleep } from '../utils.js';
 
 const topicName = 'topic.e2e.test';
 
@@ -24,6 +24,7 @@ describe('Topics', () => {
 
 	it('should delete the topic', async () => {
 		await TopicsPage.deleteTopic(topicName);
+		await sleep(100);
 
 		const topicsTableRows = await TopicsPage.topicsTable.$$('tbody tr');
 		expect(topicsTableRows.length).toBe(0);

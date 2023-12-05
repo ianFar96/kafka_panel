@@ -1,4 +1,4 @@
-import { click, setValue, sleep } from '../utils.js';
+import { click, setValue } from '../utils.js';
 
 class TopicsPage {
 	get chooseConnectionTitle () { return $('aria/Choose Connection'); }

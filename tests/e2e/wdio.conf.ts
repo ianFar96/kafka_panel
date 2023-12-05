@@ -4,7 +4,7 @@ import path from 'path';
 import os from 'os';
 import { Writable } from 'stream';
 import { KafkaContainer, StartedKafkaContainer } from '@testcontainers/kafka';
-import { createTestConnection } from './utils.js';
+import { createTestConnection, deleteSettings } from './utils.js';
 
 let tauriDriver: ChildProcessByStdio<Writable, null, null>;
 
@@ -172,8 +172,10 @@ export const config: Options.Testrunner = {
      * @param {object} config wdio configuration object
      * @param {Array.<Object>} capabilities list of capabilities details
      */
-	onPrepare: () => {
+	onPrepare: async () => {
 		// spawnSync('cargo', ['build', '--release'], {cwd: 'src-tauri'});
+		kafkaContainer = await new KafkaContainer().withExposedPorts(9093).start();
+		await createTestConnection(kafkaContainer.getMappedPort(9093));
 	},
 	/**
      * Gets executed before a worker process is spawned and can be used to initialise specific service
@@ -209,12 +211,6 @@ export const config: Options.Testrunner = {
 			[],
 			{ stdio: [null, process.stdout, process.stderr] }
 		);
-
-		kafkaContainer = await new KafkaContainer()
-			.withExposedPorts(9093)
-			.start();
-
-		await createTestConnection(kafkaContainer.getMappedPort(9093));
 	},
 	/**
      * Gets executed before test execution begins. At this point you can access to all global
@@ -301,7 +297,6 @@ export const config: Options.Testrunner = {
      */
 	afterSession: async () => {
 		tauriDriver.kill();
-		await kafkaContainer.stop();
 	},
 	/**
      * Gets executed after all workers got shut down and the process is about to exit. An error
@@ -311,8 +306,10 @@ export const config: Options.Testrunner = {
      * @param {Array.<Object>} capabilities list of capabilities details
      * @param {<Object>} results object containing test results
      */
-	// onComplete: function(exitCode, config, capabilities, results) {
-	// },
+	onComplete: async () => {
+		await kafkaContainer.stop();
+		await deleteSettings();
+	},
 	/**
     * Gets executed when a refresh happens.
     * @param {string} oldSessionId session ID of the old session

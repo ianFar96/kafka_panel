@@ -1,4 +1,4 @@
-import { writeFile } from 'fs/promises';
+import { mkdir, rm, writeFile } from 'fs/promises';
 import { homedir } from 'os';
 
 type Settings = {
@@ -27,6 +27,7 @@ export async function sleep(time = 5000) {
 }
 
 export const e2eConnectionName = 'Localhost E2E'; 
+const e2eSettingsFolderPath = `${homedir()}/.kafka_panel/config/e2e`;
 
 /**
  * Creates a connection with given port
@@ -42,5 +43,13 @@ export async function createTestConnection(port: number) {
 		}]
 	};
 
-	await writeFile(`${homedir()}/.kafka_panel/config/e2e/settings.json`, JSON.stringify(settings));
+	await mkdir(e2eSettingsFolderPath, {recursive: true});
+	await writeFile(`${e2eSettingsFolderPath}/settings.json`, JSON.stringify(settings));
+}
+
+/**
+ * Removes the E2E settings folder
+ */
+export async function deleteSettings() {
+	await rm(e2eSettingsFolderPath, { recursive: true, force: true });
 }

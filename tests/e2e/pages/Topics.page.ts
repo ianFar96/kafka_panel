@@ -15,7 +15,7 @@ class TopicsPage {
 		return $(`aria/${connectionName} topics`); 
 	}
 
-	async createTopic(topicName: string, partitions: number) {
+	async createTopic(topicName: string, partitions?: number) {
 		const newTopicButton = await $('button=New topic');
 		await click(newTopicButton);
 
@@ -25,8 +25,10 @@ class TopicsPage {
 		const nameInput = await $('input[name="name"]');
 		await setValue(nameInput, topicName);
 
-		const partitionsInput = await $('input[name="partitions"]');
-		await setValue(partitionsInput, partitions);
+		if (partitions) {
+			const partitionsInput = await $('input[name="partitions"]');
+			await setValue(partitionsInput, partitions);
+		}
 
 		const createButton = await $('button=Create');
 		await click(createButton);

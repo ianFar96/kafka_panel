@@ -1,5 +1,6 @@
+import MessagesPage from '../pages/Messages.page.js';
 import TopicsPage from '../pages/Topics.page.js';
-import { e2eConnectionName } from '../utils.js';
+import { click, e2eConnectionName, sleep } from '../utils.js';
 
 const topicName = 'topic.e2e.test';
 
@@ -24,6 +25,26 @@ describe('Topics', () => {
 		await TopicsPage.deleteTopic(topicName);
 
 		const topicsTableRows = await TopicsPage.topicsTable.$$('tbody tr');
-		await expect(topicsTableRows.length).toBe(0);
+		await expect(topicsTableRows).toHaveLength(0);
+	});
+});
+
+describe('Messages', () => {
+	it('should send a message', async () => {
+		await TopicsPage.createTopic(topicName);
+
+		const topicRow = await TopicsPage.getRow(topicName);
+		const messagesLink = await topicRow.$('a[title=Messages]');
+		await click(messagesLink);
+
+		const listItems = await MessagesPage.list.$$('li');
+		await expect(listItems).toHaveLength(0);
+
+		await MessagesPage.sendMessage();
+
+		(await MessagesPage.list).waitUntil(async () => {
+			const listItems = await MessagesPage.list.$$('li');
+			return listItems.length === 1;
+		}, {timeout: 5000, timeoutMsg: 'expected list to have exactly one message after 5s'});
 	});
 });

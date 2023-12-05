@@ -65,6 +65,7 @@ export const config: Options.Testrunner = {
 	// from the same test should run tests.
 	//
 	maxInstances: 1,
+	hostname: '127.0.0.1',
 	//
 	// If you have trouble getting all important capabilities together, check out the
 	// Sauce Labs platform configurator - a great tool to configure your capabilities:
@@ -72,7 +73,7 @@ export const config: Options.Testrunner = {
 	//
 	capabilities: [{
 		maxInstances: 1,
-		hostname: 'localhost',
+		hostname: '127.0.0.1',
 		port: 4444,
 		browserName: 'wry',
 		'tauri:options': {
@@ -111,7 +112,7 @@ export const config: Options.Testrunner = {
 	// with `/`, the base url gets prepended, not including the path portion of your baseUrl.
 	// If your `url` parameter starts without a scheme or `/` (like `some/path`), the base url
 	// gets prepended directly.
-	baseUrl: 'http://localhost',
+	baseUrl: 'http://127.0.0.1',
 	//
 	// Default timeout for all waitFor* commands.
 	waitforTimeout: 10000,

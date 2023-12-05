@@ -18,6 +18,17 @@ jobs:
       # checkout the code on the workflow runner
       - uses: actions/checkout@v2
 
+      # cache rust dependencies
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       # install system dependencies that Tauri needs to compile on Linux.
       # note the extra dependencies for `tauri-driver` to run which are: `webkit2gtk-driver` and `xvfb`
       - name: Tauri dependencies
@@ -28,6 +39,7 @@ jobs:
           libayatana-appindicator3-dev
           libwebkit2gtk-4.0-dev
           webkit2gtk-driver
+          cmake
           xvfb
 
       # install the latest Rust stable
@@ -47,6 +59,19 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 18.x
+
+      # cache node dependencies
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
+      - uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       # install our Node.js dependencies with Npm
       - name: Npm install

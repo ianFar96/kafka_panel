@@ -1,5 +1,5 @@
 import TopicsPage from '../pages/Topics.page.js';
-import { e2eConnectionName, sleep } from '../utils.js';
+import { e2eConnectionName } from '../utils.js';
 
 const topicName = 'topic.e2e.test';
 

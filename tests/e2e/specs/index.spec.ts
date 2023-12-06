@@ -47,4 +47,13 @@ describe('Messages', () => {
 			return listItems.length === 1;
 		}, {timeout: 5000, timeoutMsg: 'expected list to have exactly one message after 5s'});
 	});
+
+	it('should send a message from an already sent message', async () => {
+		await MessagesPage.sendMessage(0);
+
+		await browser.waitUntil(async () => {
+			const listItems = await MessagesPage.list.$$('li');
+			return listItems.length === 2;
+		}, {timeout: 5000, timeoutMsg: 'expected list to have exactly two messages after 5s'});
+	});
 });

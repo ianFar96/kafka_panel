@@ -3,9 +3,17 @@ import { click, waitForLoaderToHide } from '../utils.js';
 class MessagesPage {
 	get list() { return $('ul'); }
 
-	async sendMessage() {
-		const sendMessageButton = await $('button=Send message');
-		await click(sendMessageButton);
+	async sendMessage(sentMessageIndex?: number) {
+		if (sentMessageIndex === undefined) {
+			const sendMessageButton = await $('button=Send message');
+			await click(sendMessageButton);
+		} else {
+			const showMessageButton = await this.list.$(`//li[${sentMessageIndex + 1}]/div`);
+			await click(showMessageButton);
+
+			const sendAgainButton = await $('button[title="Send again"]');
+			await click(sendAgainButton);
+		}
 
 		const nextButton = await $('button=Next');
 		await click(nextButton);

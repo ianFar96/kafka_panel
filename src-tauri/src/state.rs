@@ -36,43 +36,65 @@ pub struct StorageState {
 }
 
 pub fn get_app_dir() -> Result<String, String> {
-    let home_dir = match home_dir() {
+    let app_dir = match home_dir() {
         None => Err("Could not determine your home path with https://docs.rs/dirs/latest/dirs/fn.home_dir.html# function"),
         Some(dir) => Ok(dir)
     }?;
 
-    Ok(format!("{}/.kafka_panel", home_dir.to_string_lossy()))
+    Ok(format!("{}/.kafka_panel", app_dir.to_string_lossy()))
 }
 
-pub fn init_storage() -> Result<StorageState, String> {
-    #[allow(unused_mut)]
-    let app_folder = get_app_dir()?;
-    let mut config_folder = format!("{}/config", app_folder);
+#[allow(dead_code)]
+enum Environments {
+    Dev,
+    E2E,
+    Release,
+}
 
-    // Retrocompatibility
-    if !Path::new(&config_folder).is_dir() && Path::new(&app_folder).is_dir() {
-        config_folder = app_folder;
-    }
+#[allow(unused)]
+pub fn get_app_dir_with_env() -> Result<String, String> {
+    let mut env_name = Environments::Release;
 
-    // Get settings from /dev folder in case of running in development
     #[cfg(dev)]
     {
-        config_folder = format!("{}/dev", config_folder);
+        env_name = Environments::Dev
     }
 
-    // Get settings from /test folder in case of running in test e2e
     // https://webdriver.io/docs/api/environment
     match env::var("NODE_ENV") {
         Ok(env_var) => {
             if env_var == "test" {
-                config_folder = format!("{}/e2e", config_folder);
+                env_name = Environments::E2E
             }
         }
         Err(_) => {}
     }
 
-    if !Path::new(&config_folder).is_dir() {
-        create_dir_all(&config_folder).map_err(|err| {
+    let app_dir = get_app_dir()?;
+    let app_dir_with_env = match env_name {
+        Environments::Release => format!("{}/release", app_dir),
+        Environments::Dev => format!("{}/dev", app_dir),
+        Environments::E2E => format!("{}/e2e", app_dir)
+    };
+
+    Ok(app_dir_with_env)
+}
+
+pub fn init_storage() -> Result<StorageState, String> {
+    let app_dir_with_env = get_app_dir_with_env()?;
+    let mut config_dir_with_env = format!("{}/config", app_dir_with_env);
+
+    // Retrocompatibility
+    if !Path::new(&app_dir_with_env).is_dir() {
+        let app_dir = get_app_dir()?;
+        let config_dir = format!("{}/config", app_dir);
+        if Path::new(&config_dir).is_dir() {
+            config_dir_with_env = config_dir;
+        }
+    }
+
+    if !Path::new(&config_dir_with_env).is_dir() {
+        create_dir_all(&config_dir_with_env).map_err(|err| {
             format!(
                 "Unexpected error, could not create local store directory ~/.kafka_panel; err: {}",
                 err.to_string()
@@ -83,24 +105,30 @@ pub fn init_storage() -> Result<StorageState, String> {
     let mut store_config = Config::default();
     store_config.single = true;
 
-    let settings = Store::new_with_cfg(format!("{}/settings.json", config_folder), store_config)
-        .map_err(|err| {
-            format!(
-                "Unexpected error, could create storage file; err: {}",
-                err.to_string()
-            )
-        })?;
+    let settings = Store::new_with_cfg(
+        format!("{}/settings.json", config_dir_with_env),
+        store_config,
+    )
+    .map_err(|err| {
+        format!(
+            "Unexpected error, could create storage file; err: {}",
+            err.to_string()
+        )
+    })?;
 
     set_storage_default(&settings, "CONNECTIONS", &json!([]))?;
     set_storage_default(&settings, "MESSAGES", &json!(20))?;
 
-    let messages = Store::new_with_cfg(format!("{}/messages.json", config_folder), store_config)
-        .map_err(|err| {
-            format!(
-                "Unexpected error, could create storage file; err: {}",
-                err.to_string()
-            )
-        })?;
+    let messages = Store::new_with_cfg(
+        format!("{}/messages.json", config_dir_with_env),
+        store_config,
+    )
+    .map_err(|err| {
+        format!(
+            "Unexpected error, could create storage file; err: {}",
+            err.to_string()
+        )
+    })?;
 
     Ok(StorageState { settings, messages })
 }

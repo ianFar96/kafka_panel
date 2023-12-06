@@ -7,6 +7,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use std::thread;
 use tauri::Window;
 use tokio::time::Duration;
 
@@ -27,7 +28,7 @@ pub async fn listen_messages(
     messages_number: i64,
     id: String,
 ) -> Result<(), String> {
-    // Manually fecth metadata and assign partition so we don't fetch using our consumer group
+    // Manually fetch metadata and assign partition so we don't fetch using our consumer group
     let metadata = consumer
         .fetch_metadata(Some(&topic), Duration::from_secs(30))
         .map_err(|err| {
@@ -55,7 +56,7 @@ pub async fn listen_messages(
             .fetch_watermarks(&topic, partition.id(), Duration::from_secs(30))
             .map_err(|err| {
                 format!(
-                    "Could not seek partition offset in topic:{}, partition: {}\n\nError: {}",
+                    "Could not seek partition offset in topic: {}, partition: {}\n\nError: {}",
                     topic,
                     partition.id(),
                     err.to_string()
@@ -68,15 +69,33 @@ pub async fn listen_messages(
         } else {
             Offset::Beginning
         };
-        consumer.seek(&topic, partition.id(), offset_start, Duration::from_secs(30)).map_err(|err| {
-            format!(
-                "Could not seek partition offset in topic:{}, partition: {}, offset: {}\n\nError: {}",
-                topic,
-                partition.id(),
-                seek_start,
-                err.to_string()
-            )
-        })?;
+        
+        // Workaround system for the Erroneus state error
+        let mut success = false;
+        let mut attempts = 0;
+        while !success {
+            success = consumer.seek(&topic, partition.id(), offset_start, Duration::from_secs(30))
+                .map(|_| true)
+                .or_else(|error| {
+                    if error.to_string() == "Seek error: Local: Erroneous state" && attempts < 5 {
+                        return Ok(false);
+                    }
+    
+                    Err(error)
+                })
+                .map_err(|err| {
+                    format!(
+                        "Could not seek partition offset in topic: {}, partition: {}, offset: {:?}\n\nError: {}",
+                        topic,
+                        partition.id(),
+                        offset_start,
+                        err.to_string()
+                    )
+                })?;
+
+            attempts += 1;
+            thread::sleep(Duration::from_millis(100));
+        }
     }
 
     let keep_listening = Arc::new(RwLock::new(true));

@@ -27,7 +27,7 @@ export async function sleep(time = 5000) {
 }
 
 export const e2eConnectionName = 'Localhost E2E'; 
-const e2eSettingsFolderPath = `${homedir()}/.kafka_panel/config/e2e`;
+const e2eSettingsFolderPath = `${homedir()}/.kafka_panel/e2e/config`;
 
 /**
  * Creates a connection with given port

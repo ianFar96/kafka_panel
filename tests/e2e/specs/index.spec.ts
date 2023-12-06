@@ -1,6 +1,6 @@
 import MessagesPage from '../pages/Messages.page.js';
 import TopicsPage from '../pages/Topics.page.js';
-import { click, e2eConnectionName, sleep } from '../utils.js';
+import { click, e2eConnectionName } from '../utils.js';
 
 const topicName = 'topic.e2e.test';
 
@@ -42,7 +42,7 @@ describe('Messages', () => {
 
 		await MessagesPage.sendMessage();
 
-		(await MessagesPage.list).waitUntil(async () => {
+		await browser.waitUntil(async () => {
 			const listItems = await MessagesPage.list.$$('li');
 			return listItems.length === 1;
 		}, {timeout: 5000, timeoutMsg: 'expected list to have exactly one message after 5s'});

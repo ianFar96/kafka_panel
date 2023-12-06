@@ -283,6 +283,7 @@ pub fn append_log_command(message: &str, level: &str, extras: Option<Extras>) {
 }
 
 #[tauri::command]
+#[allow(unreachable_code)]
 pub fn is_dev() -> bool {
     #[cfg(dev)]
     {

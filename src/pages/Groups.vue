@@ -185,8 +185,8 @@ onBeforeUnmount(() => {
 		<div class="flex mb-6 justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block mr-2 bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
-			<button @click="fetchGroupsFromTopic()" 
-				class="text-2xl bi-arrow-clockwise" type="button">
+			<button type="button" @click="fetchGroupsFromTopic()"
+				title="Refresh list" class="text-2xl bi-arrow-clockwise" >
 			</button>
 		</div>
 		<div class="h-full overflow-auto">

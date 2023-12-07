@@ -1,5 +1,5 @@
 import { mkdir, rm, writeFile } from 'fs/promises';
-import { Kafka } from 'kafkajs';
+import { Consumer, Kafka, KafkaMessage, logLevel } from 'kafkajs';
 import { after } from 'mocha';
 import { homedir } from 'os';
 
@@ -66,10 +66,17 @@ export async function waitForLoaderToHide() {
 }
 
 let kafka: Kafka;
-export async function getProducer() {
+function setKafka() {
 	if (!kafka) {
-		kafka = new Kafka({ brokers: [`localhost:${(global as any).kafkaContainer.getMappedPort(9093)}`] });
+		kafka = new Kafka({ 
+			brokers: [`localhost:${(global as any).kafkaContainer.getMappedPort(9093)}`],
+			logLevel: logLevel.NOTHING
+		});
 	}
+}
+
+export async function getProducer() {
+	setKafka();
 	const producer = kafka.producer();
 	await producer.connect();
 	after(async () => {
@@ -78,3 +85,45 @@ export async function getProducer() {
 
 	return producer;
 }
+
+// export async function getConsumer(groupId: string) {
+// 	setKafka();
+// 	const consumer = kafka.consumer({ groupId });
+// 	await consumer.connect();
+// 	after(async () => {
+// 		await consumer.disconnect();
+// 	});
+
+// 	return consumer;
+// }
+
+export async function getAdmin() {
+	setKafka();
+	const admin = kafka.admin();
+	await admin.connect();
+	after(async () => {
+		await admin.disconnect();
+	});
+
+	return admin;
+}
+
+// export function waitForMessages(consumer: Consumer, messagesCount: number) {
+// 	// eslint-disable-next-line no-async-promise-executor
+// 	return new Promise<KafkaMessage[]>(async (resolve, reject) => {
+// 		const receivedMessages: KafkaMessage[] = [];
+// 		await consumer.run({
+// 			eachMessage: async ({message}) => {
+// 				receivedMessages.push(message);
+// 				if (receivedMessages.length >= messagesCount) {
+// 					resolve(receivedMessages);
+// 					await consumer.stop();
+// 				}
+// 			}
+// 		});
+
+// 		setTimeout(() => {
+// 			reject(`Did not receive expected number of messages: ${messagesCount}, instead received ${receivedMessages.length}`);
+// 		}, 3000);
+// 	});
+// }

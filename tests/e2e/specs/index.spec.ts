@@ -1,9 +1,11 @@
 import { Message } from 'kafkajs';
+import GroupsPage from '../pages/Groups.page.js';
 import MessagesPage from '../pages/Messages.page.js';
 import TopicsPage from '../pages/Topics.page.js';
-import { click, e2eConnectionName, getProducer, sleep } from '../utils.js';
+import { click, e2eConnectionName, getProducer, getAdmin, sleep } from '../utils.js';
 
 const topicName = 'topic.e2e.test';
+const groupId = 'topic.e2e.test.groupId';
 
 describe('Topics', () => {
 	it('should see topics list', async () => {
@@ -25,9 +27,12 @@ describe('Topics', () => {
 	it('should delete the topic', async () => {
 		await TopicsPage.deleteTopic(topicName);
 
-		const topicsTableRows = await TopicsPage.topicsTable.$$('tbody tr');
+		const topicsTableRows = await TopicsPage.table.$$('tbody tr');
 		await expect(topicsTableRows).toHaveLength(0);
 	});
+
+	// TODO: check on watermarks and topic state
+	// TODO: test search
 });
 
 describe('Messages', () => {
@@ -67,4 +72,84 @@ describe('Messages', () => {
 		MessagesPage.startListener();
 		await MessagesPage.waitUntilMessagesCount(3);
 	});
+
+	// TODO: test search
+});
+
+describe('Groups', () => {
+	it('should see consumer group', async () => {
+		const groupsLink = await $('a=Groups');
+		await click(groupsLink);
+
+		await GroupsPage.waitUntilGroupsCount(0);
+
+		// Commit offsets to see the group in the list
+		const admin = await getAdmin();
+		await admin.setOffsets({groupId, topic: topicName, partitions: [{partition: 0, offset: '2'}]});
+
+		await GroupsPage.refresh();
+		await GroupsPage.waitUntilGroupsCount(1);
+
+		const groupRow = await GroupsPage.getRow(groupId);
+		const lowCell = await GroupsPage.getCell(groupRow, 'low');
+		await expect(lowCell).toHaveText('2');
+
+		const highCell = await GroupsPage.getCell(groupRow, 'high');
+		await expect(highCell).toHaveText('3');
+
+		const lagCell = await GroupsPage.getCell(groupRow, 'lag');
+		await expect(lagCell).toHaveText('1');
+
+		// Should not be disabled
+		const seekLatestOffsetsButton = await GroupsPage.getAction(groupRow, 'seekEarliestOffsets');
+		await expect(seekLatestOffsetsButton).not.toHaveElementClass('text-gray-500');
+		const commitLatestOffsetsButton = await GroupsPage.getAction(groupRow, 'commitLatestOffsets');
+		await expect(commitLatestOffsetsButton).not.toHaveElementClass('text-gray-500');
+	});
+
+	it('should commit latest offsets', async () => {
+		await GroupsPage.commitLatestOffsets(groupId);
+		
+		const groupRow = await GroupsPage.getRow(groupId);
+		const lowCell = await GroupsPage.getCell(groupRow, 'low');
+		await expect(lowCell).toHaveText('3');
+
+		const highCell = await GroupsPage.getCell(groupRow, 'high');
+		await expect(highCell).toHaveText('3');
+
+		const lagCell = await GroupsPage.getCell(groupRow, 'lag');
+		await expect(lagCell).toHaveText('0');
+
+		// Should be disabled
+		const commitLatestOffsetsButton = await GroupsPage.getAction(groupRow, 'commitLatestOffsets');
+		await expect(commitLatestOffsetsButton).toHaveElementClass('text-gray-500');
+
+		// Should not be disabled
+		const seekLatestOffsetsButton = await GroupsPage.getAction(groupRow, 'seekEarliestOffsets');
+		await expect(seekLatestOffsetsButton).not.toHaveElementClass('text-gray-500');
+	});
+
+	it('should seek earliest offsets', async () => {
+		await GroupsPage.seekEarliestOffsets(groupId);
+
+		// The group should disappear
+		await GroupsPage.waitUntilGroupsCount(0);
+	});
+
+	it('should delete new consumer group', async () => {
+		// Commit offsets to see the group in the list
+		const admin = await getAdmin();
+		await admin.setOffsets({groupId, topic: topicName, partitions: [{partition: 0, offset: '2'}]});
+
+		await GroupsPage.refresh();
+		await GroupsPage.waitUntilGroupsCount(1);
+
+		await GroupsPage.deleteGroup(groupId);
+
+		// The group should disappear
+		await GroupsPage.waitUntilGroupsCount(0);
+	});
+
+	// TODO: test state
+	// TODO: test search
 });

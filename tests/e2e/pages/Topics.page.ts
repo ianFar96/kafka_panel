@@ -2,7 +2,7 @@ import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class TopicsPage {
 	get chooseConnectionTitle () { return $('aria/Choose Connection'); }
-	get topicsTable () { return $('table'); }
+	get table () { return $('table'); }
 
 	async selectConnection (connectionName: string) {
 		const connection = await $(`li=${connectionName}`);
@@ -48,10 +48,10 @@ class TopicsPage {
 	}
 
 	getRow(topicName: string) {
-		return this.topicsTable.$(`td=${topicName}`).$('..');
+		return this.table.$(`td=${topicName}`).$('..');
 	}
 
-	async getCell(row: WebdriverIO.Element, columName: 'name' | 'partitions') {
+	getCell(row: WebdriverIO.Element, columName: 'partitions') {
 		switch (columName) {
 		case 'partitions':
 			return row.$('//td[3]');

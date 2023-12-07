@@ -51,7 +51,7 @@ class TopicsPage {
 			return tableItems.length === elementsCount;
 		}, {timeout: 5000, timeoutMsg: `expected list to have exactly ${elementsCount} groups after 5s`});
 	}
-	
+
 	async search(searchString: string) {
 		await setValue(await this.searchInput, searchString);
 	}

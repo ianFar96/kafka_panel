@@ -22,8 +22,10 @@ class GroupsPage {
 		return this.table.$(`td=${groupName}`).$('..');
 	}
 
-	getCell(row: WebdriverIO.Element, columName: 'low' | 'high' | 'lag') {
+	getCell(row: WebdriverIO.Element, columName: 'state' |'low' | 'high' | 'lag') {
 		switch (columName) {
+		case 'state':
+			return row.$('//td[1]/div/div[title="Consuming"|title="Disconnected"|title="Unconnected"]');
 		case 'low':
 			return row.$('//td[2]');
 		case 'high':
@@ -68,7 +70,7 @@ class GroupsPage {
 		await click(await this.confirmButton);
 		await waitForLoaderToHide();
 	}
-	
+
 	async search(searchString: string) {
 		await setValue(await this.searchInput, searchString);
 	}

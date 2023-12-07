@@ -38,7 +38,7 @@ describe('Topics', () => {
 		await expect(stateCell).toHaveAttribute('title', 'Unconnected');
 
 		// Connect to the topic
-		const groupId = 'groupId.e2e.test.change.state';
+		const groupId = 'topics.change.state';
 		const consumer = await getConsumer(groupId);
 		await consumer.subscribe({topic: topicName, fromBeginning: true});
 		await consumer.run({eachBatch: async() => {/* do nothing */}});
@@ -201,7 +201,7 @@ describe('Groups', () => {
 
 	it('should commit latest offsets', async () => {
 		await GroupsPage.commitLatestOffsets(groupId);
-		
+
 		const groupRow = await GroupsPage.getRow(groupId);
 		const lowCell = await GroupsPage.getCell(groupRow, 'low');
 		await expect(lowCell).toHaveText('3');
@@ -229,7 +229,7 @@ describe('Groups', () => {
 	});
 
 	it('should delete new consumer group', async () => {
-		const groupId = 'messages.groups.delete';
+		const groupId = 'groups.delete';
 
 		// Commit offsets to see the group in the list
 		const admin = await getAdmin();
@@ -244,9 +244,38 @@ describe('Groups', () => {
 		await GroupsPage.waitUntilGroupsCount(0);
 	});
 
+	it('should show how the state changes', async () => {
+		const groupId = 'groups.change.state';
+
+		// Connect to the topic
+		const consumer = await getConsumer(groupId);
+		await consumer.subscribe({topic: topicName, fromBeginning: true});
+		await consumer.run({eachBatch: async() => {/* do nothing */}});
+
+		await GroupsPage.refresh();
+
+		const groupRow = await GroupsPage.getRow(groupId);
+		const stateCell = await GroupsPage.getCell(groupRow, 'state');
+
+		await expect(stateCell).toHaveAttribute('title', 'Consuming');
+
+		// Disconnect from topic
+		await consumer.stop();
+		await consumer.disconnect();
+
+		// Set the offset
+		const admin = await getAdmin();
+		await admin.setOffsets({groupId, topic: topicName, partitions: [{partition: 0, offset: '1'}]});
+
+		await GroupsPage.refresh();
+		await expect(stateCell).toHaveAttribute('title', 'Disconnected');
+
+		await GroupsPage.deleteGroup(groupId);
+	});
+
 	it('should search', async () => {
-		const groupName1 = 'messages.groups.search.1';
-		const groupName2 = 'messages.groups.search.2';
+		const groupName1 = 'groups.search.1';
+		const groupName2 = 'groups.search.2';
 
 		// Commit offsets to see the group in the list
 		const admin = await getAdmin();
@@ -261,7 +290,12 @@ describe('Groups', () => {
 		await GroupsPage.waitUntilGroupsCount(1);
 		const group1Row = await GroupsPage.getRow(groupName1);
 		await expect(group1Row).toBeDisplayed();
-	});
 
-	// TODO: test state
+		// Empty search bar
+		await GroupsPage.search('');
+
+		// Delete created groups
+		await GroupsPage.deleteGroup(groupName1);
+		await GroupsPage.deleteGroup(groupName2);
+	});
 });

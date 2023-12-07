@@ -28,7 +28,7 @@ export const isSendValid = (value: unknown) => {
 
 export const stringifyMessage = (message: MessageContent) => {
 	return JSON.stringify({
-		headers: message.headers, 
+		headers: message.headers,
 		key: message.key,
 		value: message.value
 	}, null, 2);
@@ -74,7 +74,7 @@ export const getDefaultAutosendConfiguration = (): AutosendOptions => ({
 });
 
 export const getMonacoEditorCompletionItems = (
-	suggestions: object, 
+	suggestions: object,
 	range: monaco.IRange
 ): monaco.languages.CompletionItem[] => {
 	// This is used to ignore circular dependencies when looping throught the suggestions object
@@ -82,7 +82,7 @@ export const getMonacoEditorCompletionItems = (
 
 	const accumulator: monaco.languages.CompletionItem[] = [];
 	const recursion = (suggestions: object, previousKey?: string) =>  {
-		for (const [key, value] of Object.entries(suggestions ?? {})) {			
+		for (const [key, value] of Object.entries(suggestions ?? {})) {
 			// Avoid circular dependencies
 			if (typeof value === 'object' && value !== null) {
 				if (ancestors.includes(value)) {
@@ -102,7 +102,7 @@ export const getMonacoEditorCompletionItems = (
 					suggestionKind = monaco.languages.CompletionItemKind.Function;
 					insertText = `${newKey}()`;
 					break;
-				
+
 				default:
 					suggestionKind = monaco.languages.CompletionItemKind.Field;
 					insertText = newKey;

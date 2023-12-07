@@ -28,13 +28,13 @@ export async function sleep(time = 5000) {
 	return new Promise(resolve => setTimeout(resolve, time));
 }
 
-export const e2eConnectionName = 'Localhost E2E'; 
+export const e2eConnectionName = 'Localhost E2E';
 const e2eSettingsFolderPath = `${homedir()}/.kafka_panel/e2e/config`;
 
 /**
  * Creates a connection with given port
  * directly into the .kafka_panel/config/e2e/settings.json file
- * 
+ *
  * @param port
  */
 export async function createTestConnection(port: number) {
@@ -68,7 +68,8 @@ export async function waitForLoaderToHide() {
 let kafka: Kafka;
 function setKafka() {
 	if (!kafka) {
-		kafka = new Kafka({ 
+		kafka = new Kafka({
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			brokers: [`localhost:${(global as any).kafkaContainer.getMappedPort(9093)}`],
 			logLevel: logLevel.NOTHING
 		});

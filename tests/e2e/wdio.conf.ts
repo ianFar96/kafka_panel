@@ -24,7 +24,7 @@ export const config: Options.Testrunner = {
 			transpileOnly: true
 		}
 	},
-    
+
 	//
 	// ==================
 	// Specify Test Files
@@ -79,6 +79,7 @@ export const config: Options.Testrunner = {
 		'tauri:options': {
 			application: './src-tauri/target/release/kafka-panel',
 		},
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	}] as any,
 
 	//
@@ -219,6 +220,7 @@ export const config: Options.Testrunner = {
 		await createTestConnection(kafkaContainer.getMappedPort(9093));
 
 		// Expose globally the kafka container
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(global as any).kafkaContainer = kafkaContainer;
 	},
 	/**

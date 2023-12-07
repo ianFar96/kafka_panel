@@ -21,7 +21,7 @@ async function checkSettings(page: Page) {
 	if (!dependencies) {
 		logger.error(`Unknown page in check settings: ${page}`);
 	} else {
-		const settings = (await Promise.all(dependencies.map(async (dependency) => 
+		const settings = (await Promise.all(dependencies.map(async (dependency) =>
 			await storageService.settings.get(dependency)
 		))).filter(Boolean) as Setting[];
 

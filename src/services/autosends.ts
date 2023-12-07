@@ -19,7 +19,7 @@ export class AutosendsService {
 		});
 
 		let messagesSent = 0;
-    
+
 		const interval = this.castAutosendTimeToDuration(autosend.options.interval);
 		this.intervals[autosend.id] = setInterval((autosend: ActiveAutosend) => {
 			try {
@@ -65,7 +65,7 @@ export class AutosendsService {
 			duration = Duration.fromObject({milliseconds: time.value});
 			break;
 		}
-	
+
 		return duration;
 	}
 }

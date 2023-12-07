@@ -32,8 +32,8 @@ export const useAutosendsStore = defineStore('autosends', () => {
 		messagesSentObservable.subscribe({
 			error: async error => {
 				logger.error(error, {autosendsService});
-				alert?.value?.show({ 
-					title: 'Error', 
+				alert?.value?.show({
+					title: 'Error',
 					type: 'error',
 					description: error
 				});

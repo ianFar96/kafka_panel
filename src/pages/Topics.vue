@@ -46,8 +46,8 @@ const fetchTopicsList = async () => {
 	} catch (error) {
 		const errorMessage = `Error fetching topics: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -64,8 +64,8 @@ const fetchTopicsState = async () => {
 	} catch (error) {
 		const errorMessage = `Error fetching topics state: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -104,8 +104,8 @@ const fetchTopicsWatermark = async () => {
 		error: async error => {
 			const errorMessage = `Error fetching watermarks: ${error}`;
 			logger.error(errorMessage, {kafkaService});
-			alert?.value?.show({ 
-				title: 'Error', 
+			alert?.value?.show({
+				title: 'Error',
 				type: 'error',
 				description: errorMessage
 			});
@@ -144,8 +144,8 @@ const createTopic = async (name: string, partitions?: number, replicationFactor?
 	} catch (error) {
 		const errorMessage = `Error creating topic: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -172,8 +172,8 @@ const removeTopic = async (topic: Topic) => {
 	} catch (error) {
 		const errorMessage = `Error removing topic: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -187,7 +187,7 @@ const selectConnectionDialog = ref<InstanceType<typeof Dialog> | null>(null); //
 
 const setNewConnection = async (newConnection: Connection) => {
 	loader?.value?.show();
-	try {		
+	try {
 		logger.info(`Setting connection ${newConnection.name}...`, {kafkaService});
 		await connectionStore.setConnection(newConnection);
 		selectConnectionDialog.value?.close();
@@ -195,8 +195,8 @@ const setNewConnection = async (newConnection: Connection) => {
 	} catch (error) {
 		const errorMessage = `Error setting connection: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -299,7 +299,7 @@ onDeactivated(() => {
 							<router-link title="Consumer groups" class="mr-3" :to="`/topics/${topic.name}/groups`">
 								<i class="text-2xl bi-people cursor-pointer transition-colors hover:text-orange-400"></i>
 							</router-link>
-							<button type="button" title="Delete topic" @click="removeTopic(topic)" 
+							<button type="button" title="Delete topic" @click="removeTopic(topic)"
 								class="text-2xl bi-trash cursor-pointer transition-colors hover:text-red-500">
 							</button>
 						</td>

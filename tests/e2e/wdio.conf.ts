@@ -88,7 +88,7 @@ export const config: Options.Testrunner = {
 	// Define all options that are relevant for the WebdriverIO instance here
 	//
 	// Level of logging verbosity: trace | debug | info | warn | error | silent
-	logLevel: 'info',
+	logLevel: 'error',
 	//
 	// Set specific log levels per logger
 	// loggers:
@@ -106,7 +106,7 @@ export const config: Options.Testrunner = {
 	//
 	// If you only want to run your tests until a specific amount of tests have failed use
 	// bail (default is 0 - don't bail, run all tests).
-	bail: 0,
+	bail: 1,
 	//
 	// Set a base URL in order to shorten url command calls. If your `url` parameter starts
 	// with `/`, the base url gets prepended, not including the path portion of your baseUrl.
@@ -157,7 +157,8 @@ export const config: Options.Testrunner = {
 	// See the full list at http://mochajs.org/
 	mochaOpts: {
 		ui: 'bdd',
-		timeout: 60000
+		timeout: 60000,
+		bail: true
 	},
 	//
 	// =====

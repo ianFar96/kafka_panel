@@ -1,4 +1,3 @@
-import { ConsumerGroupState } from '../../../src/types/consumerGroup.js';
 import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class TopicsPage {
@@ -12,10 +11,6 @@ class TopicsPage {
 		await click(connection);
 
 		await waitForLoaderToHide();
-	}
-
-	async getTitle (connectionName: string) { 
-		return $(`aria/${connectionName} topics`); 
 	}
 
 	async createTopic(topicName: string, partitions?: number) {
@@ -50,7 +45,7 @@ class TopicsPage {
 		await waitForLoaderToHide();
 	}
 
-	async waitUntilGroupsCount(elementsCount: number) {
+	async waitUntilTopicsCount(elementsCount: number) {
 		await browser.waitUntil(async () => {
 			const tableItems = await this.table.$$('tbody tr');
 			return tableItems.length === elementsCount;
@@ -70,16 +65,15 @@ class TopicsPage {
 		return this.table.$(`td=${topicName}`).$('..');
 	}
 
-	getCell(row: WebdriverIO.Element, columName: 'partitions') {
+	getCell(row: WebdriverIO.Element, columName: 'state' | 'watermarks' | 'partitions') {
 		switch (columName) {
+		case 'state':
+			return row.$('//td[1]/div/div[title="Consuming"|title="Disconnected"|title="Unconnected"]');
+		case 'watermarks':
+			return row.$('//td[2]');
 		case 'partitions':
 			return row.$('//td[3]');
 		}
-	}
-
-	async waitForStateToBe(state: ConsumerGroupState, row: WebdriverIO.Element) {
-		const stateElement = await row.$(`div[title=${state}]`);
-		await expect(stateElement).toBeDisplayed();
 	}
 }
 

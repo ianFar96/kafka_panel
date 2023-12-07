@@ -107,23 +107,3 @@ export async function getAdmin() {
 
 	return admin;
 }
-
-// export function waitForMessages(consumer: Consumer, messagesCount: number) {
-// 	// eslint-disable-next-line no-async-promise-executor
-// 	return new Promise<KafkaMessage[]>(async (resolve, reject) => {
-// 		const receivedMessages: KafkaMessage[] = [];
-// 		await consumer.run({
-// 			eachMessage: async ({message}) => {
-// 				receivedMessages.push(message);
-// 				if (receivedMessages.length >= messagesCount) {
-// 					resolve(receivedMessages);
-// 					await consumer.stop();
-// 				}
-// 			}
-// 		});
-
-// 		setTimeout(() => {
-// 			reject(`Did not receive expected number of messages: ${messagesCount}, instead received ${receivedMessages.length}`);
-// 		}, 3000);
-// 	});
-// }

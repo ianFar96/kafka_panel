@@ -1,8 +1,10 @@
-import { click, waitForLoaderToHide } from '../utils.js';
+import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class GroupsPage {
 	get table() { return $('table'); }
 	get confirmButton() { return $('button=Accept'); }
+	get searchInput() { return $('input[placeholder="Search"]'); }
+	get refreshButton() { return $('button[title="Refresh list"'); }
 
 	async waitUntilGroupsCount(elementsCount: number) {
 		await browser.waitUntil(async () => {
@@ -12,9 +14,7 @@ class GroupsPage {
 	}
 
 	async refresh() {
-		const refreshButton = await $('button[title="Refresh list"');
-		await click(refreshButton);
-
+		await click(await this.refreshButton);
 		await waitForLoaderToHide();
 	}
 
@@ -67,6 +67,10 @@ class GroupsPage {
 
 		await click(await this.confirmButton);
 		await waitForLoaderToHide();
+	}
+	
+	async search(searchString: string) {
+		await setValue(await this.searchInput, searchString);
 	}
 }
 

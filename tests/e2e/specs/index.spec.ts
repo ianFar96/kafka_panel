@@ -139,7 +139,7 @@ describe('Groups', () => {
 	it('should delete new consumer group', async () => {
 		// Commit offsets to see the group in the list
 		const admin = await getAdmin();
-		await admin.setOffsets({groupId, topic: topicName, partitions: [{partition: 0, offset: '2'}]});
+		await admin.setOffsets({groupId, topic: topicName, partitions: [{partition: 0, offset: '3'}]});
 
 		await GroupsPage.refresh();
 		await GroupsPage.waitUntilGroupsCount(1);
@@ -150,6 +150,24 @@ describe('Groups', () => {
 		await GroupsPage.waitUntilGroupsCount(0);
 	});
 
+	it('should search', async () => {
+		const group1 = 'group1';
+		const group2 = 'group2';
+
+		// Commit offsets to see the group in the list
+		const admin = await getAdmin();
+		await admin.setOffsets({groupId: group1, topic: topicName, partitions: [{partition: 0, offset: '3'}]});
+		await admin.setOffsets({groupId: group2, topic: topicName, partitions: [{partition: 0, offset: '3'}]});
+
+		await GroupsPage.refresh();
+		await GroupsPage.waitUntilGroupsCount(2);
+
+		await GroupsPage.search(group1);
+
+		await GroupsPage.waitUntilGroupsCount(1);
+		const group1Row = await GroupsPage.getRow(group1);
+		await expect(group1Row).toBeDisplayed();
+	});
+
 	// TODO: test state
-	// TODO: test search
 });

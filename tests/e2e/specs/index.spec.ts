@@ -1,6 +1,7 @@
+import { Message } from 'kafkajs';
 import MessagesPage from '../pages/Messages.page.js';
 import TopicsPage from '../pages/Topics.page.js';
-import { click, e2eConnectionName } from '../utils.js';
+import { click, e2eConnectionName, getProducer, sleep } from '../utils.js';
 
 const topicName = 'topic.e2e.test';
 
@@ -41,19 +42,29 @@ describe('Messages', () => {
 		await expect(listItems).toHaveLength(0);
 
 		await MessagesPage.sendMessage();
-
-		await browser.waitUntil(async () => {
-			const listItems = await MessagesPage.list.$$('li');
-			return listItems.length === 1;
-		}, {timeout: 5000, timeoutMsg: 'expected list to have exactly one message after 5s'});
+		await MessagesPage.waitUntilMessagesCount(1);
 	});
 
 	it('should send a message from an already sent message', async () => {
 		await MessagesPage.sendMessage(0);
+		await MessagesPage.waitUntilMessagesCount(2);
+	});
 
-		await browser.waitUntil(async () => {
-			const listItems = await MessagesPage.list.$$('li');
-			return listItems.length === 2;
-		}, {timeout: 5000, timeoutMsg: 'expected list to have exactly two messages after 5s'});
+	it('should stop and restart the listener', async () => {
+		await MessagesPage.stopListener();
+
+		const producer = await getProducer();
+		const message: Message = {
+			key: JSON.stringify({some: 'key'}),
+			value: JSON.stringify({some: 'value'})
+		};
+		await producer.send({topic: topicName, messages: [message]});
+
+		// Make sure the listener is really stopped
+		await sleep(1000);
+		await MessagesPage.waitUntilMessagesCount(2);
+
+		MessagesPage.startListener();
+		await MessagesPage.waitUntilMessagesCount(3);
 	});
 });

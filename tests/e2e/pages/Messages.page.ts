@@ -23,6 +23,27 @@ class MessagesPage {
 
 		await waitForLoaderToHide();
 	}
+
+	async waitUntilMessagesCount(elementsCount: number) {
+		await browser.waitUntil(async () => {
+			const listItems = await this.list.$$('li');
+			return listItems.length === elementsCount;
+		}, {timeout: 5000, timeoutMsg: `expected list to have exactly ${elementsCount} messages after 5s`});
+	}
+
+	async stopListener() {
+		const stopButton = await $('button[title="Stop fetching"');
+		await click(stopButton);
+
+		await browser.waitUntil( () => $('button[title="Start fetching"]').isDisplayed());
+	}
+
+	async startListener() {
+		const startButton = await $('button[title="Start fetching"');
+		await click(startButton);
+
+		await browser.waitUntil( () => $('button[title="Stop fetching"]').isDisplayed());
+	}
 }
 
 export default new MessagesPage();

@@ -15,7 +15,7 @@
       "DOM"
     ],
     "types": [
-      "node",
+      "node"
     ],
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,

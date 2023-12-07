@@ -88,7 +88,7 @@ export const config: Options.Testrunner = {
 	// Define all options that are relevant for the WebdriverIO instance here
 	//
 	// Level of logging verbosity: trace | debug | info | warn | error | silent
-	logLevel: 'info',
+	logLevel: 'error',
 	//
 	// Set specific log levels per logger
 	// loggers:
@@ -174,11 +174,6 @@ export const config: Options.Testrunner = {
      */
 	onPrepare: async () => {
 		// spawnSync('cargo', ['build', '--release'], {cwd: 'src-tauri'});
-		console.log('Starting e2e kafka testcontainer...');
-		kafkaContainer = await new KafkaContainer().withExposedPorts(9093).start();
-
-		console.log('Creating setting connection for the testcontainer...');
-		await createTestConnection(kafkaContainer.getMappedPort(9093));
 	},
 	/**
      * Gets executed before a worker process is spawned and can be used to initialise specific service
@@ -215,6 +210,15 @@ export const config: Options.Testrunner = {
 			[],
 			{ stdio: [null, process.stdout, process.stderr] }
 		);
+
+		console.log('Starting e2e kafka testcontainer...');
+		kafkaContainer = await new KafkaContainer().withExposedPorts(9093).start();
+
+		console.log('Creating setting connection for the testcontainer...');
+		await createTestConnection(kafkaContainer.getMappedPort(9093));
+
+		// Expose globally the kafka container
+		(global as any).kafkaContainer = kafkaContainer;
 	},
 	/**
      * Gets executed before test execution begins. At this point you can access to all global
@@ -302,6 +306,12 @@ export const config: Options.Testrunner = {
 	afterSession: async () => {
 		console.log('Shutting down tauri-driver...');
 		tauriDriver.kill();
+
+		console.log('Stopping kafka testcontainer...');
+		await kafkaContainer.stop();
+
+		console.log('Deleting e2e config directory...');
+		await deleteSettings();
 	},
 	/**
      * Gets executed after all workers got shut down and the process is about to exit. An error
@@ -311,13 +321,8 @@ export const config: Options.Testrunner = {
      * @param {Array.<Object>} capabilities list of capabilities details
      * @param {<Object>} results object containing test results
      */
-	onComplete: async () => {
-		console.log('Stopping kafka testcontainer...');
-		await kafkaContainer.stop();
-
-		console.log('Deleting e2e config directory...');
-		await deleteSettings();
-	},
+	// onComplete: async () => {
+	// },
 	/**
     * Gets executed when a refresh happens.
     * @param {string} oldSessionId session ID of the old session

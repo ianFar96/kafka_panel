@@ -1,4 +1,6 @@
 import { mkdir, rm, writeFile } from 'fs/promises';
+import { Kafka } from 'kafkajs';
+import { after } from 'mocha';
 import { homedir } from 'os';
 
 type Settings = {
@@ -61,4 +63,18 @@ export async function waitForLoaderToHide() {
 		timeout: 5000,
 		timeoutMsg: 'expected loader to be hidden after 5s'
 	});
+}
+
+let kafka: Kafka;
+export async function getProducer() {
+	if (!kafka) {
+		kafka = new Kafka({ brokers: [`localhost:${(global as any).kafkaContainer.getMappedPort(9093)}`] });
+	}
+	const producer = kafka.producer();
+	await producer.connect();
+	after(async () => {
+		await producer.disconnect();
+	});
+
+	return producer;
 }

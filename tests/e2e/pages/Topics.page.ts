@@ -1,9 +1,11 @@
+import { ConsumerGroupState } from '../../../src/types/consumerGroup.js';
 import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class TopicsPage {
 	get chooseConnectionTitle() { return $('aria/Choose Connection'); }
 	get table() { return $('table'); }
 	get searchInput() { return $('input[placeholder="Search"]'); }
+	get refreshButton() { return $('button[title="Refresh list"'); }
 
 	async selectConnection (connectionName: string) {
 		const connection = await $(`li=${connectionName}`);
@@ -59,6 +61,11 @@ class TopicsPage {
 		await setValue(await this.searchInput, searchString);
 	}
 
+	async refresh() {
+		await click(await this.refreshButton);
+		await waitForLoaderToHide();
+	}
+
 	getRow(topicName: string) {
 		return this.table.$(`td=${topicName}`).$('..');
 	}
@@ -68,6 +75,11 @@ class TopicsPage {
 		case 'partitions':
 			return row.$('//td[3]');
 		}
+	}
+
+	async waitForStateToBe(state: ConsumerGroupState, row: WebdriverIO.Element) {
+		const stateElement = await row.$(`div[title=${state}]`);
+		await expect(stateElement).toBeDisplayed();
 	}
 }
 

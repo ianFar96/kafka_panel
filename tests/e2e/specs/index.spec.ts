@@ -2,7 +2,7 @@ import { Message } from 'kafkajs';
 import GroupsPage from '../pages/Groups.page.js';
 import MessagesPage from '../pages/Messages.page.js';
 import TopicsPage from '../pages/Topics.page.js';
-import { click, e2eConnectionName, getProducer, getAdmin, sleep } from '../utils.js';
+import { click, e2eConnectionName, getProducer, getAdmin, sleep, getConsumer } from '../utils.js';
 
 const topicName = 'topic.e2e.test';
 const groupId = 'topic.e2e.test.groupId';
@@ -31,6 +31,35 @@ describe('Topics', () => {
 		await expect(topicsTableRows).toHaveLength(0);
 	});
 
+	it('should change state', async () => {
+		const changeStateTopic = 'topic.e2e.test.change.state';
+		await TopicsPage.createTopic(changeStateTopic);
+
+		const topicRow = await TopicsPage.getRow(changeStateTopic);
+		await TopicsPage.waitForStateToBe('Unconnected', topicRow);
+
+		// Connect to the topic
+		const consumer = await getConsumer(groupId);
+		await consumer.subscribe({topic: changeStateTopic, fromBeginning: true});
+		await consumer.run({eachBatch: async() => {/* do nothing */}});
+
+		await TopicsPage.refresh();
+		await TopicsPage.waitForStateToBe('Consuming', topicRow);
+
+		// Disconnect from topic
+		await consumer.stop();
+		await consumer.disconnect();
+
+		// Set the offset
+		const admin = await getAdmin();
+		await admin.setOffsets({groupId, topic: changeStateTopic, partitions: [{partition: 0, offset: '1'}]});
+
+		await TopicsPage.refresh();
+		await TopicsPage.waitForStateToBe('Disconnected', topicRow);
+
+		await TopicsPage.deleteTopic(changeStateTopic);
+	});
+
 	it('should search', async () => {
 		const topic1 = 'topic1';
 		const topic2 = 'topic2';
@@ -47,6 +76,10 @@ describe('Topics', () => {
 
 		// Empty search bar
 		await TopicsPage.search('');
+
+		// Delete created topics
+		await TopicsPage.deleteTopic(topic1);
+		await TopicsPage.deleteTopic(topic2);
 	});
 
 	// TODO: check on watermarks and topic state

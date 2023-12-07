@@ -1,5 +1,5 @@
 import { mkdir, rm, writeFile } from 'fs/promises';
-import { Consumer, Kafka, KafkaMessage, logLevel } from 'kafkajs';
+import { Kafka, logLevel } from 'kafkajs';
 import { after } from 'mocha';
 import { homedir } from 'os';
 
@@ -86,16 +86,16 @@ export async function getProducer() {
 	return producer;
 }
 
-// export async function getConsumer(groupId: string) {
-// 	setKafka();
-// 	const consumer = kafka.consumer({ groupId });
-// 	await consumer.connect();
-// 	after(async () => {
-// 		await consumer.disconnect();
-// 	});
+export async function getConsumer(groupId: string) {
+	setKafka();
+	const consumer = kafka.consumer({ groupId });
+	await consumer.connect();
+	after(async () => {
+		await consumer.disconnect();
+	});
 
-// 	return consumer;
-// }
+	return consumer;
+}
 
 export async function getAdmin() {
 	setKafka();

@@ -88,7 +88,7 @@ export const config: Options.Testrunner = {
 	// Define all options that are relevant for the WebdriverIO instance here
 	//
 	// Level of logging verbosity: trace | debug | info | warn | error | silent
-	logLevel: 'error',
+	logLevel: 'info',
 	//
 	// Set specific log levels per logger
 	// loggers:
@@ -214,7 +214,7 @@ export const config: Options.Testrunner = {
 		console.log('Starting e2e kafka testcontainer...');
 		kafkaContainer = await new KafkaContainer().withExposedPorts(9093).start();
 
-		console.log('Creating setting connection for the testcontainer...');
+		console.log('Creating connection for the testcontainer...');
 		await createTestConnection(kafkaContainer.getMappedPort(9093));
 
 		// Expose globally the kafka container

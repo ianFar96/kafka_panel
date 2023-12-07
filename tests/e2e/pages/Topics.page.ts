@@ -1,8 +1,9 @@
 import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class TopicsPage {
-	get chooseConnectionTitle () { return $('aria/Choose Connection'); }
-	get table () { return $('table'); }
+	get chooseConnectionTitle() { return $('aria/Choose Connection'); }
+	get table() { return $('table'); }
+	get searchInput() { return $('input[placeholder="Search"]'); }
 
 	async selectConnection (connectionName: string) {
 		const connection = await $(`li=${connectionName}`);
@@ -45,6 +46,17 @@ class TopicsPage {
 		await click(acceptButton);
 
 		await waitForLoaderToHide();
+	}
+
+	async waitUntilGroupsCount(elementsCount: number) {
+		await browser.waitUntil(async () => {
+			const tableItems = await this.table.$$('tbody tr');
+			return tableItems.length === elementsCount;
+		}, {timeout: 5000, timeoutMsg: `expected list to have exactly ${elementsCount} groups after 5s`});
+	}
+	
+	async search(searchString: string) {
+		await setValue(await this.searchInput, searchString);
 	}
 
 	getRow(topicName: string) {

@@ -31,8 +31,25 @@ describe('Topics', () => {
 		await expect(topicsTableRows).toHaveLength(0);
 	});
 
+	it('should search', async () => {
+		const topic1 = 'topic1';
+		const topic2 = 'topic2';
+
+		await TopicsPage.createTopic(topic1);
+		await TopicsPage.createTopic(topic2);
+		await TopicsPage.waitUntilGroupsCount(2);
+
+		await TopicsPage.search(topic1);
+
+		await TopicsPage.waitUntilGroupsCount(1);
+		const topic1Row = await TopicsPage.getRow(topic1);
+		await expect(topic1Row).toBeDisplayed();
+
+		// Empty search bar
+		await TopicsPage.search('');
+	});
+
 	// TODO: check on watermarks and topic state
-	// TODO: test search
 });
 
 describe('Messages', () => {

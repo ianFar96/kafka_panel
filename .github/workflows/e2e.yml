@@ -18,7 +18,6 @@ jobs:
       # checkout the code on the workflow runner
       - uses: actions/checkout@v2
 
-      # FIXME: does not find cache
       # cache rust dependencies
       - uses: actions/cache@v3
         with:
@@ -61,7 +60,6 @@ jobs:
         with:
           node-version: 18.x
 
-      # FIXME: does not find cache
       # cache node dependencies
       - name: Get npm cache directory
         id: npm-cache-dir
@@ -85,7 +83,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: tauri-driver
+          args: tauri-driver --force
 
       # build the app
       - name: Tauri build

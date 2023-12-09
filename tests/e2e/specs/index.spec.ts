@@ -2,7 +2,7 @@ import { Message } from 'kafkajs';
 import GroupsPage from '../pages/Groups.page.js';
 import MessagesPage from '../pages/Messages.page.js';
 import TopicsPage from '../pages/Topics.page.js';
-import { click, e2eConnectionName, getProducer, getAdmin, sleep, getConsumer } from '../utils.js';
+import { click, e2eConnectionName, getAdmin, getConsumer, getProducer } from '../utils.js';
 
 describe('Topics', () => {
 	it('should set a connection', async () => {
@@ -149,14 +149,12 @@ describe('Messages', () => {
 		await producer.send({topic: topicName, messages: [message]});
 
 		// Wait a bit to make sure a message won't appear in the list
-		await sleep(1000);
+		await browser.pause(1000);
 		await MessagesPage.waitUntilMessagesCount(2);
 
 		await MessagesPage.startListener();
 		await MessagesPage.waitUntilMessagesCount(3);
 	});
-
-	// TODO: test search
 });
 
 describe('Groups', () => {

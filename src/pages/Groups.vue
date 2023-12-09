@@ -26,7 +26,6 @@ const kafkaService = new KafkaService();
 
 const alert = useAlertDialog();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fetchGroupsFromTopic = async () => {
 	loader?.value?.show();
 	try {
@@ -35,8 +34,8 @@ const fetchGroupsFromTopic = async () => {
 	} catch (error) {
 		const errorMessage = `Error getting groups: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -83,8 +82,8 @@ Partitions: All`,
 	} catch (error) {
 		const errorMessage = `Error Seeking earliest offsets: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -122,8 +121,8 @@ You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`,
 	} catch (error) {
 		const errorMessage = `Error Committing latests offsets: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -147,8 +146,8 @@ const deleteGroup = async (group: ConsumerGroup) => {
 	} catch (error) {
 		const errorMessage = `Error deleting consumer group: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -235,11 +234,11 @@ onBeforeUnmount(() => {
 						<td :class="{'border-b': key !== filteredGroups.length - 1}"
 							class="border-white py-3 px-4 flex justify-center">
 							<button title="Seek earliest offsets"
-								@click="seekEarliestOffsets(group)" class="text-2xl bi-skip-backward mr-3" 
+								@click="seekEarliestOffsets(group)" class="text-2xl bi-skip-backward mr-3"
 								:class="{'text-gray-500': !canSeekEarliestOffsets(group)}">
 							</button>
 							<button title="Commit latest offsets"
-								@click="commitLatestOffsets(group)" class="text-2xl bi-skip-forward mr-3" 
+								@click="commitLatestOffsets(group)" class="text-2xl bi-skip-forward mr-3"
 								:class="{'text-gray-500': !canCommitLatestOffsets(group)}">
 							</button>
 							<button title="Delete consumer group"

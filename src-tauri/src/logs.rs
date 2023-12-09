@@ -7,7 +7,7 @@ use log::LevelFilter;
 use serde::Deserialize;
 use simplelog::{CombinedLogger, ConfigBuilder, WriteLogger};
 
-use crate::{get_app_dir, get_app_dir_with_env};
+use crate::state::{get_app_dir, get_app_dir_with_env};
 
 #[derive(Deserialize, Debug)]
 pub struct Extras {

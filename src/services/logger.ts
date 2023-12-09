@@ -63,7 +63,8 @@ class Logger {
 	}
 }
 
-const isDev = await invoke('is_dev');
-const logger = new Logger(isDev ? 'trace' : 'info');
+const env = await invoke('get_env_command');
+const debug = env === 'Dev' || env === 'E2E';
+const logger = new Logger(debug ? 'trace' : 'info');
 
 export default logger;

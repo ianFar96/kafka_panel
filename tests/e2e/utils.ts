@@ -24,10 +24,6 @@ export async function setValue (input: WebdriverIO.Element, value: number | stri
 	await browser.execute('arguments[0].dispatchEvent(new Event("input", { bubbles: true }))', input);
 }
 
-export async function sleep(time = 5000) {
-	return new Promise(resolve => setTimeout(resolve, time));
-}
-
 export const e2eConnectionName = 'Localhost E2E';
 const e2eSettingsFolderPath = `${homedir()}/.kafka_panel/e2e/config`;
 
@@ -69,7 +65,6 @@ let kafka: Kafka;
 function setKafka() {
 	if (!kafka) {
 		kafka = new Kafka({
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			brokers: [`localhost:${(global as any).kafkaContainer.getMappedPort(9093)}`],
 			logLevel: logLevel.NOTHING
 		});

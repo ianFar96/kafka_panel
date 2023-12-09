@@ -1,4 +1,4 @@
-use std::{env, fs::create_dir_all, io::ErrorKind, path::Path};
+use std::{fs::create_dir_all, io::ErrorKind, path::Path};
 
 use jfs::{Config, Store};
 use rdkafka::{
@@ -8,6 +8,8 @@ use rdkafka::{
 use serde_json::{json, Value};
 use tauri::api::path::home_dir;
 use tokio::sync::RwLock;
+
+use crate::utils::{get_env, Environment};
 
 pub struct KafkaState {
     pub common_config: RwLock<Option<ClientConfig>>,
@@ -44,40 +46,14 @@ pub fn get_app_dir() -> Result<String, String> {
     Ok(format!("{}/.kafka_panel", app_dir.to_string_lossy()))
 }
 
-#[allow(dead_code)]
-enum Environments {
-    Dev,
-    E2E,
-    Release,
-}
-
 #[allow(unused)]
 pub fn get_app_dir_with_env() -> Result<String, String> {
-    let mut env_name = Environments::Release;
-
-    #[cfg(dev)]
-    {
-        env_name = Environments::Dev
-    }
-
-    // https://webdriver.io/docs/api/environment
-    match env::var("NODE_ENV") {
-        Ok(env_var) => {
-            if env_var == "test" {
-                env_name = Environments::E2E
-            }
-        }
-        Err(_) => {}
-    }
-
     let app_dir = get_app_dir()?;
-    let app_dir_with_env = match env_name {
-        Environments::Release => format!("{}/release", app_dir),
-        Environments::Dev => format!("{}/dev", app_dir),
-        Environments::E2E => format!("{}/e2e", app_dir)
-    };
-
-    Ok(app_dir_with_env)
+    match get_env() {
+        Environment::Release => Ok(format!("{}/release", app_dir)),
+        Environment::Dev => Ok(format!("{}/dev", app_dir)),
+        Environment::E2E => Ok(format!("{}/e2e", app_dir))
+    }
 }
 
 pub fn init_storage() -> Result<StorageState, String> {

@@ -120,7 +120,7 @@ if (Object.keys(props.suggestions ?? {}).length > 0) {
 			};
 		},
 	});
-	
+
 	// TS bug in type definiton
 	(editor as unknown as monaco.editor.IStandaloneCodeEditor)?.onDidDispose(() => {
 		disposable.dispose();

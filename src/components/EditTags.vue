@@ -4,7 +4,7 @@ import { getRandomColor } from '../services/chipColors';
 import Chip, { Tag } from './Chip.vue';
 
 const props = defineProps<{
-	tags?: string[] 
+	tags?: string[]
 }>();
 
 const emit = defineEmits<{
@@ -30,17 +30,20 @@ const tagsInput = ref<HTMLInputElement | null>(null); // Template ref
 
 const addTagOnEnter = async (event: KeyboardEvent) => {
 	if (event.key === 'Enter') {
-		const input  = event.target as HTMLInputElement;
-		if (input.value !== '' && !tags.value.some(tag => tag.name === input.value)) {
-			tags.value.push({
-				name: input.value,
-				color: getRandomColor()
-			});
-		}
+		await addTag();
+	}
+};
+
+const addTag = async () => {
+	if (tagsInput.value && tagsInput.value.value !== '' && !tags.value.some(tag => tag.name === tagsInput.value?.value)) {
+		tags.value.push({
+			name: tagsInput.value.value,
+			color: getRandomColor()
+		});
 
 		await emit('change', tagsToStrings(tags.value));
 
-		input.value = '';
+		tagsInput.value.value = '';
 		tagsInput.value?.focus();
 	}
 };
@@ -48,9 +51,14 @@ const addTagOnEnter = async (event: KeyboardEvent) => {
 
 <template>
 	<div v-bind.sync="$attrs" class="h-full">
-		<input class="bg-transparent border-b-white border-b outline-none px-2 py-1 w-full mb-4"
-			placeholder="Type the tag and press enter" autofocus ref="tagsInput" 
-			@keyup="addTagOnEnter($event)" type="text">
+		<div class="flex mb-4">
+			<input class="bg-transparent border-b-white border-b outline-none px-2 py-1 w-full mr-4"
+				placeholder="Type the tag and press enter" autofocus ref="tagsInput"
+				@keyup="addTagOnEnter($event)" type="text">
+			<button class="bi-plus-circle text-2xl hover:text-orange-400 transition-colors"
+				title="Add to tags" @click="addTag" type="button">
+			</button>
+		</div>
 		<div class="min-h-[theme(spacing.14)]">
 			<ul class="flex flex-wrap">
 				<li v-for="tag in tags" :key="tag.name">

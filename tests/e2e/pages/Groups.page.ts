@@ -2,16 +2,10 @@ import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class GroupsPage {
 	get table() { return $('table'); }
+	get tableBody() { return this.table.$('tbody'); }
 	get confirmButton() { return $('button=Accept'); }
 	get searchInput() { return $('input[placeholder="Search"]'); }
 	get refreshButton() { return $('button[title="Refresh list"'); }
-
-	async waitUntilGroupsCount(elementsCount: number) {
-		await browser.waitUntil(async () => {
-			const tableItems = await this.table.$$('tbody tr');
-			return tableItems.length === elementsCount;
-		}, {timeout: 5000, timeoutMsg: `expected list to have exactly ${elementsCount} groups after 5s`});
-	}
 
 	async refresh() {
 		await click(await this.refreshButton);

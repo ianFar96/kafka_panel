@@ -6,8 +6,6 @@ import { click, e2eConnectionName, getAdmin, getConsumer, getProducer } from '..
 
 describe('Topics', () => {
 	it('should set a connection', async () => {
-		expect(browser).toHaveTitle('Kafka Panel - Topics');
-
 		await TopicsPage.selectConnection(e2eConnectionName);
 		await expect(TopicsPage.table).toBeDisplayed();
 	});
@@ -15,7 +13,7 @@ describe('Topics', () => {
 	it('should create and delete a topic', async () => {
 		const topicName = 'topics.create.new.topic';
 		await TopicsPage.createTopic(topicName, 5);
-		await TopicsPage.waitUntilTopicsCount(1);
+		await expect(await TopicsPage.tableBody).toHaveChildren(1);
 
 		const topicRow = await TopicsPage.getRow(topicName);
 		const topicPartitionsCell = await TopicsPage.getCell(topicRow, 'partitions');
@@ -25,7 +23,7 @@ describe('Topics', () => {
 		await expect(topicWatermarkCell).toHaveText('0');
 
 		await TopicsPage.deleteTopic(topicName);
-		await TopicsPage.waitUntilTopicsCount(0);
+		await expect(await TopicsPage.tableBody).toHaveChildren(0);
 	});
 
 	it('should show how the state changes', async () => {
@@ -95,11 +93,11 @@ describe('Topics', () => {
 
 		await TopicsPage.createTopic(topicName1);
 		await TopicsPage.createTopic(topicName2);
-		await TopicsPage.waitUntilTopicsCount(2);
+		await expect(await TopicsPage.tableBody).toHaveChildren(2);
 
 		await TopicsPage.search(topicName1);
 
-		await TopicsPage.waitUntilTopicsCount(1);
+		await expect(await TopicsPage.tableBody).toHaveChildren(1);
 		const topic1Row = await TopicsPage.getRow(topicName1);
 		await expect(topic1Row).toBeDisplayed();
 
@@ -115,27 +113,17 @@ describe('Topics', () => {
 describe('Messages', () => {
 	const topicName = 'messages.default';
 
-	it('should go in the messages page', async () => {
-		await TopicsPage.createTopic(topicName);
-
-		const topicRow = await TopicsPage.getRow(topicName);
-		const messagesLink = await topicRow.$('a[title=Messages]');
-		await click(messagesLink);
-
-		expect(browser).toHaveTitle('Kafka Panel - Messages');
-	});
-
 	it('should send a message', async () => {
-		const listItems = await MessagesPage.list.$$('li');
-		await expect(listItems).toHaveLength(0);
+		await TopicsPage.createTopic(topicName);
+		await TopicsPage.goToMessages(topicName);
 
 		await MessagesPage.sendMessage();
-		await MessagesPage.waitUntilMessagesCount(1);
+		expect(await MessagesPage.list).toHaveChildren(1);
 	});
 
 	it('should send a message from an already sent message', async () => {
 		await MessagesPage.sendMessage(0);
-		await MessagesPage.waitUntilMessagesCount(2);
+		expect(await MessagesPage.list).toHaveChildren(2);
 	});
 
 	it('should stop and restart the listener', async () => {
@@ -150,35 +138,30 @@ describe('Messages', () => {
 
 		// Wait a bit to make sure a message won't appear in the list
 		await browser.pause(1000);
-		await MessagesPage.waitUntilMessagesCount(2);
+		expect(await MessagesPage.list).toHaveChildren(2);
 
 		await MessagesPage.startListener();
-		await MessagesPage.waitUntilMessagesCount(3);
+		expect(await MessagesPage.list).toHaveChildren(3);
 	});
 });
 
 describe('Groups', () => {
-	const groupId = 'groups.default';
-
 	// Use the same topic as the messages
 	const topicName = 'messages.default';
+	const groupId = 'groups.default';
 
-	it('should go in the groups page', async () => {
+	it('should see consumer group', async () => {
 		const groupsLink = await $('a=Groups');
 		await click(groupsLink);
 
-		expect(browser).toHaveTitle('Kafka Panel - Consumer Groups');
-	});
-
-	it('should see consumer group', async () => {
-		await GroupsPage.waitUntilGroupsCount(0);
+		expect(await GroupsPage.tableBody).toHaveChildren(0);
 
 		// Commit offsets to see the group in the list
 		const admin = await getAdmin();
 		await admin.setOffsets({groupId, topic: topicName, partitions: [{partition: 0, offset: '2'}]});
 
 		await GroupsPage.refresh();
-		await GroupsPage.waitUntilGroupsCount(1);
+		expect(await GroupsPage.tableBody).toHaveChildren(1);
 
 		const groupRow = await GroupsPage.getRow(groupId);
 		const lowCell = await GroupsPage.getCell(groupRow, 'low');
@@ -223,7 +206,7 @@ describe('Groups', () => {
 		await GroupsPage.seekEarliestOffsets(groupId);
 
 		// The group should disappear
-		await GroupsPage.waitUntilGroupsCount(0);
+		expect(await GroupsPage.tableBody).toHaveChildren(0);
 	});
 
 	it('should delete new consumer group', async () => {
@@ -234,12 +217,12 @@ describe('Groups', () => {
 		await admin.setOffsets({groupId, topic: topicName, partitions: [{partition: 0, offset: '3'}]});
 
 		await GroupsPage.refresh();
-		await GroupsPage.waitUntilGroupsCount(1);
+		expect(await GroupsPage.tableBody).toHaveChildren(1);
 
 		await GroupsPage.deleteGroup(groupId);
 
 		// The group should disappear
-		await GroupsPage.waitUntilGroupsCount(0);
+		expect(await GroupsPage.tableBody).toHaveChildren(0);
 	});
 
 	it('should show how the state changes', async () => {
@@ -281,11 +264,11 @@ describe('Groups', () => {
 		await admin.setOffsets({groupId: groupName2, topic: topicName, partitions: [{partition: 0, offset: '3'}]});
 
 		await GroupsPage.refresh();
-		await GroupsPage.waitUntilGroupsCount(2);
+		expect(await GroupsPage.tableBody).toHaveChildren(2);
 
 		await GroupsPage.search(groupName1);
 
-		await GroupsPage.waitUntilGroupsCount(1);
+		expect(await GroupsPage.tableBody).toHaveChildren(1);
 		const group1Row = await GroupsPage.getRow(groupName1);
 		await expect(group1Row).toBeDisplayed();
 

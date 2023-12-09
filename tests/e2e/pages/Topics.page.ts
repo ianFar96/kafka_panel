@@ -3,6 +3,7 @@ import { click, setValue, waitForLoaderToHide } from '../utils.js';
 class TopicsPage {
 	get chooseConnectionTitle() { return $('aria/Choose Connection'); }
 	get table() { return $('table'); }
+	get tableBody() { return this.table.$('tbody'); }
 	get searchInput() { return $('input[placeholder="Search"]'); }
 	get refreshButton() { return $('button[title="Refresh list"'); }
 
@@ -46,10 +47,6 @@ class TopicsPage {
 	}
 
 	async waitUntilTopicsCount(elementsCount: number) {
-		await browser.waitUntil(async () => {
-			const tableItems = await this.table.$$('tbody tr');
-			return tableItems.length === elementsCount;
-		}, {timeout: 5000, timeoutMsg: `expected list to have exactly ${elementsCount} groups after 5s`});
 	}
 
 	async search(searchString: string) {
@@ -58,6 +55,13 @@ class TopicsPage {
 
 	async refresh() {
 		await click(await this.refreshButton);
+		await waitForLoaderToHide();
+	}
+
+	async goToMessages(topicName: string) {
+		const topicRow = await this.getRow(topicName);
+		const messagesLink = await topicRow.$('a[title=Messages]');
+		await click(messagesLink);
 		await waitForLoaderToHide();
 	}
 

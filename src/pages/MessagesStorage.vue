@@ -57,8 +57,8 @@ const fetchMessages = async () => {
 	} catch (error) {
 		const errorMessage = `Error fetching messages: ${error}`;
 		logger.error(errorMessage);
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});
@@ -82,8 +82,8 @@ const deleteMessage = async (storageMessage: DisplayMessage) => {
 	} catch (error) {
 		const errorMessage = `Could not delete message from storage: ${error}`;
 		logger.error(errorMessage);
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});

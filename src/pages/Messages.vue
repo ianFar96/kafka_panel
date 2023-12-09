@@ -54,7 +54,7 @@ const startListenMessages = async () => {
 				...kafkaMessage,
 				valueVisible: false
 			});
-			
+
 			if (!windowingTimeout) {
 				windowingTimeout = setTimeout(() => {
 					logger.trace('Displaying messages', {kafkaService});
@@ -79,8 +79,8 @@ const startListenMessages = async () => {
 			status.value = 'stopped';
 			const errorMessage = `Error fetching messages: ${error}`;
 			logger.error(errorMessage, {kafkaService});
-			alert?.value?.show({ 
-				title: 'Error', 
+			alert?.value?.show({
+				title: 'Error',
 				type: 'error',
 				description: errorMessage
 			});
@@ -151,8 +151,8 @@ const sendMessage = async (messageContent: MessageContent) => {
 	} catch (error) {
 		const errorMessage = `Error sending the message: ${error}`;
 		logger.error(errorMessage, {kafkaService});
-		alert?.value?.show({ 
-			title: 'Error', 
+		alert?.value?.show({
+			title: 'Error',
 			type: 'error',
 			description: errorMessage
 		});

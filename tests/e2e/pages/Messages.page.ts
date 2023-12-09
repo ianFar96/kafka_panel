@@ -1,4 +1,4 @@
-import { click, waitForLoaderToHide } from '../utils.js';
+import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class MessagesPage {
 	get list() { return $('ul'); }
@@ -24,13 +24,6 @@ class MessagesPage {
 		await waitForLoaderToHide();
 	}
 
-	async waitUntilMessagesCount(elementsCount: number) {
-		await browser.waitUntil(async () => {
-			const listItems = await this.list.$$('li');
-			return listItems.length === elementsCount;
-		}, {timeout: 5000, timeoutMsg: `expected list to have exactly ${elementsCount} messages after 5s`});
-	}
-
 	async stopListener() {
 		const stopButton = await $('button[title="Stop fetching"');
 		await click(stopButton);
@@ -43,6 +36,30 @@ class MessagesPage {
 		await click(startButton);
 
 		await browser.waitUntil( () => $('button[title="Stop fetching"]').isDisplayed());
+	}
+
+	async saveMessage(sentMessageIndex: number, tags: string[]) {
+		const showMessageButton = await this.list.$(`//li[${sentMessageIndex + 1}]/div`);
+		await click(showMessageButton);
+
+		const saveInStorageButton = await $('button[title="Save in storage"]');
+		await click(saveInStorageButton);
+
+		const tagsInput = await $('input[placeholder="Type the tag and press enter"]');
+		const addTagButton = await $('button[title="Add to tags"]');
+		for (const tag of tags) {
+			await setValue(tagsInput, tag);
+			await click(addTagButton);
+		}
+
+		const nextContentButton = await $('button=Next');
+		await click(nextContentButton);
+
+		const nextHeadersButton = await $('button=Next');
+		await click(nextHeadersButton);
+
+		const saveButton = await $('button=Save');
+		await click(saveButton);
 	}
 }
 

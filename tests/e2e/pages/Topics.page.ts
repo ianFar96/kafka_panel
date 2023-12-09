@@ -46,9 +46,6 @@ class TopicsPage {
 		await waitForLoaderToHide();
 	}
 
-	async waitUntilTopicsCount(elementsCount: number) {
-	}
-
 	async search(searchString: string) {
 		await setValue(await this.searchInput, searchString);
 	}

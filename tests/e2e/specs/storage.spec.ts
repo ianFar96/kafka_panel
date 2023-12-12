@@ -11,11 +11,16 @@ describe('Storage', () => {
 		await TopicsPage.goToMessages(topicName);
 
 		await MessagesPage.sendMessage();
-		await MessagesPage.saveMessage(0, ['first-tag', 'second-tag']);
+		const tags = ['first-tag', 'second-tag'];
+		await MessagesPage.saveMessage(0, tags);
 
 		const messagesStorageLink = await $('a[title="Messages storage"]');
 		await click(messagesStorageLink);
 
 		await expect(await MessagesStoragePage.list).toHaveChildren(1);
+		const tagsList = await MessagesStoragePage.getTagsList(0);
+		for (const tag of tags) {
+			await expect(await tagsList.$(`span=${tag}`)).toBeDisplayed();
+		}
 	});
 });

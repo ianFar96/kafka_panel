@@ -2,36 +2,38 @@
 
 import * as monaco from 'monaco-editor';
 import { Autosend, AutosendOptions } from '../types/autosend';
-import { MessageContent, ParsedHeaders, StorageMessage } from '../types/message';
+import { MessageContent, Headers, StorageMessage } from '../types/message';
+
+export const isKeyValid = (key: string | null) => {
+	return key !== null && key !== '';
+};
 
 export const tryJsonParse = (text: unknown): unknown => {
 	try {
-		if (typeof text === 'string') {
+		// Do not parse string "null" to differentiate it from empty buffer
+		if (typeof text === 'string' && text !== 'null') {
 			return JSON.parse(text);
 		}
 	} catch (error) { }
-
 	return text;
 };
 
-export const isSendValid = (value: unknown) => {
-	if (value === undefined) {
-		return false;
-	}
-
-	if (value === '') {
-		return false;
-	}
-
-	return true;
+export const displayMessage = (message: MessageContent) => {
+	return JSON.stringify({
+		headers: displayHeaders(message.headers),
+		key: tryJsonParse(message.key),
+		value: tryJsonParse(message.value)
+	}, null, 2);
 };
 
-export const stringifyMessage = (message: MessageContent) => {
-	return JSON.stringify({
-		headers: message.headers,
-		key: message.key,
-		value: message.value
-	}, null, 2);
+export const displayHeaders = (headers: Headers) => {
+	if (headers === null) {
+		return null;
+	}
+	return Object.entries(headers).reduce((acc, [key, value]) => ({
+		...acc,
+		[key]: tryJsonParse(value)
+	}), {});
 };
 
 export const autosendToStorageMessage = (autosend: Autosend, tags?: string[]): StorageMessage => ({
@@ -43,23 +45,17 @@ export const autosendToStorageMessage = (autosend: Autosend, tags?: string[]): S
 
 export const getDefaultMessage = (): MessageContent => ({
 	headers: null,
-	key: {
+	key: JSON.stringify({
 		id: '{{faker.string.uuid()}}'
-	},
-	value: {
+	}, null, 2),
+	value: JSON.stringify({
 		id: '{{key.id}}',
 		name: '{{faker.person.fullName()}}'
-	}
+	}, null, 2)
 });
 
-export const isValidHeaders = (headers: ParsedHeaders) => {
-	for (const [key, value] of Object.entries(headers ?? {})) {
-		if (!isSendValid(key) || !isSendValid(value)) {
-			return false;
-		}
-	}
-
-	return true;
+export const isValidHeaders = (headers: Headers) => {
+	return headers === null || Object.keys(headers).every(isKeyValid);
 };
 
 export const getDefaultAutosendConfiguration = (): AutosendOptions => ({

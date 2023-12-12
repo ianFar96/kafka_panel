@@ -1,24 +1,24 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { MessageContent } from '../types/message';
 import CodeEditor from './CodeEditor.vue';
 import { clone } from 'ramda';
 import { faker } from '@faker-js/faker';
+import { MessageKeyValue } from '../types/message';
 
 const props = defineProps<{
-	message?: Omit<MessageContent, 'headers'>
+	message: MessageKeyValue
 }>();
 
-// eslint-disable-next-line vue/no-setup-props-destructure
-const message: Partial<Omit<MessageContent, 'headers'>> = clone(props.message) ?? {};
+const message: MessageKeyValue = clone(props.message);
 
 const emit = defineEmits<{
-	(event: 'change', message: Partial<Omit<MessageContent, 'headers'>>): void | Promise<void>
+	(event: 'change', message: MessageKeyValue): void | Promise<void>
 }>();
 
-let keyDebounce: any;
-const onKeyChange = (key: unknown) => {
+// eslint-disable-next-line no-undef
+let keyDebounce: NodeJS.Timer;
+const onKeyChange = (key: string) => {
 	clearTimeout(keyDebounce);
 	keyDebounce = setTimeout(async () => {
 		message.key = key;
@@ -26,26 +26,27 @@ const onKeyChange = (key: unknown) => {
 	}, 300);
 };
 
-let valueDebounce: any;
-const onValueChange = (value: unknown) => {
+// eslint-disable-next-line no-undef
+let valueDebounce: NodeJS.Timer;
+const onValueChange = (value: string) => {
 	clearTimeout(valueDebounce);
 	valueDebounce = setTimeout(async () => {
-		message.value = value;
+		message.value = value !== '' ? value : null;
 		await emit('change', message);
 	}, 300);
 };
 
 // We only need one of the slots since they are the same
-const keySlotRef = ref<HTMLElement | null>(null);
+const codeEditorSlotRef = ref<HTMLElement | null>(null);
 </script>
 
 <template>
 	<div class="flex h-full">
 		<div class="flex flex-col w-full">
 			<label class="mb-4">Key</label>
-			<div class="h-full rounded-xl overflow-hidden" ref="keySlotRef">
-				<CodeEditor v-if="keySlotRef" :wrapper-ref="keySlotRef"
-					:suggestions="{faker}" :code="props.message?.key" @code-change="onKeyChange">
+			<div class="h-full rounded-xl overflow-hidden" ref="codeEditorSlotRef">
+				<CodeEditor v-if="codeEditorSlotRef" :wrapper-ref="codeEditorSlotRef"
+					:suggestions="{faker}" :code="props.message.key" @code-change="onKeyChange">
 				</CodeEditor>
 			</div>
 		</div>
@@ -53,8 +54,8 @@ const keySlotRef = ref<HTMLElement | null>(null);
 		<div class="flex flex-col w-full">
 			<label class="mb-4">Value</label>
 			<div class="h-full rounded-xl overflow-hidden">
-				<CodeEditor v-if="keySlotRef" :wrapper-ref="keySlotRef"
-					:suggestions="{faker, key: message.key}" :code="props.message?.value" @code-change="onValueChange">
+				<CodeEditor v-if="codeEditorSlotRef" :wrapper-ref="codeEditorSlotRef"
+					:suggestions="{faker, key: message.key}" :code="props.message.value" @code-change="onValueChange">
 				</CodeEditor>
 			</div>
 		</div>

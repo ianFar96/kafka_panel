@@ -9,7 +9,7 @@ import checkSettings from '../services/checkSettings';
 import storageService from '../services/storage';
 import { Message, MessageContent, StorageMessage } from '../types/message';
 import { DateTime } from 'luxon';
-import { stringifyMessage } from '../services/utils';
+import { displayMessage } from '../services/utils';
 import EditMessageStorageStepper from '../components/EditMessageStorageStepper.vue';
 import Button from '../components/Button.vue';
 import logger from '../services/logger';
@@ -240,7 +240,7 @@ const getDisplayDate = (dateMilis: number) => {
 
 				<div v-if="message.valueVisible" class="mb-4 relative">
 					<div class="absolute top-4 right-4">
-						<button @click="copyToClipboard($event, stringifyMessage(message))"
+						<button @click="copyToClipboard($event, displayMessage(message))"
 							title="Copy JSON"
 							class="text-xl leading-none bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
@@ -254,7 +254,7 @@ const getDisplayDate = (dateMilis: number) => {
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
-						<highlightjs :language="'json'" :code="stringifyMessage(message)" />
+						<highlightjs :language="'json'" :code="displayMessage(message)" />
 					</div>
 				</div>
 			</li>

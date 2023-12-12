@@ -1,32 +1,34 @@
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useLoader } from '../composables/loader';
-import { MessageContent, ParsedHeaders, StorageMessage } from '../types/message';
-import EditTags from './EditTags.vue';
-import EditMessageContent from './EditMessageContent.vue';
-import Dialog from './Dialog.vue';
 import { clone } from 'ramda';
-import Stepper, { Step } from './Stepper.vue';
+import { Ref, ref } from 'vue';
+import { useLoader } from '../composables/loader';
+import { isKeyValid, isValidHeaders } from '../services/utils';
+import { Headers, MessageKeyValue, StorageMessage } from '../types/message';
+import Dialog from './Dialog.vue';
+import EditMessageContent from './EditMessageContent.vue';
 import EditMessageHeaders from './EditMessageHeaders.vue';
-import { isSendValid, isValidHeaders } from '../services/utils';
+import EditTags from './EditTags.vue';
+import Stepper, { Step } from './Stepper.vue';
 
-const selectedMessage = ref<StorageMessage>();
+// Force the type so it cannot be undefined
+// The message will be set when the modal is opened
+const selectedMessage = ref() as Ref<StorageMessage>;
 
 const steps: Step[] = [{
 	name:'tags',
 	label: 'Tags',
-	isValid: () => (selectedMessage.value?.tags.length || 0) > 0
+	isValid: () => (selectedMessage.value.tags.length || 0) > 0
 },
 {
 	name:'message',
 	label: 'Content',
-	isValid: () => isSendValid(selectedMessage.value?.key) && isSendValid(selectedMessage.value?.value)
+	isValid: () => isKeyValid(selectedMessage.value.key)
 },
 {
 	name:'headers',
 	label: 'Headers',
-	isValid: () => isValidHeaders(selectedMessage.value?.headers ?? {})
+	isValid: () => isValidHeaders(selectedMessage.value.headers)
 }];
 
 const emit = defineEmits<{
@@ -46,21 +48,21 @@ defineExpose({
 const loader = useLoader();
 
 const onTagsChange = (selectedTags: string[]) => {
-	selectedMessage.value!.tags = selectedTags;
+	selectedMessage.value.tags = selectedTags;
 };
 
-const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
-	selectedMessage.value!.key = message.key;
-	selectedMessage.value!.value = message.value;
+const onContentChange = (message: MessageKeyValue) => {
+	selectedMessage.value.key = message.key;
+	selectedMessage.value.value = message.value;
 };
 
-const onHeadersChange = (headers: ParsedHeaders) => {
-	selectedMessage.value!.headers = headers;
+const onHeadersChange = (headers: Headers) => {
+	selectedMessage.value.headers = headers;
 };
 
 const saveMessage = async () => {
 	loader?.value?.show();
-	await emit('submit', selectedMessage.value!);
+	await emit('submit', selectedMessage.value);
 	loader?.value?.hide();
 
 	stepperDialog.value?.close();
@@ -73,13 +75,13 @@ const stepperDialog = ref<InstanceType<typeof Dialog> | null>(null); // Template
 	<Dialog size="fullpage" ref="stepperDialog" title="Edit storage message">
 		<Stepper class="mb-8" :steps="steps" @submit="saveMessage" submit-button-text="Save">
 			<template #tags>
-				<EditTags class="mt-8" :tags="selectedMessage!.tags" @change="onTagsChange" />
+				<EditTags class="mt-8" :tags="selectedMessage.tags" @change="onTagsChange" />
 			</template>
 			<template #message>
 				<EditMessageContent :message="selectedMessage" @change="onContentChange"/>
 			</template>
 			<template #headers>
-				<EditMessageHeaders :headers="selectedMessage?.headers" @change="onHeadersChange" />
+				<EditMessageHeaders :headers="selectedMessage.headers" @change="onHeadersChange" />
 			</template>
 		</Stepper>
 	</Dialog>

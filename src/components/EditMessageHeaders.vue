@@ -1,36 +1,36 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { ParsedHeaders } from '../types/message';
+import { Headers, Key, Value } from '../types/message';
 import CodeEditor from './CodeEditor.vue';
 import Button from './Button.vue';
 import { faker } from '@faker-js/faker';
 
 type EditHeaders = {
-	key: string,
-	value: unknown
-}[] | null
+	key: Key,
+	value: Value
+}[]
 
 const props = defineProps<{
-	headers?: ParsedHeaders
+	headers: Headers
 }>();
 
 const emit = defineEmits<{
-	(event: 'change', headers: ParsedHeaders): void | Promise<void>
+	(event: 'change', headers: Headers): void | Promise<void>
 }>();
 
-const headersToEditHeaders = (headers: ParsedHeaders): EditHeaders => {
+const headersToEditHeaders = (headers: Headers): EditHeaders => {
 	return Object.entries(headers ?? {}).map(([key, value]) => ({key, value}));
 };
 
-const editHeadersToHeaders = (headers: EditHeaders): ParsedHeaders => {
+const editHeadersToHeaders = (headers: EditHeaders): Headers => {
 	return headers && headers.reduce((acc, editHeader) => ({
 		...acc,
 		[editHeader.key]: editHeader.value
 	}), {});
 };
 
-const headersToEdit = ref(props.headers ? headersToEditHeaders(props.headers) : []);
+const headersToEdit = ref(headersToEditHeaders(props.headers));
 
 const addHeader = () => {
 	if (headersToEdit.value) {
@@ -49,29 +49,25 @@ const addHeader = () => {
 };
 
 const removeHeader = async (index: number) => {
-	headersToEdit.value!.splice(index, 1);
-
-	// For display purposes, it's nicer to see null
-	if ((headersToEdit.value?.length || 0) <= 0) {
-		headersToEdit.value = null;
-	}
+	headersToEdit.value.splice(index, 1);
 
 	const headers = editHeadersToHeaders(headersToEdit.value);
 	await emit('change', headers);
 };
 
 const onHeaderKeyChange = async (event: Event, index: number) => {
-	headersToEdit.value![index].key = (event.target as HTMLInputElement).value;
+	headersToEdit.value[index].key = (event.target as HTMLInputElement).value;
 
 	const headers = editHeadersToHeaders(headersToEdit.value);
 	await emit('change', headers);
 };
 
-let valueDebounce: any;
-const onHeaderValueChange = (code: unknown, index: number) => {
+// eslint-disable-next-line no-undef
+let valueDebounce: NodeJS.Timer;
+const onHeaderValueChange = (code: string, index: number) => {
 	clearTimeout(valueDebounce);
 	valueDebounce = setTimeout(async () => {
-		headersToEdit.value![index].value = code;
+		headersToEdit.value[index].value = code !== '' ? code : null;
 
 		const headers = editHeadersToHeaders(headersToEdit.value);
 		await emit('change', headers);

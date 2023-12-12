@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import * as monaco from 'monaco-editor';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { getMonacoEditorCompletionItems, tryJsonParse } from '../services/utils';
+import { getMonacoEditorCompletionItems } from '../services/utils';
 
 const props = defineProps<{
 	code?: unknown,
@@ -12,16 +12,18 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'codeChange', code: unknown): Promise<void> | void
+  (e: 'codeChange', code: string): Promise<void> | void
 }>();
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 
 let editorCode = '';
-if (typeof props.code !== 'string') {
-	editorCode = JSON.stringify(props.code, null, 2);
+if (typeof props.code === 'string') {
+	editorCode = props.code;
+} else if (props.code === null || props.code === undefined) {
+	editorCode = '';
 } else {
-	editorCode = props.code as string;
+	editorCode = JSON.stringify(props.code, null, 2);
 }
 let sizes: monaco.editor.IDimension;
 const initMonacoEditor = () => {
@@ -69,7 +71,9 @@ const initMonacoEditor = () => {
 			clearTimeout(debounce);
 			debounce = setTimeout(async () => {
 				const stringifiedCode = editor?.getValue();
-				await emit('codeChange', tryJsonParse(stringifiedCode));
+				if(stringifiedCode !== undefined) {
+					await emit('codeChange', stringifiedCode);
+				}
 			}, 300);
 		});
 	}, 10);

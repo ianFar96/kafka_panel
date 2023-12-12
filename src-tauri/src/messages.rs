@@ -4,7 +4,6 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::Timeout;
 use rdkafka::{Message, Offset, TopicPartitionList};
 use serde::Serialize;
-use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::thread;
@@ -13,9 +12,9 @@ use tokio::time::Duration;
 
 #[derive(Serialize, Clone)]
 pub struct KafkaMessageResponse {
-    headers: Option<HashMap<String, Option<Value>>>,
-    value: Option<Value>,
-    key: Option<Value>,
+    headers: Option<HashMap<String, Option<String>>>,
+    value: Option<String>,
+    key: String,
     offset: i64,
     partition: i32,
     timestamp: i64,
@@ -146,9 +145,7 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
                     Some(value) => {
                         let stringified_value =
                             std::str::from_utf8(value).map_err(|err| err.to_string())?;
-                        let parsed_value = serde_json::from_str::<Value>(stringified_value)
-                            .unwrap_or(stringified_value.into());
-                        Some(parsed_value)
+                        Some(stringified_value.to_owned())
                     }
                     None => None,
                 };
@@ -162,19 +159,15 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
     let key = match message.key() {
         Some(key) => {
             let stringified_key = std::str::from_utf8(key).map_err(|err| err.to_string())?;
-            let parsed_key =
-                serde_json::from_str::<Value>(stringified_key).unwrap_or(stringified_key.into());
-            Some(parsed_key)
+            stringified_key.to_owned()
         }
-        None => None,
+        None => return Err("Invalid message with no key".to_owned()),
     };
 
     let value = match message.payload() {
         Some(value) => {
             let stringified_value = std::str::from_utf8(value).map_err(|err| err.to_string())?;
-            let parsed_value = serde_json::from_str::<Value>(stringified_value)
-                .unwrap_or(stringified_value.into());
-            Some(parsed_value)
+            Some(stringified_value.to_owned())
         }
         None => None,
     };
@@ -197,44 +190,33 @@ fn process_message(message: &BorrowedMessage) -> Result<KafkaMessageResponse, St
 pub async fn send_message(
     producer: &FutureProducer,
     topic: String,
-    headers: Option<HashMap<String, Value>>,
-    key: Value,
-    value: Value,
+    headers: Option<HashMap<String, Option<&str>>>,
+    key: String,
+    value: Option<String>,
 ) -> Result<(), String> {
-    let stringified_key = serde_json::to_string(&key)
-        .map_err(|err| format!("Error while stringifying message key: {}", err.to_string()))?;
-    let stringified_value = serde_json::to_string(&value).map_err(|err| {
-        format!(
-            "Error while stringifying message value: {}",
-            err.to_string()
-        )
-    })?;
-
     let mut record = FutureRecord::to(&topic)
-        .key(&stringified_key)
-        .payload(&stringified_value);
+        .key(&key);
 
-    if let Some(headers) = headers {
-        let mut headers_to_send = OwnedHeaders::new();
-        for (header_key, header_value) in headers {
-            let stringified_header_value = match header_value {
-                Value::String(string_header_value) => string_header_value,
-                _ => serde_json::to_string(&header_value).map_err(|err| {
-                    format!(
-                        "Error while stringifying header's value: {}",
-                        err.to_string()
-                    )
-                })?,
-            };
-
-            headers_to_send = headers_to_send.insert(Header {
-                key: &header_key,
-                value: Some(&stringified_header_value),
-            });
-        }
-
-        record = record.headers(headers_to_send);
+    #[allow(unused)]
+    let mut extracted_value = "".to_owned();
+    if value.is_some() {
+        extracted_value = value.unwrap();
+        record = record.payload(&extracted_value);
     }
+
+    let mut headers_to_send = OwnedHeaders::new();
+    match headers {
+        Some(headers) => {
+            for (header_key, header_value) in headers {
+                headers_to_send = headers_to_send.insert(Header {
+                    key: &header_key,
+                    value: header_value,
+                });
+            }
+        },
+        None => {}
+    }
+    record = record.headers(headers_to_send);
 
     // FIXME: messages with same key sent by another system (kafkaJs, akhq) end up in different partitions
     producer

@@ -14,7 +14,7 @@ import { getRandomColor } from '../services/chipColors';
 import storageService from '../services/storage';
 import { Connection } from '../types/connection';
 import { StorageMessage, StorageMessageWithId } from '../types/message';
-import { stringifyMessage } from '../services/utils';
+import { displayMessage } from '../services/utils';
 import logger from '../services/logger';
 import { useAlertDialog } from '../composables/alertDialog';
 import { useConfirmDialog } from '../composables/confirmDialog';
@@ -169,7 +169,7 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 							title="Delete message"
 							class="text-2xl translate-y-[3px] bi-trash transition-colors duration-300 cursor-pointer mr-3 hover:text-red-500">
 						</button>
-						<button @click="copyToClipboard($event, stringifyMessage(message))"
+						<button @click="copyToClipboard($event, displayMessage(message))"
 							title="Copy JSON"
 							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
@@ -183,7 +183,7 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
-						<highlightjs :language="'json'" :code="stringifyMessage(message)" />
+						<highlightjs :language="'json'" :code="displayMessage(message)" />
 					</div>
 				</div>
 			</li>

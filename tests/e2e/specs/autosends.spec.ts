@@ -4,9 +4,8 @@ import TopicsPage from '../pages/Topics.page.js';
 import { click, e2eConnectionName } from '../utils.js';
 
 describe('Autosends', () => {
-	const topicName = 'autosends.default';
-
 	it('should start autosend', async () => {
+		const topicName = 'autosends.start.autosend';
 		await TopicsPage.selectConnection(e2eConnectionName);
 		await TopicsPage.createTopic(topicName);
 
@@ -38,5 +37,42 @@ describe('Autosends', () => {
 		// But there's always a delay in sending the messages
 		// So we consider the 50% sent is a success
 		await expect(await MessagesPage.list).toHaveChildren({gte: 5});
+	});
+
+	it('should stop autosend', async () => {
+		const topicName = 'autosends.stop.autosend';
+		await click(await TopicsPage.topicsPageLink);
+		await TopicsPage.createTopic(topicName);
+
+		await click(await AutosendsPage.autosendsPageLink);
+
+		await AutosendsPage.startAutosend({
+			duration:{
+				value: 5,
+				time_unit: 'Minutes'
+			},
+			interval: {
+				value: 500,
+				time_unit: 'Milliseconds'
+			}
+		}, topicName);
+		await expect(AutosendsPage.list).toHaveChildren(1);
+
+		// Wait a few seconds so it sends some messages
+		await browser.pause(5 * 1000);
+
+		await AutosendsPage.stopAutosend(0);
+		await expect(AutosendsPage.list).toHaveChildren(0);
+
+		await click(await TopicsPage.topicsPageLink);
+		await TopicsPage.goToMessages(topicName);
+
+		// Wait a few seconds to be sure no new messages are comming
+		await browser.pause(5 * 1000);
+
+		// Messages should be at most 10 since 5secs / 500 milis = 10
+		// But since it takes a moment to stop the autosend
+		// We consider a 50% margin of error
+		await expect(await MessagesPage.list).toHaveChildren({lte: 15});
 	});
 });

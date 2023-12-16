@@ -1,7 +1,7 @@
 import MessagesPage from '../pages/Messages.page.js';
 import MessagesStoragePage from '../pages/MessagesStorage.page.js';
 import TopicsPage from '../pages/Topics.page.js';
-import { click, e2eConnectionName, setValue } from '../utils.js';
+import { click, e2eConnectionName } from '../utils.js';
 
 describe('Storage', () => {
 	const topicName = 'storage.default';
@@ -43,17 +43,17 @@ describe('Storage', () => {
 		await click(await MessagesStoragePage.messagesStoragePageLink);
 		await expect(await MessagesStoragePage.list).toHaveChildren(2);
 
-		await setValue(await MessagesStoragePage.searchInput, 'no-tag');
+		await MessagesStoragePage.search('no-tag');
 		await expect(await MessagesStoragePage.list).toHaveChildren(0);
 
-		await setValue(await MessagesStoragePage.searchInput, 'first-tag');
+		await MessagesStoragePage.search('first-tag');
 		await expect(await MessagesStoragePage.list).toHaveChildren(1);
 
-		await setValue(await MessagesStoragePage.searchInput, 'second-tag');
+		await MessagesStoragePage.search('second-tag');
 		await expect(await MessagesStoragePage.list).toHaveChildren(2);
 
 		// Clean search bar
-		await setValue(await MessagesStoragePage.searchInput, '');
+		await MessagesStoragePage.search('');
 	});
 
 	it('should edit the message', async () => {

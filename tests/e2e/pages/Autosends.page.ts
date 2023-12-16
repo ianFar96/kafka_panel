@@ -45,6 +45,14 @@ class AutosendsPage {
 
 		await waitForLoaderToHide();
 	}
+
+	async stopAutosend(autosendIndex: number) {
+		const toggleAutosendContentButton = await this.list.$(`//li[${autosendIndex + 1}]/div`);
+		await click(toggleAutosendContentButton);
+
+		const stopButton = await this.list.$('button[title="Stop"]');
+		await click(stopButton);
+	}
 }
 
 export default new AutosendsPage();

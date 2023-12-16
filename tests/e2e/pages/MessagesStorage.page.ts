@@ -16,6 +16,10 @@ class MessagesStoragePage {
 		return this.list.$(`li:nth-child(${index + 1}) ul`);
 	}
 
+	async search(searchString: string) {
+		await setValue(await this.searchInput, searchString);
+	}
+
 	async editMessage(messageIndex: number, tags: string[]) {
 		const toggleMessageContentButton = await this.list.$(`//li[${messageIndex + 1}]/div`);
 		await click(toggleMessageContentButton);

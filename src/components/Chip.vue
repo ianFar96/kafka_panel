@@ -17,7 +17,8 @@ const color = computed(() => props.disabled ? disabledColor : chipColors[props.c
 </script>
 
 <template>
-  <span :class="`rounded border ${color} py-1 px-2 w-fit text-sm block whitespace-nowrap`">
+  <button v-bind="$attrs"
+   :class="`rounded border ${color} py-1 px-2 w-fit text-sm block whitespace-nowrap`">
     <slot></slot>
-  </span>
+  </button>
 </template>

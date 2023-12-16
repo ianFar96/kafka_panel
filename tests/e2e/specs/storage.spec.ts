@@ -18,9 +18,24 @@ describe('Storage', () => {
 		await click(messagesStorageLink);
 
 		await expect(await MessagesStoragePage.list).toHaveChildren(1);
+
 		const tagsList = await MessagesStoragePage.getTagsList(0);
+		await expect(tagsList).toHaveChildren(tags.length);
+
 		for (const tag of tags) {
-			await expect(await tagsList.$(`span=${tag}`)).toBeDisplayed();
+			await expect(await tagsList.$(`button=${tag}`)).toBeDisplayed();
+		}
+	});
+
+	it('should edit the message', async () => {
+		const tags = ['new-tag'];
+		await MessagesStoragePage.editMessage(0, tags);
+
+		const tagsList = await MessagesStoragePage.getTagsList(0);
+		await expect(tagsList).toHaveChildren(tags.length);
+
+		for (const tag of tags) {
+			await expect(await tagsList.$(`button=${tag}`)).toBeDisplayed();
 		}
 	});
 });

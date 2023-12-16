@@ -1,4 +1,4 @@
-import { click, e2eConnectionName, setValue } from '../utils.js';
+import { click, e2eConnectionName, setValue, waitForLoaderToHide } from '../utils.js';
 
 class MessagesStoragePage {
 	get messagesStoragePageLink() { return $('aside a[href="#/messages-storage"]'); }
@@ -17,8 +17,8 @@ class MessagesStoragePage {
 	}
 
 	async editMessage(messageIndex: number, tags: string[]) {
-		const showMessageButton = await this.list.$(`//li[${messageIndex + 1}]/div`);
-		await click(showMessageButton);
+		const toggleMessageContentButton = await this.list.$(`//li[${messageIndex + 1}]/div`);
+		await click(toggleMessageContentButton);
 
 		const editButton = await this.list.$('button[title="Edit tags and message"]');
 		await click(editButton);
@@ -40,11 +40,26 @@ class MessagesStoragePage {
 
 		const saveButton = await this.edit.modal.$('button=Save');
 		await click(saveButton);
+
+		await waitForLoaderToHide();
+	}
+
+	async deleteMessage(messageIndex: number) {
+		const toggleMessageContentButton = await this.list.$(`//li[${messageIndex + 1}]/div`);
+		await click(toggleMessageContentButton);
+
+		const deleteButton = await this.list.$('button[title="Delete message"]');
+		await click(deleteButton);
+
+		const acceptButton = await $('button=Accept');
+		await click(acceptButton);
+
+		await waitForLoaderToHide();
 	}
 
 	async sendMessage(messageIndex: number, topicName: string) {
-		const showMessageButton = await this.list.$(`//li[${messageIndex + 1}]/div`);
-		await click(showMessageButton);
+		const toggleMessageContentButton = await this.list.$(`//li[${messageIndex + 1}]/div`);
+		await click(toggleMessageContentButton);
 
 		const editButton = await this.list.$('button[title="Send again"]');
 		await click(editButton);
@@ -62,6 +77,12 @@ class MessagesStoragePage {
 		// Accept current headers
 		const sendButton = await this.sendMessageModal.$('button=Send');
 		await click(sendButton);
+
+		await waitForLoaderToHide();
+
+		// Hide message content so this action
+		// can be called immediately after if needed
+		await click(toggleMessageContentButton);
 	}
 }
 

@@ -4,12 +4,13 @@ class MessagesPage {
 	get list() { return $('h2*=messages').$('../..').$('//ul'); }
 
 	async sendMessage(sentMessageIndex?: number) {
+		let toggleMessageContentButton;
 		if (sentMessageIndex === undefined) {
 			const sendMessageButton = await $('button=Send message');
 			await click(sendMessageButton);
 		} else {
-			const showMessageButton = await this.list.$(`//li[${sentMessageIndex + 1}]/div`);
-			await click(showMessageButton);
+			toggleMessageContentButton = await this.list.$(`//li[${sentMessageIndex + 1}]/div`);
+			await click(toggleMessageContentButton);
 
 			const sendAgainButton = await $('button[title="Send again"]');
 			await click(sendAgainButton);
@@ -22,6 +23,12 @@ class MessagesPage {
 		await click(sendButton);
 
 		await waitForLoaderToHide();
+
+		// Hide message content so this action
+		// can be called immediately after if needed
+		if (toggleMessageContentButton) {
+			await click(toggleMessageContentButton);
+		}
 	}
 
 	async stopListener() {
@@ -39,8 +46,8 @@ class MessagesPage {
 	}
 
 	async saveMessage(sentMessageIndex: number, tags: string[]) {
-		const showMessageButton = await this.list.$(`//li[${sentMessageIndex + 1}]/div`);
-		await click(showMessageButton);
+		const toggleMessageContentButton = await this.list.$(`//li[${sentMessageIndex + 1}]/div`);
+		await click(toggleMessageContentButton);
 
 		const saveInStorageButton = await $('button[title="Save in storage"]');
 		await click(saveInStorageButton);
@@ -60,6 +67,10 @@ class MessagesPage {
 
 		const saveButton = await $('button=Save');
 		await click(saveButton);
+
+		// Hide message content so this action
+		// can be called immediately after if needed
+		await click(toggleMessageContentButton);
 	}
 }
 

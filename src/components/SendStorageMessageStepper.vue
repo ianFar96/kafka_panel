@@ -118,7 +118,7 @@ const onHeadersChange = (headers: Headers) => {
 	selectedMessage.value.headers = headers;
 };
 
-const saveMessage = async () => {
+const sendMessage = async () => {
 	if (!selectedTopic.value) {
 		throw new Error('Unexpected error, topic is not selected');
 	}
@@ -143,7 +143,7 @@ const saveMessage = async () => {
 
 <template>
 	<Dialog size="fullpage" ref="stepperDialog" title="Send storage message">
-		<Stepper class="mb-8" ref="stepper" :steps="steps" submit-button-text="Send" @submit="saveMessage">
+		<Stepper class="mb-8" ref="stepper" :steps="steps" submit-button-text="Send" @submit="sendMessage">
 			<!-- Steps -->
 			<template #connection>
 				<SelectConnection :selected-connection="connectionStore.connection?.name"

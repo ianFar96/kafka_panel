@@ -1,5 +1,5 @@
 import { AutosendOptions } from '../../../src/types/autosend.js';
-import { click, e2eConnectionName, setValue } from '../utils.js';
+import { click, e2eConnectionName, setValue, waitForLoaderToHide } from '../utils.js';
 
 class AutosendsPage {
 	get autosendsPageLink() { return $('aside a[href="#/autosend"]'); }
@@ -42,6 +42,8 @@ class AutosendsPage {
 
 		const startButton = await this.startAutosendModal.$('button=Start');
 		await click(startButton);
+
+		await waitForLoaderToHide();
 	}
 }
 

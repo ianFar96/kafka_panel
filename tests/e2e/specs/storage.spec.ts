@@ -27,13 +27,18 @@ describe('Storage', () => {
 		}
 	});
 
+	it('should delete the message from storage', async () => {
+		await MessagesStoragePage.deleteMessage(0);
+		await expect(await MessagesStoragePage.list).toHaveChildren(0);
+	});
+
 	it('should search by tag', async () => {
 		await click(await TopicsPage.topicsPageLink);
 		await TopicsPage.goToMessages(topicName);
 
+		await MessagesPage.saveMessage(0,  ['first-tag', 'second-tag']);
 		// Save the same message with other tags
-		const tags = ['second-tag', 'third-tag'];
-		await MessagesPage.saveMessage(0, tags);
+		await MessagesPage.saveMessage(0, ['second-tag', 'third-tag']);
 
 		await click(await MessagesStoragePage.messagesStoragePageLink);
 		await expect(await MessagesStoragePage.list).toHaveChildren(2);

@@ -1,6 +1,8 @@
 import { click, setValue } from '../utils.js';
 
 class MessagesStoragePage {
+	get messagesStoragePageLink() { return $('aside a[href="#/messages-storage"]'); }
+	get searchInput() { return $('input[placeholder="Search by tags"]'); }
 	get list() { return $('h2=Messages Storage').$('../..').$('//ul'); }
 	edit = {
 		get modal() { return $('h2=Edit storage message').$('..'); },

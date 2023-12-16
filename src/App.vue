@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { appWindow } from '@tauri-apps/api/window';
-import { provide, ref } from 'vue';
+import { onMounted, provide, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AlertDialog from './components/AlertDialog.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
@@ -14,13 +14,14 @@ router.afterEach(to => {
 });
 
 const loader = ref<InstanceType<typeof Loader> | null>(null); // Template ref
-provide('loader', loader);
-
 const confirmDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null); // Template ref
-provide('confirmDialog', confirmDialog);
-
 const alertDialog = ref<InstanceType<typeof AlertDialog> | null>(null); // Template ref
-provide('alertDialog', alertDialog);
+
+onMounted(() => {
+	provide('confirmDialog', confirmDialog);
+	provide('alertDialog', alertDialog);
+	provide('loader', loader);
+});
 
 const autosendStore = useAutosendsStore();
 

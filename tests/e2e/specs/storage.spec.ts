@@ -4,7 +4,7 @@ import TopicsPage from '../pages/Topics.page.js';
 import { click, e2eConnectionName, setValue } from '../utils.js';
 
 describe('Storage', () => {
-	const topicName = 'storage.save.message';
+	const topicName = 'storage.default';
 
 	it('should save a message to the storage', async () => {
 		await TopicsPage.selectConnection(e2eConnectionName);

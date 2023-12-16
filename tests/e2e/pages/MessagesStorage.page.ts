@@ -1,4 +1,4 @@
-import { click, setValue } from '../utils.js';
+import { click, e2eConnectionName, setValue } from '../utils.js';
 
 class MessagesStoragePage {
 	get messagesStoragePageLink() { return $('aside a[href="#/messages-storage"]'); }
@@ -10,9 +10,7 @@ class MessagesStoragePage {
 		get tagsList() { return this.tagsInput.$('../..').$$('ul li button'); },
 		get addTagButton() { return this.modal.$('button[title="Add to tags"]'); }
 	};
-	sendAgain = {
-		get modal() { return $('h2=Send storage message').$('..'); },
-	};
+	get sendMessageModal() { return $('h2=Send storage message').$('..'); }
 
 	getTagsList(index: number) {
 		return this.list.$(`li:nth-child(${index + 1}) ul`);
@@ -51,19 +49,18 @@ class MessagesStoragePage {
 		const editButton = await this.list.$('button[title="Send again"]');
 		await click(editButton);
 
-		// Accept default connection
-		let nextButton = await this.sendAgain.modal.$('button=Next');
-		await click(nextButton);
+		const connectionItem = await this.sendMessageModal.$(`li=${e2eConnectionName}`);
+		await click(connectionItem);
 
-		const topic = await this.sendAgain.modal.$(`li=${topicName}`);
-		await click(topic);
+		const topicItem = await this.sendMessageModal.$(`li=${topicName}`);
+		await click(topicItem);
 
 		// Accept current message
-		nextButton = await this.sendAgain.modal.$('button=Next');
+		const nextButton = await this.sendMessageModal.$('button=Next');
 		await click(nextButton);
 
 		// Accept current headers
-		const sendButton = await this.sendAgain.modal.$('button=Send');
+		const sendButton = await this.sendMessageModal.$('button=Send');
 		await click(sendButton);
 	}
 }

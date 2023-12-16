@@ -22,6 +22,7 @@ export async function click(button: WebdriverIO.Element, timeout?: number) {
 export async function setValue (input: WebdriverIO.Element, value: number | string) {
 	await browser.execute(`arguments[0].value="${value}"`, input);
 	await browser.execute('arguments[0].dispatchEvent(new Event("input", { bubbles: true }))', input);
+	await browser.execute('arguments[0].dispatchEvent(new Event("change", { bubbles: true }))', input);
 }
 
 export const e2eConnectionName = 'Localhost E2E';

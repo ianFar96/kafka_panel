@@ -2,7 +2,7 @@ import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class TopicsPage {
 	get chooseConnectionTitle() { return $('aria/Choose Connection'); }
-	get table() { return $('table'); }
+	get table() { return $('h2*=topic').$('../..').$('table'); }
 	get tableBody() { return this.table.$('tbody'); }
 	get searchInput() { return $('input[placeholder="Search"]'); }
 	get refreshButton() { return $('button[title="Refresh list"'); }

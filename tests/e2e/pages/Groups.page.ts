@@ -1,7 +1,7 @@
 import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class GroupsPage {
-	get table() { return $('table'); }
+	get table() { return $('h2*=groups').$('../..').$('table'); }
 	get tableBody() { return this.table.$('tbody'); }
 	get confirmButton() { return $('button=Accept'); }
 	get searchInput() { return $('input[placeholder="Search"]'); }

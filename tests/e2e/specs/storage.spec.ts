@@ -4,8 +4,9 @@ import TopicsPage from '../pages/Topics.page.js';
 import { click, e2eConnectionName } from '../utils.js';
 
 describe('Storage', () => {
+	const topicName = 'storage.save.message';
+
 	it('should save a message to the storage', async () => {
-		const topicName = 'storage.save.message';
 		await TopicsPage.selectConnection(e2eConnectionName);
 		await TopicsPage.createTopic(topicName);
 		await TopicsPage.goToMessages(topicName);
@@ -37,5 +38,15 @@ describe('Storage', () => {
 		for (const tag of tags) {
 			await expect(await tagsList.$(`button=${tag}`)).toBeDisplayed();
 		}
+	});
+
+	it('should send the message again', async () => {
+		await MessagesStoragePage.sendMessage(0, topicName);
+
+		const topicLink = await $('a[href="#/topics"]');
+		await click(topicLink);
+
+		await TopicsPage.goToMessages(topicName);
+		await expect(await MessagesPage.list).toHaveChildren(2);
 	});
 });

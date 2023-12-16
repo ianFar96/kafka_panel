@@ -1,7 +1,7 @@
 import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class MessagesPage {
-	get list() { return $('ul'); }
+	get list() { return $('h2*=messages').$('../..').$('//ul'); }
 
 	async sendMessage(sentMessageIndex?: number) {
 		if (sentMessageIndex === undefined) {

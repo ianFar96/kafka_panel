@@ -9,7 +9,7 @@ describe('Autosends', () => {
 		await TopicsPage.selectConnection(e2eConnectionName);
 		await TopicsPage.createTopic(topicName);
 
-		await click(await AutosendsPage.autosendsPageLink);
+		await click(await AutosendsPage.pageLink);
 
 		await AutosendsPage.startAutosend({
 			duration:{
@@ -24,13 +24,13 @@ describe('Autosends', () => {
 		await expect(AutosendsPage.list).toHaveChildren(1);
 
 		// A red circle should display the active autosend in the page link
-		await expect(await AutosendsPage.autosendsPageLink.$('i=1')).toBeDisplayed();
+		await expect(await AutosendsPage.pageLink.$('i=1')).toBeDisplayed();
 
 		// Wait for the autosend to finish
 		await browser.pause(5 * 1000);
 		await expect(AutosendsPage.list).toHaveChildren(0);
 
-		await click(await TopicsPage.topicsPageLink);
+		await click(await TopicsPage.pageLink);
 		await TopicsPage.goToMessages(topicName);
 
 		// Messages should be 10 since 5secs / 500 milis = 10
@@ -41,10 +41,10 @@ describe('Autosends', () => {
 
 	it('should stop autosend', async () => {
 		const topicName = 'autosends.stop.autosend';
-		await click(await TopicsPage.topicsPageLink);
+		await click(await TopicsPage.pageLink);
 		await TopicsPage.createTopic(topicName);
 
-		await click(await AutosendsPage.autosendsPageLink);
+		await click(await AutosendsPage.pageLink);
 
 		await AutosendsPage.startAutosend({
 			duration:{
@@ -64,7 +64,7 @@ describe('Autosends', () => {
 		await AutosendsPage.stopAutosend(0);
 		await expect(AutosendsPage.list).toHaveChildren(0);
 
-		await click(await TopicsPage.topicsPageLink);
+		await click(await TopicsPage.pageLink);
 		await TopicsPage.goToMessages(topicName);
 
 		// Wait a few seconds to be sure no new messages are comming
@@ -77,7 +77,7 @@ describe('Autosends', () => {
 	});
 
 	it('should search', async () => {
-		await click(await TopicsPage.topicsPageLink);
+		await click(await TopicsPage.pageLink);
 
 		const topicName1 = 'autosends.search.1';
 		await TopicsPage.createTopic(topicName1);
@@ -85,7 +85,7 @@ describe('Autosends', () => {
 		const topicName2 = 'autosends.search.2';
 		await TopicsPage.createTopic(topicName2);
 
-		await click(await AutosendsPage.autosendsPageLink);
+		await click(await AutosendsPage.pageLink);
 
 		await AutosendsPage.startAutosend({
 			duration:{

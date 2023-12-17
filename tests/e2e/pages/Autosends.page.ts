@@ -2,7 +2,7 @@ import { AutosendOptions } from '../../../src/types/autosend.js';
 import { click, e2eConnectionName, setValue, waitForLoaderToHide } from '../utils.js';
 
 class AutosendsPage {
-	get autosendsPageLink() { return $('aside a[href="#/autosend"]'); }
+	get pageLink() { return $('aside a[href="#/autosend"]'); }
 	get list() { return $('h2=Autosend').$('../..').$('//ul'); }
 	get searchInput() { return $('input[placeholder="Search by topic"]'); }
 	get startAutosendModal() {return $('h2=Start autosend').$('..'); }

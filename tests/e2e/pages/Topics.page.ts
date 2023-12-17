@@ -1,7 +1,7 @@
 import { click, setValue, waitForLoaderToHide } from '../utils.js';
 
 class TopicsPage {
-	get topicsPageLink() { return $('aside a[href="#/topics"]'); }
+	get pageLink() { return $('aside a[href="#/topics"]'); }
 	get chooseConnectionTitle() { return $('aria/Choose Connection'); }
 	get table() { return $('h2*=topic').$('../..').$('table'); }
 	get tableBody() { return this.table.$('tbody'); }

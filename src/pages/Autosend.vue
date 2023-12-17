@@ -51,7 +51,7 @@ const startAutosend = async (autosend: Autosend) => {
 	logger.info('Starting autosend...');
 	await autosendStore.startAutosend(autosend);
 };
-	
+
 const editMessageStorage = (autosend: Autosend) => {
 	const storageMessage = autosendToStorageMessage(autosend, ['autosend template']);
 	editMessageStorageStepper.value?.openDialog(storageMessage);

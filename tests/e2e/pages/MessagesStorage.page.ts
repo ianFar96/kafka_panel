@@ -1,7 +1,7 @@
 import { click, e2eConnectionName, setValue, waitForLoaderToHide } from '../utils.js';
 
 class MessagesStoragePage {
-	get messagesStoragePageLink() { return $('aside a[href="#/messages-storage"]'); }
+	get pageLink() { return $('aside a[href="#/messages-storage"]'); }
 	get searchInput() { return $('input[placeholder="Search by tags"]'); }
 	get list() { return $('h2=Messages Storage').$('../..').$('//ul'); }
 	edit = {

@@ -15,7 +15,7 @@ describe('Storage', () => {
 		const tags = ['first-tag', 'second-tag'];
 		await MessagesPage.saveMessage(0, tags);
 
-		await click(await MessagesStoragePage.messagesStoragePageLink);
+		await click(await MessagesStoragePage.pageLink);
 
 		await expect(await MessagesStoragePage.list).toHaveChildren(1);
 
@@ -33,14 +33,14 @@ describe('Storage', () => {
 	});
 
 	it('should search by tag', async () => {
-		await click(await TopicsPage.topicsPageLink);
+		await click(await TopicsPage.pageLink);
 		await TopicsPage.goToMessages(topicName);
 
 		await MessagesPage.saveMessage(0,  ['first-tag', 'second-tag']);
 		// Save the same message with other tags
 		await MessagesPage.saveMessage(0, ['second-tag', 'third-tag']);
 
-		await click(await MessagesStoragePage.messagesStoragePageLink);
+		await click(await MessagesStoragePage.pageLink);
 		await expect(await MessagesStoragePage.list).toHaveChildren(2);
 
 		await MessagesStoragePage.search('no-tag');
@@ -71,7 +71,7 @@ describe('Storage', () => {
 	it('should send the message again', async () => {
 		await MessagesStoragePage.sendMessage(0, topicName);
 
-		await click(await TopicsPage.topicsPageLink);
+		await click(await TopicsPage.pageLink);
 
 		await TopicsPage.goToMessages(topicName);
 		await expect(await MessagesPage.list).toHaveChildren(2);

@@ -144,7 +144,37 @@ describe('Autosends', () => {
 		const tags = ['first-tag', 'second-tag'];
 		await AutosendsPage.saveAutosend(0, tags);
 
+		// Cleanup
+		await AutosendsPage.stopAutosend(0);
+
 		await click(await MessagesStoragePage.pageLink);
 		await expect(MessagesStoragePage.list).toHaveChildren(1);
+	});
+
+	it('should start the autosend from the storage', async () => {
+		await click(await TopicsPage.pageLink);
+
+		const topicName = 'autosends.start.autosend.storage';
+		await TopicsPage.createTopic(topicName);
+
+		await click(await MessagesStoragePage.pageLink);
+		await MessagesStoragePage.startAutosend(0, {
+			duration:{
+				value: 5,
+				time_unit: 'Minutes'
+			},
+			interval: {
+				value: 5,
+				time_unit: 'Seconds'
+			}
+		}, topicName);
+
+		await expect(await AutosendsPage.pageLink.$('i=1')).toBeDisplayed();
+
+		await click(await AutosendsPage.pageLink);
+		await expect(AutosendsPage.list).toHaveChildren(1);
+
+		// Cleanup
+		await AutosendsPage.stopAutosend(0);
 	});
 });

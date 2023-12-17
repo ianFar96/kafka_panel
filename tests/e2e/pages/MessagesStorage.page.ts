@@ -1,4 +1,6 @@
+import { AutosendOptions } from '../../../src/types/autosend.js';
 import EditStorageMessageModal from '../modals/EditStorageMessage.modal.js';
+import StartAutosendModal from '../modals/StartAutosend.modal.js';
 import { click, e2eConnectionName, setValue, waitForLoaderToHide } from '../utils.js';
 
 class MessagesStoragePage {
@@ -60,6 +62,22 @@ class MessagesStoragePage {
 		// Accept current headers
 		const sendButton = await this.sendMessageModal.$('button=Send');
 		await click(sendButton);
+
+		await waitForLoaderToHide();
+
+		// Hide message content so this action
+		// can be called immediately after if needed
+		await click(toggleMessageContentButton);
+	}
+
+	async startAutosend(autosendIndex: number, config: AutosendOptions, topicName: string) {
+		const toggleMessageContentButton = await this.list.$(`//li[${autosendIndex + 1}]/div`);
+		await click(toggleMessageContentButton);
+
+		const startAutosendButton = await $('button[title="Start autosend"]');
+		await click(startAutosendButton);
+
+		await StartAutosendModal.startAutosend(config, topicName);
 
 		await waitForLoaderToHide();
 

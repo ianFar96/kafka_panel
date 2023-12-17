@@ -38,12 +38,12 @@ pub struct StorageState {
 }
 
 pub fn get_app_dir() -> Result<String, String> {
-    let app_dir = match home_dir() {
+    let home_dir = match home_dir() {
         None => Err("Could not determine your home path with https://docs.rs/dirs/latest/dirs/fn.home_dir.html# function"),
         Some(dir) => Ok(dir)
     }?;
 
-    Ok(format!("{}/.kafka_panel", app_dir.to_string_lossy()))
+    Ok(format!("{}/.kafka_panel", home_dir.to_string_lossy()))
 }
 
 #[allow(unused)]

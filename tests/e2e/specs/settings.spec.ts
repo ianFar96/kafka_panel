@@ -27,18 +27,23 @@ describe('Settings', () => {
 
 		await click(await SettingsPage.pageLink);
 		await SettingsPage.updateNumberOfMessages(5);
-
 		await click(await TopicsPage.pageLink);
 		await TopicsPage.goToMessages(topicName);
-
 		await expect(await MessagesPage.list).toHaveChildren(5);
 
 		await click(await SettingsPage.pageLink);
 		await SettingsPage.updateNumberOfMessages(20);
-
 		await click(await TopicsPage.pageLink);
 		await TopicsPage.goToMessages(topicName);
-
 		await expect(await MessagesPage.list).toHaveChildren(20);
+
+		// Check that with a bigger limit it shows less elements than the limit
+		await click(await SettingsPage.pageLink);
+		await SettingsPage.updateNumberOfMessages(1000);
+		await click(await TopicsPage.pageLink);
+		await TopicsPage.goToMessages(topicName);
+		// Wait for all the messages to be pulled
+		await browser.pause(3 * 1000);
+		await expect(await MessagesPage.list).toHaveChildren({lte: 500});
 	});
 });

@@ -1,5 +1,20 @@
 # Changelog
 
+### Added
+
+- Add e2e tests with WebDriverIO. Should cover all spec cases
+- Add button to add tags dialog
+- Add CI for testing
+
+### Changed
+
+- Refactor on displaying and sending the messages content
+- Migrate alerts from system to in-app modals
+
+### Fixed
+
+- Fix wrong topic state bug when fetching messages
+
 ## 1.4.0
 
 ### Added

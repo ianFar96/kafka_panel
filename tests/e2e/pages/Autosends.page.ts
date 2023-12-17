@@ -1,4 +1,5 @@
 import { AutosendOptions } from '../../../src/types/autosend.js';
+import EditStorageMessageModal from '../modals/EditStorageMessage.modal.js';
 import { click, e2eConnectionName, setValue, waitForLoaderToHide } from '../utils.js';
 
 class AutosendsPage {
@@ -57,6 +58,20 @@ class AutosendsPage {
 
 	async search(searchString: string) {
 		await setValue(await this.searchInput, searchString);
+	}
+
+	async saveAutosend(autosendIndex: number, tags: string[]) {
+		const toggleAutosendContentButton = await this.list.$(`//li[${autosendIndex + 1}]/div`);
+		await click(toggleAutosendContentButton);
+
+		const saveInStorageButton = await this.list.$('button[title="Save in storage"]');
+		await click(saveInStorageButton);
+
+		await EditStorageMessageModal.edit(tags);
+
+		// Hide message content so this action
+		// can be called immediately after if needed
+		await click(toggleAutosendContentButton);
 	}
 }
 

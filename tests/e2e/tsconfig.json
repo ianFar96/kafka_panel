@@ -15,6 +15,7 @@
     "../../vite.config.ts",
     "specs/*.spec.ts",
     "pages/*.page.ts",
+    "modals/*.modal.ts",
     "**/*.ts",
   ],
 }

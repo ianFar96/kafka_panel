@@ -1,4 +1,5 @@
-import { click, setValue, waitForLoaderToHide } from '../utils.js';
+import EditStorageMessageModal from '../modals/EditStorageMessage.modal.js';
+import { click, waitForLoaderToHide } from '../utils.js';
 
 class MessagesPage {
 	get list() { return $('h2*=messages').$('../..').$('//ul'); }
@@ -52,21 +53,7 @@ class MessagesPage {
 		const saveInStorageButton = await $('button[title="Save in storage"]');
 		await click(saveInStorageButton);
 
-		const tagsInput = await $('input[placeholder="Type the tag and press enter"]');
-		const addTagButton = await $('button[title="Add to tags"]');
-		for (const tag of tags) {
-			await setValue(tagsInput, tag);
-			await click(addTagButton);
-		}
-
-		const nextContentButton = await $('button=Next');
-		await click(nextContentButton);
-
-		const nextHeadersButton = await $('button=Next');
-		await click(nextHeadersButton);
-
-		const saveButton = await $('button=Save');
-		await click(saveButton);
+		await EditStorageMessageModal.edit(tags);
 
 		// Hide message content so this action
 		// can be called immediately after if needed

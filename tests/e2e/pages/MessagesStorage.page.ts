@@ -1,15 +1,10 @@
+import EditStorageMessageModal from '../modals/EditStorageMessage.modal.js';
 import { click, e2eConnectionName, setValue, waitForLoaderToHide } from '../utils.js';
 
 class MessagesStoragePage {
 	get pageLink() { return $('aside a[href="#/messages-storage"]'); }
 	get searchInput() { return $('input[placeholder="Search by tags"]'); }
 	get list() { return $('h2=Messages Storage').$('../..').$('//ul'); }
-	edit = {
-		get modal() { return $('h2=Edit storage message').$('..'); },
-		get tagsInput() { return this.modal.$('input[placeholder="Type the tag and press enter"]'); },
-		get tagsList() { return this.tagsInput.$('../..').$$('ul li button'); },
-		get addTagButton() { return this.modal.$('button[title="Add to tags"]'); }
-	};
 	get sendMessageModal() { return $('h2=Send storage message').$('..'); }
 
 	getTagsList(index: number) {
@@ -23,23 +18,7 @@ class MessagesStoragePage {
 		const editButton = await this.list.$('button[title="Edit tags and message"]');
 		await click(editButton);
 
-		for (const tagChip of await this.edit.tagsList) {
-			await click(tagChip);
-		}
-
-		for (const tag of tags) {
-			await setValue(await this.edit.tagsInput, tag);
-			await click(await this.edit.addTagButton);
-		}
-
-		let nextButton = await this.edit.modal.$('button=Next');
-		await click(nextButton);
-
-		nextButton = await this.edit.modal.$('button=Next');
-		await click(nextButton);
-
-		const saveButton = await this.edit.modal.$('button=Save');
-		await click(saveButton);
+		await EditStorageMessageModal.edit(tags);
 
 		await waitForLoaderToHide();
 	}

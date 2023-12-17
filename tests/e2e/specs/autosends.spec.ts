@@ -1,5 +1,6 @@
 import AutosendsPage from '../pages/Autosends.page.js';
 import MessagesPage from '../pages/Messages.page.js';
+import MessagesStoragePage from '../pages/MessagesStorage.page.js';
 import TopicsPage from '../pages/Topics.page.js';
 import { click, e2eConnectionName } from '../utils.js';
 
@@ -120,5 +121,30 @@ describe('Autosends', () => {
 		await AutosendsPage.search('');
 		await AutosendsPage.stopAutosend(0);
 		await AutosendsPage.stopAutosend(0);
+	});
+
+	it('should save an autosend in storage', async () => {
+		await click(await TopicsPage.pageLink);
+
+		const topicName = 'autosends.save.storage';
+		await TopicsPage.createTopic(topicName);
+
+		await click(await AutosendsPage.pageLink);
+		await AutosendsPage.startAutosend({
+			duration:{
+				value: 5,
+				time_unit: 'Minutes'
+			},
+			interval: {
+				value: 5,
+				time_unit: 'Seconds'
+			}
+		}, topicName);
+
+		const tags = ['first-tag', 'second-tag'];
+		await AutosendsPage.saveAutosend(0, tags);
+
+		await click(await MessagesStoragePage.pageLink);
+		await expect(MessagesStoragePage.list).toHaveChildren(1);
 	});
 });

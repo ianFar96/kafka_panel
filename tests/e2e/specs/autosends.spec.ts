@@ -75,4 +75,50 @@ describe('Autosends', () => {
 		// We consider a 50% margin of error
 		await expect(await MessagesPage.list).toHaveChildren({lte: 15});
 	});
+
+	it('should search', async () => {
+		await click(await TopicsPage.topicsPageLink);
+
+		const topicName1 = 'autosends.search.1';
+		await TopicsPage.createTopic(topicName1);
+
+		const topicName2 = 'autosends.search.2';
+		await TopicsPage.createTopic(topicName2);
+
+		await click(await AutosendsPage.autosendsPageLink);
+
+		await AutosendsPage.startAutosend({
+			duration:{
+				value: 5,
+				time_unit: 'Minutes'
+			},
+			interval: {
+				value: 5,
+				time_unit: 'Seconds'
+			}
+		}, topicName1);
+		await expect(AutosendsPage.list).toHaveChildren(1);
+
+		await AutosendsPage.startAutosend({
+			duration:{
+				value: 5,
+				time_unit: 'Minutes'
+			},
+			interval: {
+				value: 5,
+				time_unit: 'Seconds'
+			}
+		}, topicName2);
+		await expect(AutosendsPage.list).toHaveChildren(2);
+
+		await AutosendsPage.search(topicName1);
+		await expect(AutosendsPage.list).toHaveChildren(1);
+		await AutosendsPage.search('.search.');
+		await expect(AutosendsPage.list).toHaveChildren(2);
+
+		// Clean up
+		await AutosendsPage.search('');
+		await AutosendsPage.stopAutosend(0);
+		await AutosendsPage.stopAutosend(0);
+	});
 });

@@ -6,7 +6,7 @@ import StartAutosendStepper from '../components/StartAutosendStepper.vue';
 import { useAutosendsStore } from '../composables/autosends';
 import checkSettings from '../services/checkSettings';
 import storageService from '../services/storage';
-import { autosendToStorageMessage, stringifyMessage } from '../services/utils';
+import { autosendToStorageMessage, displayMessage } from '../services/utils';
 import { ActiveAutosend, Autosend } from '../types/autosend';
 import { Connection } from '../types/connection';
 import { StorageMessage } from '../types/message';
@@ -51,7 +51,7 @@ const startAutosend = async (autosend: Autosend) => {
 	logger.info('Starting autosend...');
 	await autosendStore.startAutosend(autosend);
 };
-	
+
 const editMessageStorage = (autosend: Autosend) => {
 	const storageMessage = autosendToStorageMessage(autosend, ['autosend template']);
 	editMessageStorageStepper.value?.openDialog(storageMessage);
@@ -128,7 +128,7 @@ const saveMessageInStorage = async (message: StorageMessage) => {
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
-						<highlightjs :language="'json'" :code="stringifyMessage(autosend)" />
+						<highlightjs :language="'json'" :code="displayMessage(autosend)" />
 					</div>
 				</div>
 			</li>

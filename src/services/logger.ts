@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api';
-import { message as alert } from '@tauri-apps/api/dialog';
 import { AutosendsService } from './autosends';
 import { KafkaService } from './kafka';
 
@@ -45,8 +44,6 @@ class Logger {
 	}
 
 	async error(message: unknown, extras?: Extras) {
-		await alert(message as string, { title: 'Error', type: 'error' });
-
 		if (this.level !== 'silent') {
 			const extrasObject = this.getExtrasObject(extras);
 			console.log(`❌ [${new Date().toString()}] ERROR: ${message}`, {extras: extrasObject});
@@ -66,7 +63,8 @@ class Logger {
 	}
 }
 
-const isDev = await invoke('is_dev');
-const logger = new Logger(isDev ? 'trace' : 'info');
+const env = await invoke('get_env_command');
+const debug = env === 'Dev' || env === 'E2E';
+const logger = new Logger(debug ? 'trace' : 'info');
 
 export default logger;

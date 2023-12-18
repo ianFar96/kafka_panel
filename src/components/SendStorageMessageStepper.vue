@@ -1,9 +1,9 @@
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { Ref, ref } from 'vue';
 import { useLoader } from '../composables/loader';
 import { Connection } from '../types/connection';
-import { MessageContent, ParsedHeaders } from '../types/message';
+import { MessageContent, Headers, MessageKeyValue } from '../types/message';
 import { Topic } from '../types/topic';
 import Dialog from './Dialog.vue';
 import EditMessageContent from './EditMessageContent.vue';
@@ -12,25 +12,37 @@ import SelectConnection from './SelectConnection.vue';
 import SelectTopic from './SelectTopic.vue';
 import Stepper, { Step } from './Stepper.vue';
 import { useConnectionStore } from '../composables/connection';
-import { isSendValid, isValidHeaders } from '../services/utils';
+import { isKeyValid, isValidHeaders } from '../services/utils';
 import { clone } from 'ramda';
 import logger from '../services/logger';
 import { KafkaService } from '../services/kafka';
+import { useAlertDialog } from '../composables/alertDialog';
 
 const connections = ref<Connection[]>([]);
 const topics = ref<Topic[]>([]);
-const selectedMessage = ref<MessageContent>();
+
+// Force the type so it cannot be undefined
+// The message will be set when the modal is opened
+const selectedMessage = ref() as Ref<MessageContent>;
 
 const selectedTopic = ref<Topic>();
 
 const kafkaService = new KafkaService();
+
+const alert = useAlertDialog();
 
 const fetchTopics = async () => {
 	loader?.value?.show();
 	try {
 		topics.value = await kafkaService.listTopics();
 	} catch (error) {
-		logger.error(`Error setting the connection: ${error}`, {kafkaService});
+		const errorMessage = `Error fetching topics: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({
+			title: 'Error',
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
@@ -49,12 +61,12 @@ const steps: Step[] = [{
 {
 	name: 'message',
 	label: 'Message Content',
-	isValid: () => isSendValid(selectedMessage.value?.key) && isSendValid(selectedMessage.value?.value)
+	isValid: () => isKeyValid(selectedMessage.value.key)
 },
 {
 	name: 'headers',
 	label: 'Message Headers',
-	isValid: () => isValidHeaders(selectedMessage.value?.headers ?? {})
+	isValid: () => isValidHeaders(selectedMessage.value.headers)
 }];
 
 defineExpose({
@@ -81,7 +93,13 @@ const setNewConnection = async (newConnection: Connection) => {
 		await connectionStore.setConnection(newConnection);
 		await stepper.value?.next();
 	} catch (error) {
-		logger.error(`Error setting the connection: ${error}`, {kafkaService});
+		const errorMessage = `Error setting the connection: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({
+			title: 'Error',
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
@@ -91,31 +109,41 @@ const selectTopic = async (topic: Topic) => {
 	await stepper.value?.next();
 };
 
-const onContentChange = (message: Partial<Omit<MessageContent, 'headers'>>) => {
-	selectedMessage.value!.key = message.key;
-	selectedMessage.value!.value = message.value;
+const onContentChange = (message: MessageKeyValue) => {
+	selectedMessage.value.key = message.key;
+	selectedMessage.value.value = message.value;
 };
 
-const onHeadersChange = (headers: ParsedHeaders) => {
-	selectedMessage.value!.headers = headers;
+const onHeadersChange = (headers: Headers) => {
+	selectedMessage.value.headers = headers;
 };
 
-const saveMessage = async () => {
+const sendMessage = async () => {
+	if (!selectedTopic.value) {
+		throw new Error('Unexpected error, topic is not selected');
+	}
+
 	loader?.value?.show();
 	try {
-		await kafkaService.sendMessage(selectedTopic.value!.name, selectedMessage.value!);
+		await kafkaService.sendMessage(selectedTopic.value.name, selectedMessage.value);
 
 		stepperDialog.value?.close();
 	} catch (error) {
-		logger.error(`Error sending the message: ${error}`, {kafkaService});
+		const errorMessage = `Error sending the message: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({
+			title: 'Error',
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
 </script>
 
 <template>
-	<Dialog ref="stepperDialog" title="Send storage message">
-		<Stepper class="mb-8" ref="stepper" :steps="steps" submit-button-text="Send" @submit="saveMessage">
+	<Dialog size="fullpage" ref="stepperDialog" title="Send storage message">
+		<Stepper class="mb-8" ref="stepper" :steps="steps" submit-button-text="Send" @submit="sendMessage">
 			<!-- Steps -->
 			<template #connection>
 				<SelectConnection :selected-connection="connectionStore.connection?.name"
@@ -128,7 +156,7 @@ const saveMessage = async () => {
 				<EditMessageContent :message="selectedMessage" @change="onContentChange"/>
 			</template>
 			<template #headers>
-				<EditMessageHeaders :headers="selectedMessage?.headers" @change="onHeadersChange" />
+				<EditMessageHeaders :headers="selectedMessage.headers" @change="onHeadersChange" />
 			</template>
 		</Stepper>
   </Dialog>

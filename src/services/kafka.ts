@@ -8,13 +8,14 @@ import { ConsumerGroup, ConsumerGroupState } from '../types/consumerGroup';
 import { Message, MessageContent } from '../types/message';
 import { Topic } from '../types/topic';
 import { v4 as uuidv4 } from 'uuid';
+import { tryJsonParse } from './utils';
 
 /**
  * Rxjs Subject with an `unsubscribe` method that respects the asynchronousness
  * Unlike the unsubscribe of a normal `Subject`
  */
 export type AsyncSubject<T> = {
-	subscribe: Subject<T>['subscribe'] 
+	subscribe: Subject<T>['subscribe']
 	unsubscribe: () => Promise<void>
 }
 
@@ -38,7 +39,7 @@ export class KafkaService {
 				listen<{topic: string, watermark: number}>(`onWatermark-${this.id}`, (event) => {
 					subscriber.next(event.payload);
 				}).then(unlistenFn => unlisten = unlistenFn);
-			
+
 				invoke('get_topics_watermark_command', {id: this.id})
 					.then(() => {
 						subscriber.complete();
@@ -96,7 +97,7 @@ export class KafkaService {
 	async deleteTopic(name: string) {
 		await invoke('delete_topic_command', {
 			topicName: name,
-		});	
+		});
 	}
 
 	async listenMessages(topic: string, messagesNumber: number): Promise<AsyncSubject<Message>> {
@@ -131,10 +132,10 @@ export class KafkaService {
 	async sendMessage(topic: string, message: MessageContent) {
 		const interpolatedHeaders = this.interpolateFakeValues(clone(message.headers), {faker});
 		const interpolatedKey = this.interpolateFakeValues(clone(message.key), {faker});
-		const interpolatedValue = this.interpolateFakeValues(clone(message.value), {faker, key: interpolatedKey});
-		
+		const interpolatedValue = this.interpolateFakeValues(clone(message.value), {faker, key: tryJsonParse(interpolatedKey)});
+
 		await invoke('send_message_command', {
-			topic, 
+			topic,
 			headers: interpolatedHeaders,
 			key: interpolatedKey,
 			value: interpolatedValue,

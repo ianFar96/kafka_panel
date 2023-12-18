@@ -3,10 +3,11 @@
  */
 use jfs::Store;
 use kafka_panel::{
-    create_connections, create_topic, delete_from_store, delete_topic, get_all_from_store,
-    get_from_store, get_groups_from_topic, get_topics, get_topics_state, get_topics_watermark,
-    listen_messages, logs, commit_latest_offsets, save_in_store, send_message, GroupState,
-    KafkaGroupResponse, SaslConfig, TopicResponse, Extras, delete_group, seek_earliest_offsets,
+    commit_latest_offsets, create_connections, create_topic, delete_from_store, delete_group,
+    delete_topic, get_all_from_store, get_env, get_from_store, get_groups_from_topic, get_topics,
+    get_topics_state, get_topics_watermark, listen_messages, logs, save_in_store,
+    seek_earliest_offsets, send_message, Environment, Extras, GroupState, KafkaGroupResponse,
+    SaslConfig, TopicResponse, KafkaState, StorageState,
 };
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use serde_json::Value;
@@ -15,8 +16,6 @@ use std::{
     time::Duration,
 };
 use tauri::{State, Window};
-
-use crate::state::{KafkaState, StorageState};
 
 #[tauri::command]
 pub async fn set_connection_command<'a>(
@@ -99,7 +98,7 @@ pub async fn delete_group_command<'a>(
     let binding = state.admin.read().await;
     let admin = match *binding {
         None => return Err("Connection not set".into()),
-        Some(ref x) => x.clone(),
+        Some(ref x) => x,
     };
 
     delete_group(admin, group_name).await
@@ -211,9 +210,9 @@ pub async fn listen_messages_command<'a>(
 pub async fn send_message_command<'a>(
     state: State<'a, KafkaState>,
     topic: String,
-    headers: Option<HashMap<String, Value>>,
-    key: Value,
-    value: Value,
+    headers: Option<HashMap<String, Option<&str>>>,
+    key: String,
+    value: Option<String>,
 ) -> Result<(), String> {
     let binding = state.producer.read().await;
     let producer = match *binding {
@@ -283,11 +282,7 @@ pub fn append_log_command(message: &str, level: &str, extras: Option<Extras>) {
 }
 
 #[tauri::command]
-pub fn is_dev() -> bool {
-    #[cfg(dev)]
-    {
-        return true;
-    }
-
-    return false;
+#[allow(unreachable_code)]
+pub fn get_env_command() -> Environment {
+    get_env()
 }

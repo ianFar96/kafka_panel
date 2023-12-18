@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "@wdio/globals/types",
+      "@wdio/mocha-framework"
+    ]
+  },
+  "include": [
+    "../../src/**/*.ts",
+    "../../src/**/*.d.ts",
+    "../../src/**/*.tsx",
+    "../../src/**/*.vue",
+    "../../vite.config.ts",
+    "specs/*.spec.ts",
+    "pages/*.page.ts",
+    "modals/*.modal.ts",
+    "**/*.ts",
+  ],
+}

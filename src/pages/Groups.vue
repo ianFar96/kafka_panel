@@ -7,6 +7,8 @@ import checkSettings from '../services/checkSettings';
 import { ConsumerGroup } from '../types/consumerGroup';
 import logger from '../services/logger';
 import { KafkaService } from '../services/kafka';
+import { useConfirmDialog } from '../composables/confirmDialog';
+import { useAlertDialog } from '../composables/alertDialog';
 
 await checkSettings('groups');
 
@@ -18,16 +20,25 @@ const loader = useLoader();
 
 const groups = ref<ConsumerGroup[]>([]);
 
+const confirmDialog = useConfirmDialog();
+
 const kafkaService = new KafkaService();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const alert = useAlertDialog();
+
 const fetchGroupsFromTopic = async () => {
 	loader?.value?.show();
 	try {
 		logger.info(`Fetching groups from topic ${topicName}...`);
 		groups.value = await kafkaService.listGroupsFromTopic(topicName);
 	} catch (error) {
-		logger.error(`Error getting groups: ${error}`, {kafkaService});
+		const errorMessage = `Error getting groups: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({
+			title: 'Error',
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
@@ -49,17 +60,19 @@ const canSeekEarliestOffsets = (group: ConsumerGroup) => {
 	return group.state !== 'Consuming' && group.watermarks[0] > 0;
 };
 
-
 const seekEarliestOffsets = async (group: ConsumerGroup) => {
 	if (!canSeekEarliestOffsets(group)) {
 		return;
 	}
 
-	const confirmMessage = `Are you sure you want to seek the earliest offsets?
+	const areYouSure = await confirmDialog?.value?.ask({
+		description: `Are you sure you want to seek the earliest offsets?
+
 Group: ${group.name}
 Topic: ${topicName}
-Partitions: All`;
-	const areYouSure = await confirm(confirmMessage, {title: 'Seek earliest offsets'});
+Partitions: All`,
+		title: 'Seek earliest offsets'
+	});
 	if (!areYouSure) { return; }
 
 	loader?.value?.show();
@@ -67,7 +80,13 @@ Partitions: All`;
 		logger.info(`Seeking earliest offsets for topic ${topicName} and group ${group.name}...`);
 		await kafkaService.seekEarliestOffsets(group.name, topicName);
 	} catch (error) {
-		logger.error(`Error Seeking earliest offsets: ${error}`, {kafkaService});
+		const errorMessage = `Error Seeking earliest offsets: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({
+			title: 'Error',
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 
@@ -83,13 +102,16 @@ const commitLatestOffsets = async (group: ConsumerGroup) => {
 		return;
 	}
 
-	const confirmMessage = `Are you sure you want to commit the latest offsets?
+	const areYouSure = await confirmDialog?.value?.ask({
+		description: `Are you sure you want to commit the latest offsets?
+
 Group: ${group.name}
 Topic: ${topicName}
 Partitions: All
 
-You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`;
-	const areYouSure = await confirm(confirmMessage, {title: 'Commit latest offsets'});
+You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`,
+		title: 'Commit latest offsets'
+	});
 	if (!areYouSure) { return; }
 
 	loader?.value?.show();
@@ -97,7 +119,13 @@ You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`;
 		logger.info(`Committing latests offsets for topic ${topicName} and group ${group.name}...`);
 		await kafkaService.commitLatestOffsets(group.name, topicName);
 	} catch (error) {
-		logger.error(`Error Committing latests offsets: ${error}`, {kafkaService});
+		const errorMessage = `Error Committing latests offsets: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({
+			title: 'Error',
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 
@@ -105,8 +133,10 @@ You will be skipping ${group.watermarks[1] - group.watermarks[0]} messages`;
 };
 
 const deleteGroup = async (group: ConsumerGroup) => {
-	const confirmMessage = 'Are you sure you want to delete the consumer group?';
-	const areYouSure = await confirm(confirmMessage, {title: 'Delete consumer group'});
+	const areYouSure = await confirmDialog?.value?.ask({
+		description: 'Are you sure you want to delete the consumer group?',
+		title: 'Delete consumer group'
+	});
 	if (!areYouSure) { return; }
 
 	loader?.value?.show();
@@ -114,7 +144,13 @@ const deleteGroup = async (group: ConsumerGroup) => {
 		logger.info(`Deleting consumer group ${group.name}...`);
 		await kafkaService.deleteGroup(group.name);
 	} catch (error) {
-		logger.error(`Error deleting consumer group: ${error}`, {kafkaService});
+		const errorMessage = `Error deleting consumer group: ${error}`;
+		logger.error(errorMessage, {kafkaService});
+		alert?.value?.show({
+			title: 'Error',
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 
@@ -148,8 +184,8 @@ onBeforeUnmount(() => {
 		<div class="flex mb-6 justify-between items-center">
 			<input type="text" v-model="searchQuery"
 				class="block mr-2 bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
-			<button @click="fetchGroupsFromTopic()" 
-				class="text-2xl bi-arrow-clockwise" type="button">
+			<button type="button" @click="fetchGroupsFromTopic()"
+				title="Refresh list" class="text-2xl bi-arrow-clockwise" >
 			</button>
 		</div>
 		<div class="h-full overflow-auto">
@@ -198,11 +234,11 @@ onBeforeUnmount(() => {
 						<td :class="{'border-b': key !== filteredGroups.length - 1}"
 							class="border-white py-3 px-4 flex justify-center">
 							<button title="Seek earliest offsets"
-								@click="seekEarliestOffsets(group)" class="text-2xl bi-skip-backward mr-3" 
+								@click="seekEarliestOffsets(group)" class="text-2xl bi-skip-backward mr-3"
 								:class="{'text-gray-500': !canSeekEarliestOffsets(group)}">
 							</button>
 							<button title="Commit latest offsets"
-								@click="commitLatestOffsets(group)" class="text-2xl bi-skip-forward mr-3" 
+								@click="commitLatestOffsets(group)" class="text-2xl bi-skip-forward mr-3"
 								:class="{'text-gray-500': !canCommitLatestOffsets(group)}">
 							</button>
 							<button title="Delete consumer group"

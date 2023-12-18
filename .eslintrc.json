@@ -46,6 +46,7 @@
         ],
         "vue/no-mutating-props": [
             "off"
-        ]
+        ],
+        "no-trailing-spaces": "error"
     }
 }

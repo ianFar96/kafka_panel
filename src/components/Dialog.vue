@@ -26,10 +26,11 @@ defineExpose({
 const dimensionClasses = computed(() => {
 	switch(props.size) {
 	case 's':
-		return /*tw*/'h-[350px] w-[400px]';
+		return /*tw*/'max-h-[600px] w-[400px]';
 	case 'fullpage':
-	default: 
 		return /*tw*/'h-full w-full ';
+	default:
+		return '';
 	}
 });
 
@@ -42,10 +43,17 @@ window.addEventListener('keydown', refreshEvent);
 onBeforeUnmount(() => {
 	window.removeEventListener('keydown', refreshEvent);
 });
+
+const clickOutside = () => {
+	if (props.closable) {
+		close();
+	}
+};
 </script>
 <template>
-  <Teleport to="#page-content">
-    <div v-if="visible" :class="`z-10 absolute top-0 left-0 h-full w-full bg-black bg-opacity-40 ${props.underlayClass} p-10 flex items-start justify-center`">
+  <Teleport to="#app">
+    <div v-if="visible" @click.self="clickOutside"
+      :class="`z-10 absolute top-10 left-0 h-[calc(100%-theme(spacing.10))] w-full bg-black bg-opacity-60 ${props.underlayClass} p-10 pl-16 flex items-center justify-center`">
       <div :class="`relative rounded bg-gray-800 flex flex-col p-6 shrink-0 ${dimensionClasses} ${props.modalClass}`">
         <button @click="close()" alt="close" v-if="props.closable"
           class="absolute top-0 right-0 bi-x-lg cursor-pointer hover:text-gray-300 hover:bg-gray-700 text-xs px-4 py-3">

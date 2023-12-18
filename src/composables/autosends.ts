@@ -5,10 +5,13 @@ import { ref } from 'vue';
 import { AutosendsService } from '../services/autosends';
 import logger from '../services/logger';
 import { ActiveAutosend, Autosend } from '../types/autosend';
+import { useAlertDialog } from './alertDialog';
 
 export const useAutosendsStore = defineStore('autosends', () => {
 	const autosends = ref<ActiveAutosend[]>([]);
 	const autosendsService = new AutosendsService();
+
+	const alert = useAlertDialog();
 
 	async function startAutosend(autosend: Autosend) {
 		const id = uuidv4();
@@ -29,6 +32,11 @@ export const useAutosendsStore = defineStore('autosends', () => {
 		messagesSentObservable.subscribe({
 			error: async error => {
 				logger.error(error, {autosendsService});
+				alert?.value?.show({
+					title: 'Error',
+					type: 'error',
+					description: error
+				});
 				await stopAutosend(activeAutosend);
 			}
 		});

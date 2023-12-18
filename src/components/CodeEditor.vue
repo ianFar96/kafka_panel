@@ -1,7 +1,8 @@
+<!-- eslint-disable no-empty -->
 <script lang="ts" setup>
 import * as monaco from 'monaco-editor';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { getMonacoEditorCompletionItems, tryJsonParse } from '../services/utils';
+import { getMonacoEditorCompletionItems } from '../services/utils';
 
 const props = defineProps<{
 	code?: unknown,
@@ -12,21 +13,40 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'codeChange', code: unknown): Promise<void> | void
+  (e: 'codeChange', code: string): Promise<void> | void
 }>();
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 
-let code = '';
-if (typeof props.code !== 'string') {
-	code = JSON.stringify(props.code, null, 2);
-} else {
-	code = props.code as string;
+let editorCode = '';
+switch (typeof props.code) {
+case 'undefined':
+	editorCode = '';
+	break;
+case 'object':
+	if (props.code === null) {
+		editorCode = '';
+	} else {
+		editorCode = JSON.stringify(props.code, null ,2);
+	}
+	break;
+case 'string':
+	try {
+		// Format the code
+		const parsedCode = JSON.parse(props.code);
+		editorCode = JSON.stringify(parsedCode, null, 2);
+	} catch (error) {
+		editorCode = props.code;
+	}
+	break;
+default:
+	editorCode = props.code!.toString();
+	break;
 }
 let sizes: monaco.editor.IDimension;
 const initMonacoEditor = () => {
 	if (editor) {
-		code = editor.getValue();
+		editorCode = editor.getValue();
 		editor.dispose();
 	}
 
@@ -39,7 +59,7 @@ const initMonacoEditor = () => {
 		};
 
 		editor = monaco.editor.create(monacoEditorWrapperRef.value!, {
-			value: code,
+			value: editorCode,
 			language: 'json',
 			theme: 'vs-dark',
 			colorDecorators: true,
@@ -69,7 +89,9 @@ const initMonacoEditor = () => {
 			clearTimeout(debounce);
 			debounce = setTimeout(async () => {
 				const stringifiedCode = editor?.getValue();
-				await emit('codeChange', tryJsonParse(stringifiedCode));
+				if(stringifiedCode !== undefined) {
+					await emit('codeChange', stringifiedCode);
+				}
 			}, 300);
 		});
 	}, 10);
@@ -120,7 +142,7 @@ if (Object.keys(props.suggestions ?? {}).length > 0) {
 			};
 		},
 	});
-	
+
 	// TS bug in type definiton
 	(editor as unknown as monaco.editor.IStandaloneCodeEditor)?.onDidDispose(() => {
 		disposable.dispose();

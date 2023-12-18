@@ -14,8 +14,10 @@ import { getRandomColor } from '../services/chipColors';
 import storageService from '../services/storage';
 import { Connection } from '../types/connection';
 import { StorageMessage, StorageMessageWithId } from '../types/message';
-import { stringifyMessage } from '../services/utils';
+import { displayMessage } from '../services/utils';
 import logger from '../services/logger';
+import { useAlertDialog } from '../composables/alertDialog';
+import { useConfirmDialog } from '../composables/confirmDialog';
 
 type DisplayMessage = Omit<StorageMessageWithId, 'tags'> & {
 	tags: Tag[]
@@ -27,6 +29,8 @@ await checkSettings('messages-storage');
 const connections = await storageService.settings.get('CONNECTIONS') as Connection[];
 
 const loader = useLoader();
+
+const alert = useAlertDialog();
 
 const storeMessageToDisplayMessage = (message: StorageMessageWithId): DisplayMessage => ({
 	...message,
@@ -51,19 +55,38 @@ const fetchMessages = async () => {
 
 		messages.value = Object.entries(storageMessages).map(([id, message]) => storeMessageToDisplayMessage({id, ...message}));
 	} catch (error) {
-		logger.error(`Error fetching messages: ${error}`);
+		const errorMessage = `Error fetching messages: ${error}`;
+		logger.error(errorMessage);
+		alert?.value?.show({
+			title: 'Error',
+			type: 'error',
+			description: errorMessage
+		});
 	}
 	loader?.value?.hide();
 };
 await fetchMessages();
 
+const confirmDialog = useConfirmDialog();
 const deleteMessage = async (storageMessage: DisplayMessage) => {
+	const isConfirmed = await confirmDialog?.value?.ask({
+		description: 'Are you sure you want to delete this message from the storage?',
+		title: 'Warning'
+	});
+	if (!isConfirmed) return;
+
 	try {
 		logger.info('Deleting storage message...');
 		await storageService.messages.delete(storageMessage.id);
 		await fetchMessages();
 	} catch (error) {
-		logger.error(`Could not delete message from storage: ${error}`);
+		const errorMessage = `Could not delete message from storage: ${error}`;
+		logger.error(errorMessage);
+		alert?.value?.show({
+			title: 'Error',
+			type: 'error',
+			description: errorMessage
+		});
 	}
 };
 
@@ -146,7 +169,7 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 							title="Delete message"
 							class="text-2xl translate-y-[3px] bi-trash transition-colors duration-300 cursor-pointer mr-3 hover:text-red-500">
 						</button>
-						<button @click="copyToClipboard($event, stringifyMessage(message))"
+						<button @click="copyToClipboard($event, displayMessage(message))"
 							title="Copy JSON"
 							class="text-xl bi-clipboard transition-colors duration-300 cursor-pointer mr-3">
 						</button>
@@ -160,7 +183,7 @@ const startAutosendStepper = ref<InstanceType<typeof StartAutosendStepper> | nul
 						</button>
 					</div>
 					<div class="max-h-[400px] overflow-auto rounded-xl">
-						<highlightjs :language="'json'" :code="stringifyMessage(message)" />
+						<highlightjs :language="'json'" :code="displayMessage(message)" />
 					</div>
 				</div>
 			</li>

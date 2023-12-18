@@ -9,6 +9,8 @@ use serde_json::{json, Value};
 use tauri::api::path::home_dir;
 use tokio::sync::RwLock;
 
+use crate::utils::{get_env, Environment};
+
 pub struct KafkaState {
     pub common_config: RwLock<Option<ClientConfig>>,
     pub admin: RwLock<Option<AdminClient<DefaultClientContext>>>,
@@ -44,24 +46,31 @@ pub fn get_app_dir() -> Result<String, String> {
     Ok(format!("{}/.kafka_panel", home_dir.to_string_lossy()))
 }
 
+#[allow(unused)]
+pub fn get_app_dir_with_env() -> Result<String, String> {
+    let app_dir = get_app_dir()?;
+    match get_env() {
+        Environment::Release => Ok(format!("{}/release", app_dir)),
+        Environment::Dev => Ok(format!("{}/dev", app_dir)),
+        Environment::E2E => Ok(format!("{}/e2e", app_dir))
+    }
+}
+
 pub fn init_storage() -> Result<StorageState, String> {
-    #[allow(unused_mut)]
-    let app_folder = get_app_dir()?;
-    let mut config_folder = format!("{}/config", app_folder);
+    let app_dir_with_env = get_app_dir_with_env()?;
+    let mut config_dir_with_env = format!("{}/config", app_dir_with_env);
 
     // Retrocompatibility
-    if !Path::new(&config_folder).is_dir() && Path::new(&app_folder).is_dir() {
-        config_folder = app_folder;
+    if !Path::new(&app_dir_with_env).is_dir() {
+        let app_dir = get_app_dir()?;
+        let config_dir = format!("{}/config", app_dir);
+        if Path::new(&config_dir).is_dir() {
+            config_dir_with_env = config_dir;
+        }
     }
 
-    // Get settings from /dev folder in case of running in development
-    #[cfg(dev)]
-    {
-        config_folder = format!("{}/dev", config_folder);
-    }
-
-    if !Path::new(&config_folder).is_dir() {
-        create_dir_all(&config_folder).map_err(|err| {
+    if !Path::new(&config_dir_with_env).is_dir() {
+        create_dir_all(&config_dir_with_env).map_err(|err| {
             format!(
                 "Unexpected error, could not create local store directory ~/.kafka_panel; err: {}",
                 err.to_string()
@@ -72,24 +81,30 @@ pub fn init_storage() -> Result<StorageState, String> {
     let mut store_config = Config::default();
     store_config.single = true;
 
-    let settings = Store::new_with_cfg(format!("{}/settings.json", config_folder), store_config)
-        .map_err(|err| {
-            format!(
-                "Unexpected error, could create storage file; err: {}",
-                err.to_string()
-            )
-        })?;
+    let settings = Store::new_with_cfg(
+        format!("{}/settings.json", config_dir_with_env),
+        store_config,
+    )
+    .map_err(|err| {
+        format!(
+            "Unexpected error, could create storage file; err: {}",
+            err.to_string()
+        )
+    })?;
 
     set_storage_default(&settings, "CONNECTIONS", &json!([]))?;
     set_storage_default(&settings, "MESSAGES", &json!(20))?;
 
-    let messages = Store::new_with_cfg(format!("{}/messages.json", config_folder), store_config)
-        .map_err(|err| {
-            format!(
-                "Unexpected error, could create storage file; err: {}",
-                err.to_string()
-            )
-        })?;
+    let messages = Store::new_with_cfg(
+        format!("{}/messages.json", config_dir_with_env),
+        store_config,
+    )
+    .map_err(|err| {
+        format!(
+            "Unexpected error, could create storage file; err: {}",
+            err.to_string()
+        )
+    })?;
 
     Ok(StorageState { settings, messages })
 }

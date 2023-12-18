@@ -5,7 +5,7 @@ export type TimerCallback = () => Promise<unknown> | unknown
 
 export class Timer {
 	private startTime: DateTime;
-	private interval?: NodeJS.Timer;
+	private interval?: NodeJS.Timeout;
 	private callbacks: TimerCallback[] = [];
 
 	private remainingSubject: BehaviorSubject<Duration>;

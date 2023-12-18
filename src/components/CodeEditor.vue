@@ -1,3 +1,4 @@
+<!-- eslint-disable no-empty -->
 <script lang="ts" setup>
 import * as monaco from 'monaco-editor';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
@@ -18,12 +19,29 @@ const emit = defineEmits<{
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 
 let editorCode = '';
-if (typeof props.code === 'string') {
-	editorCode = props.code;
-} else if (props.code === null || props.code === undefined) {
+switch (typeof props.code) {
+case 'undefined':
 	editorCode = '';
-} else {
-	editorCode = JSON.stringify(props.code, null, 2);
+	break;
+case 'object':
+	if (props.code === null) {
+		editorCode = '';
+	} else {
+		editorCode = JSON.stringify(props.code, null ,2);
+	}
+	break;
+case 'string':
+	try {
+		// Format the code
+		const parsedCode = JSON.parse(props.code);
+		editorCode = JSON.stringify(parsedCode, null, 2);
+	} catch (error) {
+		editorCode = props.code;
+	}
+	break;
+default:
+	editorCode = props.code!.toString();
+	break;
 }
 let sizes: monaco.editor.IDimension;
 const initMonacoEditor = () => {

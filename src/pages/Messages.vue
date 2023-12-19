@@ -225,13 +225,13 @@ const getDisplayDate = (dateMilis: number) => {
 							<i class="bi bi-calendar"></i>
 							{{ getDisplayDate(message.timestamp) }}
 						</span>
-						<span class="text-sm mr-4" title="Offset">
-							<i class="bi bi-1-square"></i>
-							{{ message.offset }}
-						</span>
-						<span class="text-sm" title="Partition">
+						<span class="text-sm mr-4" title="Partition">
 							<i class="bi bi-pie-chart"></i>
 							{{ message.partition }}
+						</span>
+						<span class="text-sm" title="Offset">
+							<i class="bi bi-1-square"></i>
+							{{ message.offset }}
 						</span>
 					</div>
 					<i class="text-xl leading-none"

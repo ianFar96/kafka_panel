@@ -210,7 +210,7 @@ const filteredTopics = computed(() => {
 	return topics.value
 		.filter(topic => {
 			const query = searchQuery.value.toLowerCase();
-			const includesTopicName = topic.name.toLowerCase().includes(query);
+			const includesTopicName = query.split('.').every(chunk => topic.name.toLowerCase().includes(chunk));
 			return includesTopicName;
 		});
 });
@@ -308,6 +308,7 @@ onDeactivated(() => {
 			</table>
 		</div>
 	</div>
+
 	<div class="flex justify-center items-center h-full" v-else>
 		<div class="rounded bg-gray-800 p-6 w-[500px]">
 			<h3 class="mb-4 text-xl">Choose Connection</h3>

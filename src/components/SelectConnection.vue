@@ -18,12 +18,13 @@ const onChange = async (connection: Connection) => {
 </script>
 
 <template>
-  <ul class="h-full flex flex-col overflow-auto">
-    <li :class="{'border-b': key !== connections.length - 1, 'bg-gray-700': selectedConnection === connection.name}" :key="key" 
+  <ul v-if="props.connections.length > 0" class="h-full flex flex-col overflow-auto">
+    <li :class="{'border-b': key !== connections.length - 1, 'bg-gray-700': selectedConnection === connection.name}" :key="key"
       class="border-white cursor-pointer hover:bg-gray-700 p-3 flex justify-between items-center"
       v-for="connection, key of props.connections" @click="onChange(connection)">
       {{ connection.name }}
       <i v-if="selectedConnection === connection.name" class="bi-check-lg text-xl text-green-600"></i>
     </li>
   </ul>
+  <span v-else class="text-gray-400">You don't have a connection setup yet, go to the <router-link to="/settings" class="border-b text-blue-400 border-blue-400">settings page</router-link> to add one</span>
 </template>

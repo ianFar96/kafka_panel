@@ -33,14 +33,13 @@ const displayAutosends = computed(() => autosendStore.autosends.map(autosend => 
 }) as DisplayAutosend));
 
 const searchQuery = ref('');
-
 const filteredAutosends = computed(() => {
 	if (!searchQuery.value) return displayAutosends.value;
 	return displayAutosends.value
 		.filter(autosend => {
 			const query = searchQuery.value.toLowerCase();
-			const includesTopic = autosend.topic.includes(query);
-			return includesTopic;
+			const includesTopicName = query.split('.').every(chunk => autosend.topic.toLowerCase().includes(chunk));
+			return includesTopicName;
 		});
 });
 

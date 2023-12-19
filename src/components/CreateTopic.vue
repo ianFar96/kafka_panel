@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import Button from './Button.vue';
 
 const name = ref<string>();
@@ -10,6 +10,11 @@ const replicationFactor = ref<number>();
 const props = defineProps<{
   createTopic: (name: string, partitions?: number, replicationFactor?: number) => Promise<void>
 }>();
+
+const topicNameInput = ref<HTMLInputElement>(); // Template ref
+onMounted(() => {
+	topicNameInput.value?.focus();
+});
 
 const handleSubmit = async (event: Event) => {
 	event.preventDefault();
@@ -32,7 +37,7 @@ const handleSubmit = async (event: Event) => {
 
 <template>
   <form @submit="handleSubmit">
-    <input v-model="name" type="text"
+    <input v-model="name" type="text" ref="topicNameInput"
       class="block mb-6 bg-transparent outline-none border-b border-gray-400 py-1 w-full"
       name="name" placeholder="Name*">
     <input v-model="partitions" type="number"

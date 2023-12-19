@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import Button from './Button.vue';
 import Dialog from './Dialog.vue';
 
@@ -27,7 +27,7 @@ defineExpose({
 
 const decide = (decision: boolean) => {
 	resolveAsk?.(decision);
-	dialog.value?.close(); 
+	dialog.value?.close();
 };
 </script>
 

@@ -19,8 +19,8 @@ const filteredTopics = computed(() => {
 	return props.topics
 		.filter(topic => {
 			const query = searchQuery.value.toLowerCase();
-			const includesName = topic.name.toLowerCase().includes(query);
-			return includesName;
+			const includesTopicName = query.split('.').every(chunk => topic.name.toLowerCase().includes(chunk));
+			return includesTopicName;
 		});
 });
 
@@ -35,8 +35,8 @@ const submit = async (topic: Topic) => {
 			<input type="text" v-model="searchQuery"
 				class="block bg-transparent outline-none border-b border-gray-400 py-1 w-[400px]" placeholder="Search">
 		</div>
-	
-		<ul class="overflow-auto">
+
+		<ul v-if="topics.length > 0" class="overflow-auto">
 			<li v-for="topic, index in filteredTopics" :key="index" @click="submit(topic)"
 				:class="{'border-b': index !== filteredTopics.length - 1, 'bg-gray-700': selectedTopic === topic.name}"
 				class="border-white overflow-hidden flex justify-between p-3 cursor-pointer hover:bg-gray-700" >
@@ -44,5 +44,10 @@ const submit = async (topic: Topic) => {
 				<i v-if="selectedTopic === topic.name" class="h-6 bi-check-lg text-xl text-green-600"></i>
 			</li>
 		</ul>
+		<div v-else class="flex justify-center items-center h-full">
+			<span class="text-gray-400">
+				You don't any topic yet, go to the <router-link to="/topics" class="border-b text-blue-400 border-blue-400">topics page</router-link> to create one
+			</span>
+		</div>
 	</div>
 </template>
